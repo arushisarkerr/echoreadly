@@ -13,7 +13,12 @@ import { cn } from "@/utils";
 
 import type { ReaderFitMode } from "./use-reader";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Bundle the worker from pdfjs-dist so it is served same-origin (CSP worker-src 'self').
+// Do not load workers from unpkg or other CDNs.
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 type PdfViewerProps = {
   fileUrl: string;
