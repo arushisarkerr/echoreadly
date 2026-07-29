@@ -670,7 +670,10 @@ export async function ensureDocumentProcessed(
     processingStatus: "processing",
   });
 
-  const extracted = await extractDocumentText(registered.id, download.data);
+  // Own a stable byte copy for the native PDFium load lifetime.
+  const pdfBytes = new Uint8Array(download.data);
+
+  const extracted = await extractDocumentText(registered.id, pdfBytes);
   if (!extracted.ok) {
     return extracted;
   }
