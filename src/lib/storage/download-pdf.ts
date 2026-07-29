@@ -1,11 +1,11 @@
 /**
  * Download private PDF object bytes from Supabase Storage.
+ * Callers must pass an authenticated Supabase client (SSR user client on the server).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PDFS_BUCKET } from "@/constants";
-import { createClient } from "@/lib/supabase/client";
 
 import { toPdfObjectKey } from "./create-signed-url";
 
@@ -19,7 +19,7 @@ export type DownloadPdfResult = {
  */
 export async function downloadPdfBytes(
   storagePath: string,
-  client?: SupabaseClient,
+  client: SupabaseClient,
 ): Promise<DownloadPdfResult> {
   const objectKey = toPdfObjectKey(storagePath);
 
@@ -30,10 +30,8 @@ export async function downloadPdfBytes(
     };
   }
 
-  const supabase = client ?? createClient();
-
   try {
-    const { data, error } = await supabase.storage
+    const { data, error } = await client.storage
       .from(PDFS_BUCKET)
       .download(objectKey);
 

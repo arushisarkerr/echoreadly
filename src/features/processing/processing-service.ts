@@ -322,7 +322,7 @@ export async function extractDocumentText(
   let bytes = pdfBytes ?? null;
 
   if (!bytes) {
-    const download = await downloadPdfBytes(working.storagePath);
+    const download = await downloadPdfBytes(working.storagePath, client);
     if (!download.data) {
       markDocumentFailed(documentId);
       return {
@@ -579,7 +579,7 @@ export async function ensureDocumentProcessed(
 
   const { userId, client } = ownership.data;
 
-  const download = await downloadPdfBytes(input.storagePath);
+  const download = await downloadPdfBytes(input.storagePath, client);
   if (!download.data) {
     return {
       ok: false,
