@@ -8,6 +8,8 @@ import { getSecurityHeaders } from "./src/lib/security/headers";
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Native PDFium (koffi + libpdfium) must stay external to the server bundle.
+  serverExternalPackages: ["koffi", "pdfium-native"],
   async headers() {
     const security = getSecurityHeaders();
     return [

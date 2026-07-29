@@ -1,5 +1,11 @@
 /**
- * PDF parsing and document extraction utilities.
+ * PDF parsing — PDFium character-level text adapter.
  */
 
-export {};
+export {
+  assemblePageTextFromChars,
+  extractPagesWithPdfium,
+  type PdfiumExtractError,
+  type PdfiumExtractErrorCode,
+  type PdfiumExtractResult,
+} from "./pdfium-adapter";

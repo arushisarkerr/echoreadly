@@ -1,14 +1,16 @@
 /**
- * PDF text extraction using unpdf (serverless PDF.js build).
+ * PDF text extraction via the dedicated PDFium adapter.
  * No OCR and no AI — embedded text only.
  */
 
-import { extractText, getDocumentProxy } from "unpdf";
+import {
+  extractPagesWithPdfium,
+  type PdfiumExtractErrorCode,
+} from "@/lib/pdf";
 
 import {
   createDocumentTextResult,
   documentTextHasContent,
-  type DocumentTextResult,
 } from "./document-text";
 
 export type TextExtractionErrorCode =
@@ -22,47 +24,20 @@ export type TextExtractionError = {
 };
 
 export type TextExtractionResult =
-  | { ok: true; data: DocumentTextResult }
+  | { ok: true; data: import("./document-text").DocumentTextResult }
   | { ok: false; error: TextExtractionError };
 
-function classifyExtractionError(error: unknown): TextExtractionError {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : "Unable to extract text from this PDF.";
-
-  const normalized = message.toLowerCase();
-
+function mapPdfiumErrorCode(
+  code: PdfiumExtractErrorCode,
+): TextExtractionErrorCode {
   if (
-    normalized.includes("password") ||
-    normalized.includes("encrypted") ||
-    normalized.includes("unsupported") ||
-    normalized.includes("not a pdf")
+    code === "corrupted_pdf" ||
+    code === "empty_pdf" ||
+    code === "unsupported_document"
   ) {
-    return {
-      code: "unsupported_document",
-      message: "This document type is not supported for text extraction.",
-    };
+    return code;
   }
-
-  if (
-    normalized.includes("invalid pdf") ||
-    normalized.includes("format error") ||
-    normalized.includes("xref") ||
-    normalized.includes("corrupt")
-  ) {
-    return {
-      code: "corrupted_pdf",
-      message: "This PDF appears corrupted or unreadable.",
-    };
-  }
-
-  return {
-    code: "corrupted_pdf",
-    message: message || "This PDF appears corrupted or unreadable.",
-  };
+  return "corrupted_pdf";
 }
 
 /**
@@ -71,71 +46,53 @@ function classifyExtractionError(error: unknown): TextExtractionError {
 export async function extractTextFromPdfBytes(
   data: Uint8Array,
 ): Promise<TextExtractionResult> {
-  if (data.byteLength === 0) {
+  const extraction = await extractPagesWithPdfium(data);
+
+  if (!extraction.ok) {
+    console.error("[extract-text] PDFium error", extraction.error);
+    return {
+      ok: false,
+      error: {
+        code: mapPdfiumErrorCode(extraction.error.code),
+        message: extraction.error.message,
+      },
+    };
+  }
+
+  const { pageTexts, pageCount } = extraction;
+
+  console.error("[extract-text] 1 PDF loaded? YES");
+  console.error("[extract-text] 2 totalPages", pageCount);
+  console.error(
+    "[extract-text] 3 page[0] prefix",
+    JSON.stringify(pageTexts[0]?.slice(0, 120) ?? ""),
+  );
+
+  const finalExtracted = pageTexts
+    .map((page) => page.trim())
+    .filter((page) => page.length > 0)
+    .join("\n\n");
+
+  console.error(
+    "[extract-text] 4 final extracted string",
+    JSON.stringify(finalExtracted.slice(0, 500)),
+  );
+
+  const result = createDocumentTextResult(pageTexts, pageCount);
+
+  if (!documentTextHasContent(result)) {
     return {
       ok: false,
       error: {
         code: "empty_pdf",
-        message: "The PDF file is empty.",
+        message:
+          "No readable text was found. Scanned PDFs need OCR (not available yet).",
       },
     };
   }
 
-  // PDF files should start with "%PDF"
-  const header = String.fromCharCode(
-    data[0] ?? 0,
-    data[1] ?? 0,
-    data[2] ?? 0,
-    data[3] ?? 0,
-  );
-
-  if (header !== "%PDF") {
-    return {
-      ok: false,
-      error: {
-        code: "unsupported_document",
-        message: "This document is not a valid PDF.",
-      },
-    };
-  }
-
-  try {
-    const pdf = await getDocumentProxy(data);
-    const { totalPages, text } = await extractText(pdf, { mergePages: false });
-
-    const pageStrings = Array.isArray(text) ? text : [text];
-
-    if (totalPages <= 0 || pageStrings.length === 0) {
-      return {
-        ok: false,
-        error: {
-          code: "empty_pdf",
-          message: "The PDF has no pages to extract.",
-        },
-      };
-    }
-
-    const result = createDocumentTextResult(pageStrings, totalPages);
-
-    if (!documentTextHasContent(result)) {
-      return {
-        ok: false,
-        error: {
-          code: "empty_pdf",
-          message:
-            "No readable text was found. Scanned PDFs need OCR (not available yet).",
-        },
-      };
-    }
-
-    return {
-      ok: true,
-      data: result,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      error: classifyExtractionError(error),
-    };
-  }
+  return {
+    ok: true,
+    data: result,
+  };
 }
