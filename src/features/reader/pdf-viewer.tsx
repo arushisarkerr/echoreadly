@@ -1,0 +1,162 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+
+import { cn } from "@/utils";
+
+import type { ReaderFitMode } from "./use-reader";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+type PdfViewerProps = {
+  fileUrl: string;
+  pageNumber: number;
+  scale: number;
+  fitMode: ReaderFitMode;
+  onLoadSuccess: (numPages: number) => void;
+  onLoadError: (message: string) => void;
+  onDocumentLoadingChange: (loading: boolean) => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+};
+
+/**
+ * PDF.js page renderer with fit modes and lightweight swipe navigation.
+ */
+export function PdfViewer({
+  fileUrl,
+  pageNumber,
+  scale,
+  fitMode,
+  onLoadSuccess,
+  onLoadError,
+  onDocumentLoadingChange,
+  onPreviousPage,
+  onNextPage,
+}: PdfViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [pageAspect, setPageAspect] = useState(1.294);
+  const pointerStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      setContainerSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const pageWidth =
+    fitMode === "width"
+      ? Math.max(280, containerSize.width - 32)
+      : fitMode === "page"
+        ? Math.max(
+            240,
+            Math.min(
+              containerSize.width - 32,
+              (containerSize.height - 32) / pageAspect,
+            ),
+          )
+        : undefined;
+
+  const pageScale = fitMode === "custom" ? scale : undefined;
+
+  const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse") {
+      return;
+    }
+    pointerStartX.current = event.clientX;
+  }, []);
+
+  const handlePointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (pointerStartX.current === null || event.pointerType === "mouse") {
+        return;
+      }
+
+      const delta = event.clientX - pointerStartX.current;
+      pointerStartX.current = null;
+
+      if (Math.abs(delta) < 56) {
+        return;
+      }
+
+      if (delta < 0) {
+        onNextPage();
+      } else {
+        onPreviousPage();
+      }
+    },
+    [onNextPage, onPreviousPage],
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        "flex min-h-0 flex-1 touch-pan-y justify-center overflow-auto bg-surface-muted/40 px-4 py-6",
+      )}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => {
+        pointerStartX.current = null;
+      }}
+    >
+      <Document
+        file={fileUrl}
+        loading={null}
+        onLoadProgress={() => onDocumentLoadingChange(true)}
+        onLoadSuccess={(pdf) => {
+          onDocumentLoadingChange(false);
+          onLoadSuccess(pdf.numPages);
+        }}
+        onLoadError={(error) => {
+          onDocumentLoadingChange(false);
+          onLoadError(error.message || "Failed to render this PDF.");
+        }}
+        className="flex justify-center"
+      >
+        <Page
+          pageNumber={pageNumber}
+          width={pageWidth}
+          scale={pageScale}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          className="shadow-md"
+          loading={null}
+          onRenderSuccess={(page) => {
+            const viewport = page.getViewport({ scale: 1 });
+            if (viewport.height > 0) {
+              setPageAspect(viewport.height / viewport.width);
+            }
+          }}
+          onRenderError={(error) => {
+            onLoadError(error.message || "Failed to render this page.");
+          }}
+        />
+      </Document>
+    </div>
+  );
+}
