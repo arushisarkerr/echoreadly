@@ -1,17 +1,22 @@
 /**
  * PDFium text adapter.
  *
- * Character iteration policy (Phase 1):
- * - FPDFText_GetUnicode for each index
- * - Skip generated U+0020 (FPDFText_IsGenerated === 1)
- * - Keep generated newlines and all non-generated codepoints
- * - Never call FPDFText_GetText
- * - No regex, script heuristics, geometry, OCR, or AI repair
+ * Phase 1: skip generated U+0020; keep real Unicode + generated newlines.
+ * Phase 2: optional script-agnostic geometry spacing (see pdfium-geometry.ts).
+ * Never call FPDFText_GetText. No regex, Bangla rules, OCR, or AI repair.
  */
 
 import { assertServerRuntime } from "@/utils/server";
 
 import { withPdfium, type PdfiumApi, type PdfiumPointer } from "./pdfium-bindings";
+import {
+  assemblePageTextWithGeometry,
+  type PdfiumCharGeometry,
+} from "./pdfium-geometry";
+import {
+  resolvePdfiumGeometryOptions,
+  type PdfiumGeometryOptions,
+} from "./pdfium-geometry-options";
 
 const GENERATED_SPACE = 0x20;
 
@@ -30,6 +35,14 @@ export type PdfiumExtractResult =
   | { ok: true; pageTexts: string[]; pageCount: number }
   | { ok: false; error: PdfiumExtractError };
 
+export type PdfiumAssembleMode = "phase1" | "phase2";
+
+export type PdfiumExtractOptions = {
+  /** Defaults to phase2 (geometry on). Benchmarks may force phase1. */
+  mode?: PdfiumAssembleMode;
+  geometry?: Partial<PdfiumGeometryOptions>;
+};
+
 function appendCodePoint(parts: string[], codePoint: number): void {
   if (codePoint === 0) {
     return;
@@ -38,7 +51,7 @@ function appendCodePoint(parts: string[], codePoint: number): void {
 }
 
 /**
- * Build page text from per-character Unicode, skipping generated spaces.
+ * Phase 1 assembly: skip generated spaces only (no geometry).
  */
 export function assemblePageTextFromChars(
   getUnicode: (index: number) => number,
@@ -51,8 +64,6 @@ export function assemblePageTextFromChars(
     const codePoint = getUnicode(index) >>> 0;
     const generated = isGenerated(index);
 
-    // Skip only PDFium-synthesized spaces. Keep generated newlines and
-    // every real (non-generated) Unicode character.
     if (generated === 1 && codePoint === GENERATED_SPACE) {
       continue;
     }
@@ -63,9 +74,38 @@ export function assemblePageTextFromChars(
   return parts.join("");
 }
 
+function readCharGeometry(
+  native: PdfiumApi,
+  textPage: PdfiumPointer,
+  index: number,
+): PdfiumCharGeometry {
+  const left = new Float64Array(1);
+  const right = new Float64Array(1);
+  const bottom = new Float64Array(1);
+  const top = new Float64Array(1);
+  const originX = new Float64Array(1);
+  const originY = new Float64Array(1);
+
+  native.FPDFText_GetCharBox(textPage, index, left, right, bottom, top);
+  native.FPDFText_GetCharOrigin(textPage, index, originX, originY);
+
+  return {
+    codePoint: native.FPDFText_GetUnicode(textPage, index) >>> 0,
+    generated: native.FPDFText_IsGenerated(textPage, index),
+    originX: originX[0] ?? 0,
+    originY: originY[0] ?? 0,
+    left: left[0] ?? 0,
+    right: right[0] ?? 0,
+    bottom: bottom[0] ?? 0,
+    top: top[0] ?? 0,
+    fontSize: native.FPDFText_GetFontSize(textPage, index) || 1,
+  };
+}
+
 function extractPageText(
   native: PdfiumApi,
   page: PdfiumPointer,
+  options: PdfiumExtractOptions,
 ): string {
   const textPage = native.FPDFText_LoadPage(page);
   if (!textPage) {
@@ -78,21 +118,33 @@ function extractPageText(
       return "";
     }
 
-    return assemblePageTextFromChars(
-      (index) => native.FPDFText_GetUnicode(textPage, index),
-      (index) => native.FPDFText_IsGenerated(textPage, index),
-      charCount,
-    );
+    const mode = options.mode ?? "phase2";
+    if (mode === "phase1") {
+      return assemblePageTextFromChars(
+        (index) => native.FPDFText_GetUnicode(textPage, index),
+        (index) => native.FPDFText_IsGenerated(textPage, index),
+        charCount,
+      );
+    }
+
+    const chars: PdfiumCharGeometry[] = [];
+    for (let index = 0; index < charCount; index += 1) {
+      chars.push(readCharGeometry(native, textPage, index));
+    }
+    return assemblePageTextWithGeometry(chars, options.geometry);
   } finally {
     native.FPDFText_ClosePage(textPage);
   }
 }
 
-function extractAllPages(native: PdfiumApi, data: Uint8Array): {
+function extractAllPages(
+  native: PdfiumApi,
+  data: Uint8Array,
+  options: PdfiumExtractOptions,
+): {
   pageTexts: string[];
   pageCount: number;
 } {
-  // Keep `data` alive for the lifetime of the document handle.
   const doc = native.FPDF_LoadMemDocument(data, data.byteLength, null);
   if (!doc) {
     throw Object.assign(new Error("FPDF_LoadMemDocument failed"), {
@@ -117,7 +169,7 @@ function extractAllPages(native: PdfiumApi, data: Uint8Array): {
         continue;
       }
       try {
-        pageTexts.push(extractPageText(native, page));
+        pageTexts.push(extractPageText(native, page, options));
       } finally {
         native.FPDF_ClosePage(page);
       }
@@ -134,6 +186,7 @@ function extractAllPages(native: PdfiumApi, data: Uint8Array): {
  */
 export async function extractPagesWithPdfium(
   data: Uint8Array,
+  options: PdfiumExtractOptions = {},
 ): Promise<PdfiumExtractResult> {
   assertServerRuntime("PDFium adapter");
 
@@ -164,11 +217,14 @@ export async function extractPagesWithPdfium(
     };
   }
 
-  // Copy so callers retain ownership; native load reads this buffer while open.
   const bytes = Uint8Array.from(data);
+  // Touch options early so invalid env is visible consistently.
+  resolvePdfiumGeometryOptions(options.geometry);
 
   try {
-    const result = await withPdfium((native) => extractAllPages(native, bytes));
+    const result = await withPdfium((native) =>
+      extractAllPages(native, bytes, options),
+    );
     return { ok: true, ...result };
   } catch (error) {
     const code =

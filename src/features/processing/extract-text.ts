@@ -49,7 +49,6 @@ export async function extractTextFromPdfBytes(
   const extraction = await extractPagesWithPdfium(data);
 
   if (!extraction.ok) {
-    console.error("[extract-text] PDFium error", extraction.error);
     return {
       ok: false,
       error: {
@@ -60,24 +59,6 @@ export async function extractTextFromPdfBytes(
   }
 
   const { pageTexts, pageCount } = extraction;
-
-  console.error("[extract-text] 1 PDF loaded? YES");
-  console.error("[extract-text] 2 totalPages", pageCount);
-  console.error(
-    "[extract-text] 3 page[0] prefix",
-    JSON.stringify(pageTexts[0]?.slice(0, 120) ?? ""),
-  );
-
-  const finalExtracted = pageTexts
-    .map((page) => page.trim())
-    .filter((page) => page.length > 0)
-    .join("\n\n");
-
-  console.error(
-    "[extract-text] 4 final extracted string",
-    JSON.stringify(finalExtracted.slice(0, 500)),
-  );
-
   const result = createDocumentTextResult(pageTexts, pageCount);
 
   if (!documentTextHasContent(result)) {

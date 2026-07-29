@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bench:pdfium-phase2": "npx tsx scripts/pdfium-phase2-benchmark.ts"
   },
   "dependencies": {
     "@google/genai": "^2.14.0",

@@ -28,6 +28,21 @@ export type PdfiumApi = {
   FPDFText_CountChars: (textPage: PdfiumPointer) => number;
   FPDFText_GetUnicode: (textPage: PdfiumPointer, index: number) => number;
   FPDFText_IsGenerated: (textPage: PdfiumPointer, index: number) => number;
+  FPDFText_GetFontSize: (textPage: PdfiumPointer, index: number) => number;
+  FPDFText_GetCharBox: (
+    textPage: PdfiumPointer,
+    index: number,
+    left: Float64Array,
+    right: Float64Array,
+    bottom: Float64Array,
+    top: Float64Array,
+  ) => number;
+  FPDFText_GetCharOrigin: (
+    textPage: PdfiumPointer,
+    index: number,
+    x: Float64Array,
+    y: Float64Array,
+  ) => number;
 };
 
 let api: PdfiumApi | null = null;
@@ -59,6 +74,15 @@ function loadApi(): PdfiumApi {
     ),
     FPDFText_IsGenerated: lib.func(
       "int FPDFText_IsGenerated(void *text_page, int index)",
+    ),
+    FPDFText_GetFontSize: lib.func(
+      "double FPDFText_GetFontSize(void *text_page, int index)",
+    ),
+    FPDFText_GetCharBox: lib.func(
+      "int FPDFText_GetCharBox(void *text_page, int index, _Out_ double *left, _Out_ double *right, _Out_ double *bottom, _Out_ double *top)",
+    ),
+    FPDFText_GetCharOrigin: lib.func(
+      "int FPDFText_GetCharOrigin(void *text_page, int index, _Out_ double *x, _Out_ double *y)",
     ),
   };
 
