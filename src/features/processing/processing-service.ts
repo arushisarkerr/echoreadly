@@ -14,6 +14,7 @@ import {
   type SummaryResult,
   type SummaryType,
 } from "@/features/ai";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import {
   requireOwnershipContext,
   type OwnershipContext,
@@ -708,6 +709,18 @@ export async function ensureDocumentProcessed(
   }
 
   const document = documentsById.get(extracted.data.id) ?? extracted.data;
+
+  trackAnalyticsEventAsync({
+    userId,
+    eventName: "document_processed",
+    documentId: document.id,
+    storagePath: document.storagePath,
+    label: `Processed ${document.originalFileName}`,
+    metadata: {
+      pageCount: document.pageCount,
+      chunkCount: chunked.data.chunkCount,
+    },
+  });
 
   return {
     ok: true,

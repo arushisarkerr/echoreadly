@@ -3,6 +3,7 @@
  * before the client uploads directly to Supabase Storage.
  */
 
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import { logger } from "@/lib/logger";
 import {
   recordUsage,
@@ -82,6 +83,17 @@ export async function POST(request: Request) {
       userId: auth.user.id,
     }, error);
   }
+
+  trackAnalyticsEventAsync({
+    userId: auth.user.id,
+    eventName: "document_uploaded",
+    label: `Uploaded ${meta.data.fileName}`,
+    metadata: {
+      fileName: meta.data.fileName,
+      fileSize: meta.data.fileSize,
+      format: meta.data.format,
+    },
+  });
 
   return apiSuccess({
     allowed: true as const,

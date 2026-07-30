@@ -12,6 +12,7 @@ import {
 } from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
 import { translateDocumentContent } from "@/features/translation/translate-service";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import {
   recordUsage,
   requireFeatureAndQuota,
@@ -353,6 +354,16 @@ export async function POST(request: Request) {
         userId: auth.user.id,
       }, error);
     }
+
+    trackAnalyticsEventAsync({
+      userId: auth.user.id,
+      eventName: "tts_generated",
+      metadata: {
+        source: source.data,
+        voice,
+        characterCount: synthesized.data.characterCount,
+      },
+    });
 
     return apiBinary(Buffer.from(synthesized.data.audio), {
       status: 200,

@@ -3,6 +3,7 @@
  */
 
 import { createCheckoutSession } from "@/features/billing/checkout";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import { isBillingInterval } from "@/constants";
 import { logger } from "@/lib/logger";
 import {
@@ -83,6 +84,13 @@ export async function POST(request: Request) {
       500,
     );
   }
+
+  trackAnalyticsEventAsync({
+    userId: auth.user.id,
+    eventName: "checkout_started",
+    label: `Checkout started (${body.interval})`,
+    metadata: { interval: body.interval, planId: "pro" },
+  });
 
   return apiSuccess(result.data);
 }

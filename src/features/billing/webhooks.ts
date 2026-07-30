@@ -5,6 +5,7 @@
 import type Stripe from "stripe";
 
 import { logger } from "@/lib/logger";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 
 import {
   claimWebhookEvent,
@@ -165,6 +166,18 @@ async function syncSubscriptionFromStripe(
   });
 
   invalidateEntitlementCache(userId);
+
+  trackAnalyticsEventAsync({
+    userId,
+    eventName: "subscription_updated",
+    label: `Subscription ${status}`,
+    activity: true,
+    metadata: {
+      status,
+      planId,
+      stripeSubscriptionId: subscription.id,
+    },
+  });
 }
 
 async function handleCheckoutCompleted(

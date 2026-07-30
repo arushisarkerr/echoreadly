@@ -2,6 +2,7 @@
  * Summarize a processed document — JSON for cache hits, SSE for fresh generation.
  */
 
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import { logger } from "@/lib/logger";
 import {
   requireFeatureAndQuota,
@@ -142,6 +143,13 @@ export async function POST(request: Request) {
         );
       }
 
+      trackAnalyticsEventAsync({
+        userId: auth.user.id,
+        eventName: "summary_generated",
+        storagePath: storagePath.data,
+        metadata: { summaryType: summaryType.data, mode: "json" },
+      });
+
       return apiSuccess(result.data);
     }
 
@@ -182,6 +190,15 @@ export async function POST(request: Request) {
           error,
         );
       }
+      trackAnalyticsEventAsync({
+        userId: auth.user.id,
+        eventName: "summary_generated",
+        storagePath: storagePath.data,
+        metadata: {
+          summaryType: summaryType.data,
+          mode: "cached",
+        },
+      });
       return apiSuccess(streamed.outcome.data);
     }
 

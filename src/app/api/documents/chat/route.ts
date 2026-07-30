@@ -23,6 +23,7 @@ import {
   buildChatInstructions,
   formatChatContext,
 } from "@/features/chat/prompts";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import { ensureDocumentProcessed } from "@/features/processing";
 import {
   recordUsage,
@@ -246,6 +247,13 @@ export async function POST(request: Request) {
         );
       }
 
+      trackAnalyticsEventAsync({
+        userId: auth.user.id,
+        eventName: "chat_message",
+        storagePath: storagePath.data,
+        metadata: { mode: "json" },
+      });
+
       return apiSuccess({
         content: cited.answer,
         pages: isNotFound ? [] : cited.pages,
@@ -315,6 +323,20 @@ export async function POST(request: Request) {
             error,
           );
         }
+
+        trackAnalyticsEventAsync({
+          userId: auth.user.id,
+          eventName: "chat_message",
+          storagePath: storagePath.data,
+          metadata: { mode: "stream" },
+        });
+        trackAnalyticsEventAsync({
+          userId: auth.user.id,
+          eventName: "streaming_ai",
+          activity: false,
+          storagePath: storagePath.data,
+          metadata: { feature: "chat" },
+        });
 
         emit("done", {
           content: cited.answer,

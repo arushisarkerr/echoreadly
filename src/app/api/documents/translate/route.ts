@@ -7,6 +7,7 @@ import {
   translateDocumentContentStreaming,
 } from "@/features/translation/translate-service";
 import type { TranslateRequestInput } from "@/features/translation/types";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import {
   recordUsage,
   requireFeatureAndQuota,
@@ -254,6 +255,15 @@ export async function POST(request: Request) {
           userId: auth.user.id,
         }, error);
       }
+
+      trackAnalyticsEventAsync({
+        userId: auth.user.id,
+        eventName: "translation_created",
+        metadata: {
+          scope: scope.data,
+          mode: "json",
+        },
+      });
     }
 
     return apiSuccess(translated.data);

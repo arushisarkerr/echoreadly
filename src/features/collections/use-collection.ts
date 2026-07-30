@@ -11,6 +11,7 @@ import {
   renameCollection,
 } from "./collections-service";
 import type { CollectionMember, CollectionSummary } from "./types";
+import { reportCollectionAnalytics } from "@/features/analytics";
 
 type UseCollectionState = {
   collection: CollectionSummary | null;
@@ -166,6 +167,11 @@ export function useCollection(collectionId: string): UseCollectionState {
               }
             : current,
         );
+        reportCollectionAnalytics({
+          eventName: "collection_item_added",
+          collectionId,
+          storagePath: result.data.storagePath,
+        });
       }
       return { ok: true as const };
     },

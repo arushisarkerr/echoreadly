@@ -20,7 +20,8 @@ export type RateLimitBucket =
   | "delete"
   | "export"
   | "translate"
-  | "billing";
+  | "billing"
+  | "analytics";
 
 export type RateLimitConfig = {
   /** Max requests per window for an authenticated user. */
@@ -70,6 +71,11 @@ export const RATE_LIMITS: Record<RateLimitBucket, RateLimitConfig> = {
   billing: {
     userLimit: 20,
     ipLimit: 40,
+    windowMs: 60 * 60 * 1000,
+  },
+  analytics: {
+    userLimit: 60,
+    ipLimit: 120,
     windowMs: 60 * 60 * 1000,
   },
 };

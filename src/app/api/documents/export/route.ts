@@ -7,6 +7,7 @@ import {
   listOwnedAudioExports,
 } from "@/features/export/export-service";
 import type { CreateAudioExportInput } from "@/features/export/types";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import {
   recordUsage,
   requireFeatureAndQuota,
@@ -236,6 +237,19 @@ export async function POST(request: Request) {
           userId: auth.user.id,
         }, error);
       }
+
+      trackAnalyticsEventAsync({
+        userId: auth.user.id,
+        eventName: "export_created",
+        storagePath:
+          payload.source === "page" ? payload.storagePath : null,
+        metadata: {
+          source: source.data,
+          cached: false,
+          documentId:
+            payload.source === "summary" ? payload.documentId : undefined,
+        },
+      });
     }
 
     return apiSuccess(exported.data);

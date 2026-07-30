@@ -98,6 +98,14 @@ function VoiceIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function AnalyticsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 19V9M10 19V5M16 19v-7M20 19H3" />
+    </Icon>
+  );
+}
+
 function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
@@ -135,6 +143,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { label: "Listen", href: ROUTES.listen, icon: ListenIcon },
   { label: "Collections", href: ROUTES.collections, icon: CollectionsIcon },
   { label: "History", href: ROUTES.history, icon: HistoryIcon },
+  { label: "Analytics", href: ROUTES.analytics, icon: AnalyticsIcon },
   { label: "Exports", href: ROUTES.exports, icon: ExportIcon },
   { label: "Voice Library", href: ROUTES.voices, icon: VoiceIcon },
   { label: "Settings", href: ROUTES.settings, icon: SettingsIcon },

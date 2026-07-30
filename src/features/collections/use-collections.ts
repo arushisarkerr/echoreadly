@@ -9,6 +9,7 @@ import {
   renameCollection,
 } from "./collections-service";
 import type { CollectionSummary } from "./types";
+import { reportCollectionAnalytics } from "@/features/analytics";
 
 type UseCollectionsState = {
   collections: CollectionSummary[];
@@ -95,6 +96,11 @@ export function useCollections(): UseCollectionsState {
       ),
     );
     setError(null);
+    reportCollectionAnalytics({
+      eventName: "collection_created",
+      collectionId: result.data.id,
+      label: `Collection: ${result.data.name}`,
+    });
     return { ok: true as const };
   }, []);
 

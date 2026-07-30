@@ -169,6 +169,26 @@ type UsageCountersRow = {
   updated_at: string;
 };
 
+type AnalyticsDailyRow = {
+  user_id: string;
+  day: string;
+  event_name: string;
+  count: number;
+  total_value: number;
+  updated_at: string;
+};
+
+type AnalyticsActivityRow = {
+  id: string;
+  user_id: string;
+  event_name: string;
+  label: string;
+  document_id: string | null;
+  storage_path: string | null;
+  metadata: Json;
+  created_at: string;
+};
+
 /**
  * Supabase database schema for EchoReadly persistence tables.
  */
@@ -344,6 +364,26 @@ export type Database = {
         Update: Partial<UsageCountersRow>;
         Relationships: [];
       };
+      analytics_daily: {
+        Row: AnalyticsDailyRow;
+        Insert: Partial<AnalyticsDailyRow> & {
+          user_id: string;
+          day: string;
+          event_name: string;
+        };
+        Update: Partial<AnalyticsDailyRow>;
+        Relationships: [];
+      };
+      analytics_activity: {
+        Row: AnalyticsActivityRow;
+        Insert: Partial<AnalyticsActivityRow> & {
+          user_id: string;
+          event_name: string;
+          label: string;
+        };
+        Update: Partial<AnalyticsActivityRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -353,6 +393,16 @@ export type Database = {
           p_metric: string;
           p_period_start: string;
           p_amount?: number;
+        };
+        Returns: number;
+      };
+      increment_analytics_daily: {
+        Args: {
+          p_user_id: string;
+          p_day: string;
+          p_event_name: string;
+          p_amount?: number;
+          p_value?: number;
         };
         Returns: number;
       };

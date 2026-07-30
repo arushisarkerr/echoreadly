@@ -62,6 +62,17 @@ export {
   type UsageMetric,
 } from "./plans";
 export {
+  ANALYTICS_EVENT_NAMES,
+  ANALYTICS_RANGE_PRESETS,
+  addUtcDays,
+  eventLabel,
+  isAnalyticsEventName,
+  resolveAnalyticsRange,
+  utcDayString,
+  type AnalyticsEventName,
+  type AnalyticsRangePreset,
+} from "./analytics";
+export {
   isAuthPagePath,
   isProtectedPath,
   PROTECTED_PATH_PREFIXES,

@@ -30,6 +30,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type { BillingEntitlement } from "@/features/billing/types";
 import { recordUsage } from "@/features/billing/gate";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 
 function getFileNameFromStoragePath(storagePath: string): string {
   const segments = storagePath.split("/");
@@ -228,6 +229,25 @@ export async function summarizeDocumentStreaming(
           error,
         );
       }
+
+      trackAnalyticsEventAsync({
+        userId: input.userId,
+        eventName: "summary_generated",
+        documentId,
+        storagePath: input.storagePath,
+        metadata: {
+          summaryType: input.summaryType,
+          mode: "stream",
+        },
+      });
+      trackAnalyticsEventAsync({
+        userId: input.userId,
+        eventName: "streaming_ai",
+        activity: false,
+        documentId,
+        storagePath: input.storagePath,
+        metadata: { feature: "summary" },
+      });
 
       emit("done", result);
     },

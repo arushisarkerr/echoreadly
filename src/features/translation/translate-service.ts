@@ -18,6 +18,7 @@ import { createSseResponse } from "@/features/ai/sse";
 import { streamTextWithFallback } from "@/features/ai/stream-text";
 import { recordUsage } from "@/features/billing/gate";
 import type { BillingEntitlement } from "@/features/billing/types";
+import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
 import {
   getDocumentById,
   getDocumentSummaryByType,
@@ -553,6 +554,24 @@ export async function translateDocumentContentStreaming(
             error,
           );
         }
+
+        trackAnalyticsEventAsync({
+          userId: args.userId,
+          eventName: "translation_created",
+          documentId,
+          metadata: {
+            scope: args.input.scope,
+            mode: "stream",
+            targetLanguage: args.input.targetLanguage,
+          },
+        });
+        trackAnalyticsEventAsync({
+          userId: args.userId,
+          eventName: "streaming_ai",
+          activity: false,
+          documentId,
+          metadata: { feature: "translation" },
+        });
 
         emit("done", {
           translationId: saved.data.id,

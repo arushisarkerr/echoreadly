@@ -3,6 +3,7 @@
  */
 
 export { AddContentWorkspace } from "./add-content-workspace";
+export { AnalyticsWorkspace } from "@/features/analytics";
 export { CollectionsWorkspace } from "@/features/collections";
 export { CommandDock } from "./command-dock";
 export { ExportsWorkspace } from "@/features/export";
