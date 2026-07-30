@@ -5,12 +5,14 @@
 import { randomUUID } from "crypto";
 
 import { serverEnv } from "@/config";
+import type { TargetLanguageCode } from "@/constants";
 import {
   getDocumentById,
   getDocumentSummaryByType,
   normalizeStoragePath,
 } from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
+import { translateDocumentContent } from "@/features/translation/translate-service";
 import {
   createOpenAiTtsProvider,
   joinPageChunkText,
@@ -55,22 +57,32 @@ function sanitizeBaseName(fileName: string): string {
     .slice(0, 80) || "document";
 }
 
+function normalizeExportTargetLanguage(
+  value: TargetLanguageCode | undefined,
+): string {
+  return value ?? "";
+}
+
 export function buildExportDownloadFileName(input: {
   originalFileName: string | null | undefined;
   source: "page" | "summary";
   pageNumber: number | null;
   summaryType: string | null;
   voice: string;
+  targetLanguage?: string | null;
 }): string {
   const base = sanitizeBaseName(
     input.originalFileName || "document.pdf",
   );
+  const languageSuffix = input.targetLanguage
+    ? `-${input.targetLanguage}`
+    : "";
 
   if (input.source === "page") {
-    return `${base}-page-${input.pageNumber ?? 1}-${input.voice}.mp3`;
+    return `${base}-page-${input.pageNumber ?? 1}${languageSuffix}-${input.voice}.mp3`;
   }
 
-  return `${base}-summary-${input.summaryType ?? "short"}-${input.voice}.mp3`;
+  return `${base}-summary-${input.summaryType ?? "short"}${languageSuffix}-${input.voice}.mp3`;
 }
 
 async function resolveNarrationText(
@@ -83,8 +95,11 @@ async function resolveNarrationText(
     pageNumber: number | null;
     summaryType: "short" | "detailed" | "bullet" | null;
     originalFileName: string | null;
+    targetLanguage: string;
   }>
 > {
+  const targetLanguage = normalizeExportTargetLanguage(input.targetLanguage);
+
   if (input.source === "summary") {
     const document = await getDocumentById(input.documentId, userId);
 
@@ -100,25 +115,50 @@ async function resolveNarrationText(
       };
     }
 
-    const summary = await getDocumentSummaryByType(
-      input.documentId,
-      userId,
-      input.summaryType,
-    );
+    let text = "";
 
-    if (!summary.ok) {
-      return { ok: false, code: "INTERNAL", error: summary.error };
+    if (input.targetLanguage) {
+      const translated = await translateDocumentContent(
+        {
+          scope: "summary",
+          documentId: input.documentId,
+          summaryType: input.summaryType,
+          targetLanguage: input.targetLanguage,
+        },
+        userId,
+      );
+
+      if (!translated.ok) {
+        return {
+          ok: false,
+          code: translated.code ?? "INTERNAL",
+          error: translated.error,
+        };
+      }
+
+      text = translated.data.translatedText.trim();
+    } else {
+      const summary = await getDocumentSummaryByType(
+        input.documentId,
+        userId,
+        input.summaryType,
+      );
+
+      if (!summary.ok) {
+        return { ok: false, code: "INTERNAL", error: summary.error };
+      }
+
+      if (!summary.data) {
+        return {
+          ok: false,
+          code: "NOT_FOUND",
+          error: "Summary is not available.",
+        };
+      }
+
+      text = summary.data.content.trim();
     }
 
-    if (!summary.data) {
-      return {
-        ok: false,
-        code: "NOT_FOUND",
-        error: "Summary is not available.",
-      };
-    }
-
-    let text = summary.data.content.trim();
     if (!text) {
       return {
         ok: false,
@@ -139,6 +179,7 @@ async function resolveNarrationText(
         pageNumber: null,
         summaryType: input.summaryType,
         originalFileName: document.data.original_file_name,
+        targetLanguage,
       },
     };
   }
@@ -156,19 +197,51 @@ async function resolveNarrationText(
     input.originalFileName?.trim() ||
     getFileNameFromStoragePath(input.storagePath);
 
-  const processed = await ensureDocumentProcessed({
-    storagePath: input.storagePath,
-    originalFileName,
-  });
+  let text = "";
+  let documentStoragePath = normalizeStoragePath(input.storagePath);
+  let resolvedOriginalFileName: string | null = originalFileName;
 
-  if (!processed.ok) {
-    return { ok: false, code: "INTERNAL", error: processed.error };
+  if (input.targetLanguage) {
+    const translated = await translateDocumentContent(
+      {
+        scope: "page",
+        storagePath: input.storagePath,
+        originalFileName,
+        pageNumber: input.pageNumber,
+        targetLanguage: input.targetLanguage,
+      },
+      userId,
+    );
+
+    if (!translated.ok) {
+      return {
+        ok: false,
+        code: translated.code ?? "INTERNAL",
+        error: translated.error,
+      };
+    }
+
+    text = translated.data.translatedText.trim();
+  } else {
+    const processed = await ensureDocumentProcessed({
+      storagePath: input.storagePath,
+      originalFileName,
+    });
+
+    if (!processed.ok) {
+      return { ok: false, code: "INTERNAL", error: processed.error };
+    }
+
+    text = joinPageChunkText(
+      processed.data.chunks.chunks,
+      input.pageNumber,
+    );
+    documentStoragePath = normalizeStoragePath(
+      processed.data.document.storagePath || input.storagePath,
+    );
+    resolvedOriginalFileName =
+      processed.data.document.originalFileName || originalFileName;
   }
-
-  let text = joinPageChunkText(
-    processed.data.chunks.chunks,
-    input.pageNumber,
-  );
 
   if (!text.trim()) {
     return {
@@ -186,13 +259,11 @@ async function resolveNarrationText(
     ok: true,
     data: {
       text,
-      documentStoragePath: normalizeStoragePath(
-        processed.data.document.storagePath || input.storagePath,
-      ),
+      documentStoragePath,
       pageNumber: input.pageNumber,
       summaryType: null,
-      originalFileName:
-        processed.data.document.originalFileName || originalFileName,
+      originalFileName: resolvedOriginalFileName,
+      targetLanguage,
     },
   };
 }
@@ -219,6 +290,7 @@ export async function createOrReuseAudioExport(
       pageNumber,
       summaryType,
       originalFileName,
+      targetLanguage,
     } = narration.data;
 
     const existing = await findAudioExport(
@@ -229,6 +301,7 @@ export async function createOrReuseAudioExport(
         pageNumber,
         summaryType,
         voice,
+        targetLanguage,
       },
       client,
     );
@@ -252,6 +325,7 @@ export async function createOrReuseAudioExport(
           pageNumber: existing.data.page_number,
           summaryType: existing.data.summary_type,
           voice: existing.data.voice,
+          targetLanguage: existing.data.target_language,
         });
 
         return {
@@ -270,6 +344,7 @@ export async function createOrReuseAudioExport(
             expiresIn: signed.expiresIn,
             pageNumber: existing.data.page_number,
             summaryType: existing.data.summary_type,
+            targetLanguage: existing.data.target_language ?? "",
             documentStoragePath: existing.data.document_storage_path,
             originalFileName: existing.data.original_file_name,
             updatedAt: existing.data.updated_at,
@@ -320,6 +395,7 @@ export async function createOrReuseAudioExport(
         mimeType: synthesized.data.mimeType,
         byteSize: uploaded.byteSize,
         originalFileName,
+        targetLanguage,
       },
       client,
     );
@@ -339,6 +415,7 @@ export async function createOrReuseAudioExport(
       pageNumber: saved.data.page_number,
       summaryType: saved.data.summary_type,
       voice: saved.data.voice,
+      targetLanguage: saved.data.target_language,
     });
 
     return {
@@ -357,6 +434,7 @@ export async function createOrReuseAudioExport(
         expiresIn: signed.expiresIn,
         pageNumber: saved.data.page_number,
         summaryType: saved.data.summary_type,
+        targetLanguage: saved.data.target_language ?? "",
         documentStoragePath: saved.data.document_storage_path,
         originalFileName: saved.data.original_file_name,
         updatedAt: saved.data.updated_at,
@@ -408,6 +486,7 @@ export async function listOwnedAudioExports(
           pageNumber: row.page_number,
           summaryType: row.summary_type,
           voice: row.voice,
+          targetLanguage: row.target_language,
         }),
         byteSize: row.byte_size,
         voice: row.voice,
@@ -415,6 +494,7 @@ export async function listOwnedAudioExports(
         expiresIn: signed.expiresIn,
         pageNumber: row.page_number,
         summaryType: row.summary_type,
+        targetLanguage: row.target_language ?? "",
         documentStoragePath: row.document_storage_path,
         originalFileName: row.original_file_name,
         updatedAt: row.updated_at,

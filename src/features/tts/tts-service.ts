@@ -4,6 +4,7 @@
 
 import { getApiErrorMessage } from "@/utils";
 
+import type { TargetLanguageCode } from "@/constants";
 import type { SummaryType } from "@/features/ai";
 
 import type { TtsSource } from "./types";
@@ -13,12 +14,14 @@ export type TtsRequestPayload =
       source: "summary";
       documentId: string;
       summaryType: SummaryType;
+      targetLanguage?: TargetLanguageCode;
     }
   | {
       source: "page";
       storagePath: string;
       pageNumber: number;
       originalFileName?: string;
+      targetLanguage?: TargetLanguageCode;
     };
 
 export type TtsServiceResult =

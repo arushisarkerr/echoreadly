@@ -4,6 +4,7 @@
 
 import { getApiErrorMessage } from "@/utils";
 
+import type { TargetLanguageCode } from "@/constants";
 import type { SummaryType } from "@/features/ai";
 
 import type {
@@ -119,10 +120,12 @@ export type PageExportPayload = {
   pageNumber: number;
   originalFileName?: string;
   regenerate?: boolean;
+  targetLanguage?: TargetLanguageCode;
 };
 
 export type SummaryExportPayload = {
   documentId: string;
   summaryType: SummaryType;
   regenerate?: boolean;
+  targetLanguage?: TargetLanguageCode;
 };

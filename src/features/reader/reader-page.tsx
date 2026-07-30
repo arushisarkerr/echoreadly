@@ -353,6 +353,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
           <SummaryPanel
             storagePath={storagePath}
             fileName={reader.fileName}
+            pageNumber={reader.pageNumber}
             open={summaryOpen}
             onClose={() => {
               setSummaryOpen(false);
@@ -368,6 +369,9 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
               }
               void tts.listenSummary(input, { seekTo });
             }}
+            onListenPageTranslated={(input) => {
+              void tts.listenPage(input);
+            }}
             exportDisabled={
               summaryExport.isExporting || pageExport.isExporting
             }
@@ -376,6 +380,9 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
             exportFileName={summaryExport.lastFileName}
             onExportSummary={(input) => {
               void summaryExport.exportSummary(input);
+            }}
+            onExportPageTranslated={(input) => {
+              void pageExport.exportPage(input);
             }}
           />
         </div>

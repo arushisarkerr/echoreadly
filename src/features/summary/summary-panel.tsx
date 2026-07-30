@@ -9,9 +9,11 @@ import {
 } from "react";
 
 import { CloseIcon } from "@/components/icons";
+import type { TargetLanguageCode } from "@/constants";
 import { cn } from "@/utils";
 import type { SummaryType } from "@/features/ai";
 import { ChatPanel } from "@/features/chat";
+import { TranslationPanel } from "@/features/translation";
 
 import { SummaryButtons } from "./summary-buttons";
 import { SummaryContent } from "./summary-content";
@@ -20,12 +22,20 @@ import { useSummary } from "./use-summary";
 type SummaryPanelProps = {
   storagePath: string;
   fileName: string;
+  pageNumber: number;
   open: boolean;
   onClose: () => void;
   listenDisabled?: boolean;
   onListenSummary?: (input: {
     documentId: string;
     summaryType: SummaryType;
+    targetLanguage?: TargetLanguageCode;
+  }) => void;
+  onListenPageTranslated?: (input: {
+    storagePath: string;
+    pageNumber: number;
+    originalFileName?: string;
+    targetLanguage: TargetLanguageCode;
   }) => void;
   exportDisabled?: boolean;
   exportStatus?: "idle" | "exporting" | "success" | "error";
@@ -34,28 +44,40 @@ type SummaryPanelProps = {
   onExportSummary?: (input: {
     documentId: string;
     summaryType: SummaryType;
+    targetLanguage?: TargetLanguageCode;
+  }) => void;
+  onExportPageTranslated?: (input: {
+    storagePath: string;
+    pageNumber: number;
+    originalFileName?: string;
+    targetLanguage: TargetLanguageCode;
   }) => void;
 };
 
-type StudioTab = "summary" | "chat";
+type StudioTab = "summary" | "chat" | "translate";
+
+const TAB_ORDER: StudioTab[] = ["summary", "chat", "translate"];
 
 /**
  * AI Summary panel for the PDF reader.
  * Desktop: collapsible right sidebar. Mobile: bottom sheet drawer.
- * Live tabs: Summary + Chat only.
+ * Live tabs: Summary + Chat + Translate.
  */
 export function SummaryPanel({
   storagePath,
   fileName,
+  pageNumber,
   open,
   onClose,
   listenDisabled = false,
   onListenSummary,
+  onListenPageTranslated,
   exportDisabled = false,
   exportStatus = "idle",
   exportError = null,
   exportFileName = null,
   onExportSummary,
+  onExportPageTranslated,
 }: SummaryPanelProps) {
   const summary = useSummary({ storagePath, fileName });
   const isLoading = summary.status === "loading";
@@ -64,8 +86,10 @@ export function SummaryPanel({
   const titleId = useId();
   const summaryTabId = useId();
   const chatTabId = useId();
+  const translateTabId = useId();
   const summaryPanelId = useId();
   const chatPanelId = useId();
+  const translatePanelId = useId();
 
   useEffect(() => {
     if (!open) {
@@ -101,7 +125,14 @@ export function SummaryPanel({
       return;
     }
     event.preventDefault();
-    setActiveTab((current) => (current === "summary" ? "chat" : "summary"));
+    setActiveTab((current) => {
+      const index = TAB_ORDER.indexOf(current);
+      const next =
+        event.key === "ArrowRight"
+          ? TAB_ORDER[(index + 1) % TAB_ORDER.length]!
+          : TAB_ORDER[(index - 1 + TAB_ORDER.length) % TAB_ORDER.length]!;
+      return next;
+    });
   }
 
   const panelBody = (
@@ -115,11 +146,11 @@ export function SummaryPanel({
             id={titleId}
             className="mt-1 font-display text-lg font-semibold tracking-tight text-foreground"
           >
-            Summary & chat
+            Summary, chat & translate
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Live tools for this document. Generate a summary or ask questions —
-            nothing runs until you choose.
+            Live tools for this document. Generate a summary, ask questions, or
+            translate — nothing runs until you choose.
           </p>
         </div>
 
@@ -153,6 +184,13 @@ export function SummaryPanel({
           selected={activeTab === "chat"}
           onSelect={() => setActiveTab("chat")}
           label="Chat"
+        />
+        <TabButton
+          id={translateTabId}
+          controls={translatePanelId}
+          selected={activeTab === "translate"}
+          onSelect={() => setActiveTab("translate")}
+          label="Translate"
         />
       </div>
 
@@ -229,7 +267,7 @@ export function SummaryPanel({
             />
           </div>
         </div>
-      ) : (
+      ) : activeTab === "chat" ? (
         <div
           id={chatPanelId}
           role="tabpanel"
@@ -237,6 +275,68 @@ export function SummaryPanel({
           className="min-h-0 flex-1 overflow-hidden px-4 py-4"
         >
           <ChatPanel storagePath={storagePath} fileName={fileName} />
+        </div>
+      ) : (
+        <div
+          id={translatePanelId}
+          role="tabpanel"
+          aria-labelledby={translateTabId}
+          className="min-h-0 flex-1 overflow-hidden"
+        >
+          <TranslationPanel
+            storagePath={storagePath}
+            fileName={fileName}
+            pageNumber={pageNumber}
+            summaryDocumentId={summary.summary?.documentId ?? null}
+            listenDisabled={listenDisabled}
+            exportDisabled={exportDisabled}
+            onListenTranslated={(input) => {
+              if (input.scope === "page" && onListenPageTranslated) {
+                onListenPageTranslated({
+                  storagePath: input.storagePath ?? storagePath,
+                  pageNumber: input.pageNumber ?? pageNumber,
+                  originalFileName: input.originalFileName ?? fileName,
+                  targetLanguage: input.targetLanguage,
+                });
+                return;
+              }
+              if (
+                input.scope === "summary" &&
+                onListenSummary &&
+                input.documentId &&
+                input.summaryType
+              ) {
+                onListenSummary({
+                  documentId: input.documentId,
+                  summaryType: input.summaryType,
+                  targetLanguage: input.targetLanguage,
+                });
+              }
+            }}
+            onExportTranslated={(input) => {
+              if (input.scope === "page" && onExportPageTranslated) {
+                onExportPageTranslated({
+                  storagePath: input.storagePath ?? storagePath,
+                  pageNumber: input.pageNumber ?? pageNumber,
+                  originalFileName: input.originalFileName ?? fileName,
+                  targetLanguage: input.targetLanguage,
+                });
+                return;
+              }
+              if (
+                input.scope === "summary" &&
+                onExportSummary &&
+                input.documentId &&
+                input.summaryType
+              ) {
+                onExportSummary({
+                  documentId: input.documentId,
+                  summaryType: input.summaryType,
+                  targetLanguage: input.targetLanguage,
+                });
+              }
+            }}
+          />
         </div>
       )}
     </div>
@@ -266,18 +366,21 @@ export function SummaryPanel({
         <div className="flex justify-center py-3" aria-hidden="true">
           <span className="h-1 w-10 rounded-full bg-border" />
         </div>
-        {panelBody}
+        <div className="min-h-0 flex-1 overflow-hidden">{panelBody}</div>
       </aside>
 
-      {open ? (
-        <aside
-          className="hidden h-full w-[22rem] shrink-0 border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl lg:flex lg:flex-col xl:w-[24rem]"
-          aria-labelledby={titleId}
-          aria-label="Studio AI sidebar"
-        >
+      <aside
+        className={cn(
+          "relative hidden min-h-0 w-full max-w-[24rem] shrink-0 flex-col border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] backdrop-blur-xl transition-[width,opacity] lg:flex",
+          open ? "opacity-100" : "pointer-events-none w-0 max-w-0 overflow-hidden opacity-0",
+        )}
+        aria-hidden={!open}
+        aria-labelledby={titleId}
+      >
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
           {panelBody}
-        </aside>
-      ) : null}
+        </div>
+      </aside>
     </>
   );
 }
@@ -305,7 +408,7 @@ function TabButton({
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={cn(
-        "inline-flex h-9 min-h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
           ? "border-foreground bg-foreground text-background"
           : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",

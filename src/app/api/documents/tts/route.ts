@@ -5,11 +5,13 @@
  */
 
 import { serverEnv } from "@/config";
+import type { TargetLanguageCode } from "@/constants";
 import {
   getDocumentById,
   getDocumentSummaryByType,
 } from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
+import { translateDocumentContent } from "@/features/translation/translate-service";
 import {
   createOpenAiTtsProvider,
   joinPageChunkText,
@@ -29,6 +31,7 @@ import {
   validatePageNumber,
   validateStoragePath,
   validateSummaryType,
+  validateTargetLanguage,
   validateTtsSource,
 } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
@@ -42,7 +45,23 @@ type TtsRequestBody = {
   storagePath?: unknown;
   pageNumber?: unknown;
   originalFileName?: unknown;
+  targetLanguage?: unknown;
 };
+
+function parseOptionalTargetLanguage(
+  value: unknown,
+):
+  | { ok: true; data: TargetLanguageCode | null }
+  | { ok: false; code: "VALIDATION"; message: string } {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, data: null };
+  }
+  const validated = validateTargetLanguage(value);
+  if (!validated.ok) {
+    return validated;
+  }
+  return { ok: true, data: validated.data };
+}
 
 const SUMMARY_UNAVAILABLE_MESSAGE = "Summary is not available.";
 
@@ -85,6 +104,11 @@ export async function POST(request: Request) {
   const source = validateTtsSource(body.source);
   if (!source.ok) {
     return apiError(source.code, source.message, 400);
+  }
+
+  const targetLanguage = parseOptionalTargetLanguage(body.targetLanguage);
+  if (!targetLanguage.ok) {
+    return apiError(targetLanguage.code, targetLanguage.message, 400);
   }
 
   let text = "";
@@ -131,31 +155,65 @@ export async function POST(request: Request) {
         return apiError("NOT_FOUND", SUMMARY_UNAVAILABLE_MESSAGE, 404);
       }
 
-      const summary = await getDocumentSummaryByType(
-        documentId.data,
-        auth.user.id,
-        summaryType.data,
-      );
-
-      if (!summary.ok) {
-        logger.ttsFailure("TTS summary lookup failed", {
-          route,
-          userId: auth.user.id,
-          documentId: documentId.data,
-          summaryType: summaryType.data,
-        }, summary.error);
-        return apiError(
-          "TTS_ERROR",
-          "Unable to generate speech. Please try again.",
-          500,
+      if (targetLanguage.data) {
+        const translated = await translateDocumentContent(
+          {
+            scope: "summary",
+            documentId: documentId.data,
+            summaryType: summaryType.data,
+            targetLanguage: targetLanguage.data,
+          },
+          auth.user.id,
         );
-      }
 
-      if (!summary.data) {
-        return apiError("NOT_FOUND", SUMMARY_UNAVAILABLE_MESSAGE, 404);
-      }
+        if (!translated.ok) {
+          if (translated.code === "FORBIDDEN") {
+            return apiError("FORBIDDEN", translated.error, 403);
+          }
+          if (translated.code === "NOT_FOUND") {
+            return apiError("NOT_FOUND", translated.error, 404);
+          }
+          if (translated.code === "VALIDATION") {
+            return apiError("VALIDATION", translated.error, 400);
+          }
+          logger.ttsFailure("TTS summary translation failed", {
+            route,
+            userId: auth.user.id,
+            documentId: documentId.data,
+            summaryType: summaryType.data,
+            targetLanguage: targetLanguage.data,
+          }, translated.error);
+          return mapDomainFailure(translated.error, "tts");
+        }
 
-      text = summary.data.content.trim();
+        text = translated.data.translatedText.trim();
+      } else {
+        const summary = await getDocumentSummaryByType(
+          documentId.data,
+          auth.user.id,
+          summaryType.data,
+        );
+
+        if (!summary.ok) {
+          logger.ttsFailure("TTS summary lookup failed", {
+            route,
+            userId: auth.user.id,
+            documentId: documentId.data,
+            summaryType: summaryType.data,
+          }, summary.error);
+          return apiError(
+            "TTS_ERROR",
+            "Unable to generate speech. Please try again.",
+            500,
+          );
+        }
+
+        if (!summary.data) {
+          return apiError("NOT_FOUND", SUMMARY_UNAVAILABLE_MESSAGE, 404);
+        }
+
+        text = summary.data.content.trim();
+      }
 
       if (!text) {
         return apiError(
@@ -184,24 +242,61 @@ export async function POST(request: Request) {
         return apiError(originalFileName.code, originalFileName.message, 400);
       }
 
-      const processed = await ensureDocumentProcessed({
-        storagePath: storagePath.data,
-        originalFileName:
-          originalFileName.data ??
-          getFileNameFromStoragePath(storagePath.data),
-      });
+      if (targetLanguage.data) {
+        const translated = await translateDocumentContent(
+          {
+            scope: "page",
+            storagePath: storagePath.data,
+            originalFileName:
+              originalFileName.data ??
+              getFileNameFromStoragePath(storagePath.data),
+            pageNumber: pageNumber.data,
+            targetLanguage: targetLanguage.data,
+          },
+          auth.user.id,
+        );
 
-      if (!processed.ok) {
-        logger.processingFailure("TTS page processing failed", {
-          route,
-          userId: auth.user.id,
+        if (!translated.ok) {
+          if (translated.code === "FORBIDDEN") {
+            return apiError("FORBIDDEN", translated.error, 403);
+          }
+          if (translated.code === "NOT_FOUND") {
+            return apiError("NOT_FOUND", translated.error, 404);
+          }
+          if (translated.code === "VALIDATION") {
+            return apiError("VALIDATION", translated.error, 400);
+          }
+          logger.ttsFailure("TTS page translation failed", {
+            route,
+            userId: auth.user.id,
+            storagePath: storagePath.data,
+            pageNumber: pageNumber.data,
+            targetLanguage: targetLanguage.data,
+          }, translated.error);
+          return mapDomainFailure(translated.error, "tts");
+        }
+
+        text = translated.data.translatedText.trim();
+      } else {
+        const processed = await ensureDocumentProcessed({
           storagePath: storagePath.data,
-          pageNumber: pageNumber.data,
-        }, processed.error);
-        return mapDomainFailure(processed.error, "processing");
-      }
+          originalFileName:
+            originalFileName.data ??
+            getFileNameFromStoragePath(storagePath.data),
+        });
 
-      text = joinPageChunkText(processed.data.chunks.chunks, pageNumber.data);
+        if (!processed.ok) {
+          logger.processingFailure("TTS page processing failed", {
+            route,
+            userId: auth.user.id,
+            storagePath: storagePath.data,
+            pageNumber: pageNumber.data,
+          }, processed.error);
+          return mapDomainFailure(processed.error, "processing");
+        }
+
+        text = joinPageChunkText(processed.data.chunks.chunks, pageNumber.data);
+      }
 
       if (!text.trim()) {
         return apiError(

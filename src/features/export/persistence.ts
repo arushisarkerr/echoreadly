@@ -20,6 +20,7 @@ export type FindAudioExportInput = {
   pageNumber: number | null;
   summaryType: SummaryType | null;
   voice: string;
+  targetLanguage: string;
 };
 
 export type UpsertAudioExportInput = {
@@ -35,6 +36,7 @@ export type UpsertAudioExportInput = {
   mimeType: string;
   byteSize: number;
   originalFileName: string | null;
+  targetLanguage: string;
 };
 
 function mapRow(row: AudioExportRow): AudioExportRow {
@@ -51,6 +53,7 @@ function mapRow(row: AudioExportRow): AudioExportRow {
     mime_type: row.mime_type,
     byte_size: Number(row.byte_size) || 0,
     original_file_name: row.original_file_name,
+    target_language: row.target_language ?? "",
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -72,7 +75,8 @@ export async function findAudioExport(
       .eq("user_id", input.userId)
       .in("document_storage_path", pathVariants)
       .eq("source", input.source)
-      .eq("voice", input.voice);
+      .eq("voice", input.voice)
+      .eq("target_language", input.targetLanguage);
 
     if (input.source === "page") {
       query = query.eq("page_number", input.pageNumber!).is("summary_type", null);
@@ -129,6 +133,7 @@ export async function upsertAudioExport(
       mime_type: input.mimeType,
       byte_size: input.byteSize,
       original_file_name: input.originalFileName,
+      target_language: input.targetLanguage,
       updated_at: new Date().toISOString(),
     };
 

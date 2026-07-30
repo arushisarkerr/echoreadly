@@ -79,6 +79,7 @@ export function useAudioExport(): UseAudioExportState {
         pageNumber: input.pageNumber,
         originalFileName: input.originalFileName,
         regenerate: input.regenerate,
+        targetLanguage: input.targetLanguage,
       });
     },
     exportSummary: async (input) => {
@@ -87,6 +88,7 @@ export function useAudioExport(): UseAudioExportState {
         documentId: input.documentId,
         summaryType: input.summaryType,
         regenerate: input.regenerate,
+        targetLanguage: input.targetLanguage,
       });
     },
     reset: () => {

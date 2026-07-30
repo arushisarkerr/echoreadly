@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { TargetLanguageCode } from "@/constants";
+import type { SummaryType } from "@/features/ai";
+
 import { requestTtsAudio, type TtsRequestPayload } from "./tts-service";
 import {
   TTS_PLAYBACK_SPEEDS,
@@ -9,7 +12,6 @@ import {
   type TtsPlaybackStatus,
   type TtsSource,
 } from "./types";
-import type { SummaryType } from "@/features/ai";
 
 export type UseTtsState = {
   status: TtsPlaybackStatus;
@@ -20,7 +22,11 @@ export type UseTtsState = {
   speed: TtsPlaybackSpeed;
   speeds: TtsPlaybackSpeed[];
   listenSummary: (
-    input: { documentId: string; summaryType: SummaryType },
+    input: {
+      documentId: string;
+      summaryType: SummaryType;
+      targetLanguage?: TargetLanguageCode;
+    },
     options?: { seekTo?: number },
   ) => Promise<void>;
   listenPage: (input: {
@@ -28,6 +34,7 @@ export type UseTtsState = {
     pageNumber: number;
     originalFileName?: string;
     seekTo?: number;
+    targetLanguage?: TargetLanguageCode;
   }) => Promise<void>;
   play: () => void;
   pause: () => void;
@@ -233,7 +240,11 @@ export function useTts(options?: UseTtsOptions): UseTtsState {
 
   const listenSummary = useCallback(
     async (
-      input: { documentId: string; summaryType: SummaryType },
+      input: {
+        documentId: string;
+        summaryType: SummaryType;
+        targetLanguage?: TargetLanguageCode;
+      },
       options?: { seekTo?: number },
     ) => {
       const documentId = input.documentId.trim();
@@ -248,6 +259,7 @@ export function useTts(options?: UseTtsOptions): UseTtsState {
           source: "summary",
           documentId,
           summaryType: input.summaryType,
+          targetLanguage: input.targetLanguage,
         },
         "summary",
         options,
@@ -262,6 +274,7 @@ export function useTts(options?: UseTtsOptions): UseTtsState {
       pageNumber: number;
       originalFileName?: string;
       seekTo?: number;
+      targetLanguage?: TargetLanguageCode;
     }) => {
       await loadAndPlay(
         {
@@ -269,6 +282,7 @@ export function useTts(options?: UseTtsOptions): UseTtsState {
           storagePath: input.storagePath,
           pageNumber: input.pageNumber,
           originalFileName: input.originalFileName,
+          targetLanguage: input.targetLanguage,
         },
         "page",
         { seekTo: input.seekTo },

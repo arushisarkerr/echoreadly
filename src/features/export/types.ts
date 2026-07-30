@@ -2,6 +2,7 @@
  * Audio export types — cached MP3 narration downloads.
  */
 
+import type { TargetLanguageCode } from "@/constants";
 import type { SummaryType } from "@/features/ai";
 import type { TtsSource } from "@/features/tts";
 
@@ -20,6 +21,7 @@ export type AudioExportRow = {
   mime_type: string;
   byte_size: number;
   original_file_name: string | null;
+  target_language: string;
   created_at: string;
   updated_at: string;
 };
@@ -30,11 +32,13 @@ export type AudioExportIdentity =
       storagePath: string;
       pageNumber: number;
       originalFileName?: string;
+      targetLanguage?: TargetLanguageCode;
     }
   | {
       source: "summary";
       documentId: string;
       summaryType: SummaryType;
+      targetLanguage?: TargetLanguageCode;
     };
 
 export type CreateAudioExportInput = AudioExportIdentity & {
@@ -55,6 +59,7 @@ export type AudioExportDownload = {
   expiresIn: number;
   pageNumber: number | null;
   summaryType: SummaryType | null;
+  targetLanguage: string;
   documentStoragePath: string;
   originalFileName: string | null;
   updatedAt: string;
@@ -73,6 +78,7 @@ export type AudioExportListItem = {
   expiresIn: number;
   pageNumber: number | null;
   summaryType: SummaryType | null;
+  targetLanguage: string;
   documentStoragePath: string;
   originalFileName: string | null;
   updatedAt: string;

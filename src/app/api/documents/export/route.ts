@@ -20,9 +20,11 @@ import {
   validatePageNumber,
   validateStoragePath,
   validateSummaryType,
+  validateTargetLanguage,
   validateTtsSource,
 } from "@/lib/security";
 import { requireUser } from "@/server/auth";
+import type { TargetLanguageCode } from "@/constants";
 
 type ExportRequestBody = {
   source?: unknown;
@@ -33,10 +35,26 @@ type ExportRequestBody = {
   originalFileName?: unknown;
   regenerate?: unknown;
   text?: unknown;
+  targetLanguage?: unknown;
 };
 
 function parseRegenerate(value: unknown): boolean {
   return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function parseOptionalTargetLanguage(
+  value: unknown,
+):
+  | { ok: true; data: TargetLanguageCode | undefined }
+  | { ok: false; code: "VALIDATION"; message: string } {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, data: undefined };
+  }
+  const validated = validateTargetLanguage(value);
+  if (!validated.ok) {
+    return validated;
+  }
+  return { ok: true, data: validated.data };
 }
 
 export async function GET(request: Request) {
@@ -123,6 +141,11 @@ export async function POST(request: Request) {
   }
 
   const regenerate = parseRegenerate(body.regenerate);
+  const targetLanguage = parseOptionalTargetLanguage(body.targetLanguage);
+  if (!targetLanguage.ok) {
+    return apiError(targetLanguage.code, targetLanguage.message, 400);
+  }
+
   let payload: CreateAudioExportInput;
 
   if (source.data === "summary") {
@@ -141,6 +164,7 @@ export async function POST(request: Request) {
       documentId: documentId.data,
       summaryType: summaryType.data,
       regenerate,
+      targetLanguage: targetLanguage.data,
     };
   } else {
     const storagePath = validateStoragePath(body.storagePath);
@@ -164,6 +188,7 @@ export async function POST(request: Request) {
       pageNumber: pageNumber.data,
       originalFileName: originalFileName.data,
       regenerate,
+      targetLanguage: targetLanguage.data,
     };
   }
 
