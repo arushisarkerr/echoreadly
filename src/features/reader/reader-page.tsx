@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SummaryPanel } from "@/features/summary";
 import { AudioPlayer, useTts } from "@/features/tts";
@@ -23,6 +23,15 @@ type ReaderPageProps = {
   storagePath: string;
 };
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return Boolean(
+    target.closest("input, textarea, select, [contenteditable='true']"),
+  );
+}
+
 /**
  * Full reader experience for a PDF selected from the library.
  */
@@ -31,6 +40,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
   const tts = useTts();
   const [summaryOpen, setSummaryOpen] = useState(false);
   const ttsBusy = tts.status === "loading";
+  const controlsLocked = reader.documentLoading || reader.loadingUrl;
 
   const toolbarProps = {
     fileName: reader.fileName,
@@ -58,9 +68,65 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
     onFitPage: reader.fitPage,
   };
 
+  const {
+    goToPreviousPage,
+    goToNextPage,
+    zoomIn,
+    zoomOut,
+    documentError,
+    urlError,
+  } = reader;
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      if (controlsLocked || documentError || urlError) {
+        return;
+      }
+
+      switch (event.key) {
+        case "ArrowLeft":
+        case "PageUp":
+          event.preventDefault();
+          goToPreviousPage();
+          break;
+        case "ArrowRight":
+        case "PageDown":
+          event.preventDefault();
+          goToNextPage();
+          break;
+        case "+":
+        case "=":
+          event.preventDefault();
+          zoomIn();
+          break;
+        case "-":
+        case "_":
+          event.preventDefault();
+          zoomOut();
+          break;
+        default:
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    controlsLocked,
+    documentError,
+    urlError,
+    goToPreviousPage,
+    goToNextPage,
+    zoomIn,
+    zoomOut,
+  ]);
+
   if (reader.loadingUrl) {
     return (
-      <div className="flex min-h-[calc(100svh-4rem)] flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} pageNumber={1} numPages={null} disabled />
         <ReaderLoading message="Fetching secure PDF link…" />
       </div>
@@ -69,9 +135,10 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
 
   if (reader.urlError || !reader.signedUrl) {
     return (
-      <div className="flex min-h-[calc(100svh-4rem)] flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} disabled />
         <ReaderError
+          title="Couldn’t open this document"
           message={reader.urlError || "Signed URL was not available."}
           onRetry={() => {
             void reader.retrySignedUrl();
@@ -83,9 +150,10 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
 
   if (reader.documentError) {
     return (
-      <div className="flex min-h-[calc(100svh-4rem)] flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} disabled />
         <ReaderError
+          title="Couldn’t render this PDF"
           message={reader.documentError}
           onRetry={() => {
             void reader.retrySignedUrl();
@@ -96,7 +164,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
   }
 
   return (
-    <div className="relative flex min-h-[calc(100svh-4rem)] flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_color-mix(in_srgb,var(--accent)_10%,transparent),_transparent_42%),linear-gradient(180deg,var(--background),color-mix(in_srgb,var(--surface-muted)_28%,var(--background)))]"
@@ -107,7 +175,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
         <div className="flex min-h-0 flex-1">
           <div className="relative flex min-h-0 flex-1 flex-col">
             {reader.documentLoading ? (
-              <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px]">
+              <div className="absolute inset-0 z-10 bg-background/65 backdrop-blur-[1px]">
                 <ReaderLoading message="Rendering PDF…" />
               </div>
             ) : null}

@@ -209,9 +209,16 @@ export function useTts(): UseTtsState {
       return;
     }
 
-    void audio.play().then(() => {
-      setStatus("playing");
-    });
+    void audio
+      .play()
+      .then(() => {
+        setStatus("playing");
+        setError(null);
+      })
+      .catch(() => {
+        setStatus("ready");
+        setError("Playback was blocked. Press Play to try again.");
+      });
   }, []);
 
   const pause = useCallback(() => {
@@ -229,9 +236,16 @@ export function useTts(): UseTtsState {
       return;
     }
 
-    void audio.play().then(() => {
-      setStatus("playing");
-    });
+    void audio
+      .play()
+      .then(() => {
+        setStatus("playing");
+        setError(null);
+      })
+      .catch(() => {
+        setStatus("paused");
+        setError("Playback was blocked. Press Resume to try again.");
+      });
   }, []);
 
   const setSpeed = useCallback((next: TtsPlaybackSpeed) => {

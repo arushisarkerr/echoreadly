@@ -12,11 +12,10 @@ export type ChatPanelProps = {
 export function ChatPanel({ storagePath, fileName }: ChatPanelProps) {
   return (
     <ChatProvider storagePath={storagePath} fileName={fileName}>
-      <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col gap-1">
         <ChatHistory />
         <ChatInput />
       </div>
     </ChatProvider>
   );
 }
-

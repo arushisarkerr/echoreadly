@@ -39,6 +39,8 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
     ref,
   ) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const errorId = "upload-dropzone-error";
+    const hintId = "upload-dropzone-hint";
 
     function openFilePicker() {
       if (disabled) {
@@ -58,20 +60,39 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
       }
     }
 
-    function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    function handleDragEnter(event: DragEvent<HTMLDivElement>) {
       event.preventDefault();
+      event.stopPropagation();
       if (!disabled) {
         onDraggingChange(true);
       }
     }
 
+    function handleDragOver(event: DragEvent<HTMLDivElement>) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (disabled) {
+        return;
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+      onDraggingChange(true);
+    }
+
     function handleDragLeave(event: DragEvent<HTMLDivElement>) {
       event.preventDefault();
+      event.stopPropagation();
+      const next = event.relatedTarget as Node | null;
+      if (next && event.currentTarget.contains(next)) {
+        return;
+      }
       onDraggingChange(false);
     }
 
     function handleDrop(event: DragEvent<HTMLDivElement>) {
       event.preventDefault();
+      event.stopPropagation();
       onDraggingChange(false);
 
       if (disabled) {
@@ -88,20 +109,25 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-disabled={disabled}
-        aria-label="Upload your PDF. Drag and drop a PDF here or click to browse."
+        aria-disabled={disabled || undefined}
+        aria-describedby={
+          errorMessage ? `${hintId} ${errorId}` : hintId
+        }
+        aria-label="Upload your PDF. Drag and drop a PDF here, or press Enter to browse."
         onClick={openFilePicker}
         onKeyDown={handleKeyDown}
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-6 py-14 text-center transition-colors sm:py-16",
+          "flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed px-5 py-12 text-center transition-[border-color,background-color,box-shadow,transform] duration-200 sm:px-6 sm:py-14",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           dragging
-            ? "border-accent bg-accent/5"
-            : "border-border bg-surface hover:border-foreground/20 hover:bg-background",
+            ? "scale-[1.01] border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] shadow-[var(--elevation-sm)]"
+            : "border-border/80 bg-surface/60 hover:border-foreground/25 hover:bg-background/70",
           disabled && "pointer-events-none cursor-not-allowed opacity-60",
-          errorMessage && !dragging && "border-danger/50",
+          errorMessage && !dragging && "border-danger/55 bg-[color-mix(in_srgb,var(--danger)_6%,transparent)]",
         )}
       >
         <input
@@ -111,6 +137,7 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
           className="sr-only"
           tabIndex={-1}
           disabled={disabled}
+          aria-label="Choose a PDF file"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
@@ -123,25 +150,32 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         <div
           aria-hidden="true"
           className={cn(
-            "flex size-14 items-center justify-center rounded-lg border bg-surface-muted text-foreground",
-            dragging ? "border-accent/40" : "border-border",
+            "flex size-14 items-center justify-center rounded-2xl border bg-surface-muted text-foreground transition-colors",
+            dragging ? "border-accent/45 bg-background" : "border-border",
           )}
         >
           <PdfIcon className="size-6" />
         </div>
 
-        <h2 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
-          Upload your PDF
+        <h2 className="mt-5 font-display text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+          {dragging ? "Drop PDF to import" : "Upload your PDF"}
         </h2>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
-          Drag & drop a PDF here or click to browse.
+        <p
+          id={hintId}
+          className="mt-2 max-w-sm text-sm leading-relaxed text-muted"
+        >
+          Drag & drop a PDF here, tap to browse, or use the Select PDF button.
         </p>
         <p className="mt-4 text-xs text-subtle">
-          PDF only ({ACCEPTED_PDF_MIME}) · Max {MAX_PDF_UPLOAD_LABEL}
+          PDF only · Max {MAX_PDF_UPLOAD_LABEL} · One file at a time
         </p>
 
         {errorMessage ? (
-          <p role="alert" className="mt-4 text-sm font-medium text-danger">
+          <p
+            id={errorId}
+            role="alert"
+            className="mt-4 max-w-md text-sm font-medium text-danger"
+          >
             {errorMessage}
           </p>
         ) : null}

@@ -105,7 +105,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
           onMenuClick={() => setMobileOpen(true)}
           title={titleForPath(pathname)}
         />
-        <main className={cn("flex-1 overflow-y-auto", !hideDock && "pb-28")}>
+        <main
+          className={cn(
+            "flex min-h-0 flex-1 flex-col",
+            hideDock ? "overflow-hidden" : "overflow-y-auto pb-28",
+          )}
+        >
           {children}
         </main>
       </div>

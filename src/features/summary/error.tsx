@@ -10,17 +10,17 @@ export function SummaryError({ message, onRetry }: SummaryErrorProps) {
   return (
     <div
       role="alert"
-      className="rounded-md border border-danger/20 bg-danger/5 px-4 py-3"
+      className="rounded-[1.25rem] border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-4"
     >
-      <p className="text-sm font-medium text-foreground">
+      <p className="font-display text-base font-semibold text-foreground">
         Summary unavailable
       </p>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{message}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted">{message}</p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-muted"
+          className="mt-4 inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Try again
         </button>

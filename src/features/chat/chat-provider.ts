@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, { createContext, useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { requestChatResponse } from "./chat-service";
 import type {
@@ -23,8 +30,10 @@ export type ChatContextValue = {
   status: ChatPanelStatus;
   error: string | null;
   sendMessage: (question: string) => Promise<void>;
+  retryLast: () => Promise<void>;
   stopGenerating: () => void;
   clearConversation: () => void;
+  clearError: () => void;
 };
 
 export const ChatContext = createContext<ChatContextValue | null>(null);
@@ -63,6 +72,11 @@ export function ChatProvider({
 
   // UI-only stop: we ignore the response when stop is pressed.
   const cancelTokenRef = useRef(0);
+  const messagesRef = useRef(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const stopGenerating = useCallback(() => {
     cancelTokenRef.current += 1;
@@ -77,37 +91,33 @@ export function ChatProvider({
     setError(null);
   }, []);
 
-  const sendMessage = useCallback(
-    async (question: string) => {
-      const trimmed = question.trim();
-      if (!trimmed) return;
-      if (status === "loading") return;
+  const clearError = useCallback(() => {
+    setError(null);
+    setStatus((current) => (current === "error" ? "idle" : current));
+  }, []);
 
+  const requestAssistant = useCallback(
+    async (historyMessages: ChatMessage[], question: string) => {
       setError(null);
       setStatus("loading");
 
-      const userMessage = createChatMessage("user", trimmed);
-      const nextMessages = [...messages, userMessage];
-      setMessages(nextMessages);
-
-      const historyForRequest: ChatHistoryItem[] = nextMessages.map(
-        (m) => ({ role: m.role, content: m.content }),
-      );
+      const historyForRequest: ChatHistoryItem[] = historyMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const requestToken = cancelTokenRef.current;
-
       let assistant: ChatAssistantResponse | null = null;
 
       try {
         const result = await requestChatResponse({
           storagePath,
-          question: trimmed,
+          question,
           history: historyForRequest,
           originalFileName: fileName,
         });
 
         if (cancelTokenRef.current !== requestToken) {
-          // A stop/clear happened; ignore late responses.
           return;
         }
 
@@ -124,29 +134,59 @@ export function ChatProvider({
         }
 
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Unable to generate a reply.");
+        setError(
+          e instanceof Error ? e.message : "Unable to generate a reply.",
+        );
         return;
-      } finally {
-        if (cancelTokenRef.current === requestToken) {
-          setStatus(assistant ? "idle" : "idle");
-        }
       }
 
-      if (!assistant) return;
+      if (cancelTokenRef.current !== requestToken || !assistant) {
+        return;
+      }
 
+      setStatus("idle");
       setMessages((current) => {
-        // If messages were cleared after request, ignore.
-        if (cancelTokenRef.current !== requestToken) return current;
-        const assistantMessage = createChatMessage(
-          "assistant",
-          assistant.content,
-          assistant.pages,
-        );
-        return [...nextMessages, assistantMessage];
+        if (cancelTokenRef.current !== requestToken) {
+          return current;
+        }
+        return [
+          ...historyMessages,
+          createChatMessage("assistant", assistant.content, assistant.pages),
+        ];
       });
     },
-    [fileName, messages, status, storagePath],
+    [fileName, storagePath],
   );
+
+  const sendMessage = useCallback(
+    async (question: string) => {
+      const trimmed = question.trim();
+      if (!trimmed) return;
+      if (status === "loading") return;
+
+      const userMessage = createChatMessage("user", trimmed);
+      const nextMessages = [...messagesRef.current, userMessage];
+      setMessages(nextMessages);
+
+      await requestAssistant(nextMessages, trimmed);
+    },
+    [requestAssistant, status],
+  );
+
+  const retryLast = useCallback(async () => {
+    if (status === "loading") return;
+
+    const current = messagesRef.current;
+    const lastUser = [...current].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+
+    // Keep conversation through the last user turn; drop a trailing failed gap.
+    const lastUserIndex = current.map((m) => m.id).lastIndexOf(lastUser.id);
+    const historyMessages = current.slice(0, lastUserIndex + 1);
+    setMessages(historyMessages);
+
+    await requestAssistant(historyMessages, lastUser.content);
+  }, [requestAssistant, status]);
 
   const value = useMemo<ChatContextValue>(
     () => ({
@@ -154,23 +194,22 @@ export function ChatProvider({
       status,
       error,
       sendMessage,
+      retryLast,
       stopGenerating,
       clearConversation,
+      clearError,
     }),
     [
       messages,
       status,
       error,
       sendMessage,
+      retryLast,
       stopGenerating,
       clearConversation,
+      clearError,
     ],
   );
 
-  return React.createElement(
-    ChatContext.Provider,
-    { value },
-    children,
-  );
+  return React.createElement(ChatContext.Provider, { value }, children);
 }
-

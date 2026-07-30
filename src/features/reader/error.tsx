@@ -1,3 +1,7 @@
+import Link from "next/link";
+
+import { ROUTES } from "@/constants";
+
 type ReaderErrorProps = {
   title?: string;
   message: string;
@@ -12,14 +16,20 @@ export function ReaderError({
   title = "Unable to open PDF",
   message,
   onRetry,
-  onBackHref = "/dashboard/library",
+  onBackHref = ROUTES.library,
 }: ReaderErrorProps) {
   return (
     <div
       role="alert"
-      className="mx-auto flex w-full max-w-lg flex-col items-center justify-center px-6 py-16 text-center"
+      className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-6 py-16 text-center"
     >
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">
+      <div
+        aria-hidden="true"
+        className="flex size-14 items-center justify-center rounded-2xl border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] font-display text-xs font-bold text-danger"
+      >
+        PDF
+      </div>
+      <h2 className="font-display mt-5 text-2xl font-semibold tracking-tight text-foreground">
         {title}
       </h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">{message}</p>
@@ -29,17 +39,17 @@ export function ReaderError({
           <button
             type="button"
             onClick={onRetry}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Try again
           </button>
         ) : null}
-        <a
+        <Link
           href={onBackHref}
-          className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Back to Library
-        </a>
+          Back to shelf
+        </Link>
       </div>
     </div>
   );

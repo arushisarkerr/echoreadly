@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { ROUTES, readerPathForStorage } from "@/constants";
 import type { StoredPdfObject } from "@/lib/storage";
-import { formatFileSize } from "@/utils";
+import { cn, formatFileSize } from "@/utils";
 
 import { LibraryEmptyState } from "./empty-state";
 import { LibraryLoading } from "./loading";
@@ -16,9 +16,10 @@ type SortMode = "newest" | "oldest" | "name";
 
 /**
  * Editorial library shelf — same useLibrary / listPdfs data.
+ * Presentation and client filter UX only; fetching unchanged.
  */
 export function LibraryPage() {
-  const { items, loading, error } = useLibrary();
+  const { items, loading, error, refresh } = useLibrary();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortMode>("newest");
@@ -29,23 +30,47 @@ export function LibraryPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+
     let next = items.filter((item) => {
-      if (source !== "all" && source !== "pdf") return false;
-      if (language !== "all") return true;
-      if (status !== "all") return true;
-      if (collection !== "all") return true;
-      if (!q) return true;
+      // Source: only PDF exists today — non-PDF choices intentionally empty.
+      if (source !== "all" && source !== "pdf") {
+        return false;
+      }
+
+      // Language / status / collection are UI previews until metadata exists.
+      // They must not short-circuit name search.
+      if (!q) {
+        return true;
+      }
       return item.name.toLowerCase().includes(q);
     });
 
     next = [...next].sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "name") {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      }
       const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
       const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
       return sort === "newest" ? bTime - aTime : aTime - bTime;
     });
+
     return next;
-  }, [items, query, sort, source, language, status, collection]);
+  }, [items, query, sort, source]);
+
+  const hasQuery = query.trim().length > 0;
+  const previewFiltersActive =
+    language !== "all" || status !== "all" || collection !== "all";
+
+  function clearSearch() {
+    setQuery("");
+  }
+
+  function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape" && query) {
+      event.preventDefault();
+      clearSearch();
+    }
+  }
 
   return (
     <section className="mx-auto w-full max-w-[96rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -64,119 +89,219 @@ export function LibraryPage() {
         </div>
         <Link
           href={ROUTES.addContent}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Add content
         </Link>
       </div>
 
-      <div className="mt-8 space-y-3 rounded-[1.75rem] border border-border/70 bg-surface/45 p-4">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name…"
-          aria-label="Search library"
-          className="h-11 w-full rounded-full border border-border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            label="Source"
-            value={source}
-            onChange={setSource}
-            options={[
-              ["all", "All sources"],
-              ["pdf", "PDF"],
-              ["doc", "DOC (soon)"],
-              ["url", "URL (soon)"],
-            ]}
+      <div className="mt-8 space-y-3 rounded-[1.75rem] border border-border/70 bg-surface/45 p-3 sm:p-4">
+        <div className="relative">
+          <label htmlFor="library-search" className="sr-only">
+            Search library by name
+          </label>
+          <input
+            id="library-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onSearchKeyDown}
+            placeholder="Search by name…"
+            autoComplete="off"
+            enterKeyHint="search"
+            className="h-11 w-full rounded-full border border-border bg-background py-2 pr-20 pl-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <Select
-            label="Language"
-            value={language}
-            onChange={setLanguage}
-            options={[
-              ["all", "All languages"],
-              ["en", "English"],
-              ["bn", "Bangla"],
-              ["hi", "Hindi"],
-              ["pt", "Portuguese"],
-            ]}
-          />
-          <Select
-            label="Status"
-            value={status}
-            onChange={setStatus}
-            options={[
-              ["all", "Any status"],
-              ["ready", "Ready"],
-              ["processing", "Processing"],
-            ]}
-          />
-          <Select
-            label="Date"
-            value={sort}
-            onChange={(v) => setSort(v as SortMode)}
-            options={[
-              ["newest", "Newest"],
-              ["oldest", "Oldest"],
-              ["name", "Name"],
-            ]}
-          />
-          <Select
-            label="Duration"
-            value="all"
-            onChange={() => undefined}
-            options={[["all", "Any duration"]]}
-          />
-          <Select
-            label="Collections"
-            value={collection}
-            onChange={setCollection}
-            options={[
-              ["all", "All collections"],
-              ["pinned", "Pinned"],
-              ["favorites", "Favorites"],
-            ]}
-          />
-          <div
-            className="ml-auto flex rounded-full border border-border p-1"
-            role="group"
-            aria-label="View mode"
-          >
-            {(["grid", "list", "compact"] as ViewMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={view === mode}
-                onClick={() => setView(mode)}
-                className={`rounded-full px-3 py-1.5 text-[0.7rem] font-semibold capitalize ${
-                  view === mode
-                    ? "bg-foreground text-background"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
+          {hasQuery ? (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute top-1/2 right-2 inline-flex h-8 -translate-y-1/2 items-center rounded-full px-3 text-xs font-semibold text-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterSelect
+              label="Source"
+              value={source}
+              onChange={setSource}
+              options={[
+                ["all", "All sources"],
+                ["pdf", "PDF"],
+                ["doc", "DOC (soon)"],
+                ["url", "URL (soon)"],
+              ]}
+            />
+            <FilterSelect
+              label="Language"
+              value={language}
+              onChange={setLanguage}
+              options={[
+                ["all", "All languages"],
+                ["en", "English"],
+                ["bn", "Bangla"],
+                ["hi", "Hindi"],
+                ["pt", "Portuguese"],
+              ]}
+            />
+            <FilterSelect
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                ["all", "Any status"],
+                ["ready", "Ready"],
+                ["processing", "Processing"],
+              ]}
+            />
+            <FilterSelect
+              label="Collections"
+              value={collection}
+              onChange={setCollection}
+              options={[
+                ["all", "All collections"],
+                ["pinned", "Pinned"],
+                ["favorites", "Favorites"],
+              ]}
+            />
+            <FilterSelect
+              label="Duration"
+              value="all"
+              onChange={() => undefined}
+              disabled
+              options={[["all", "Any duration"]]}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterSelect
+              label="Sort"
+              value={sort}
+              onChange={(v) => setSort(v as SortMode)}
+              options={[
+                ["newest", "Newest"],
+                ["oldest", "Oldest"],
+                ["name", "Name"],
+              ]}
+            />
+            <div
+              className="flex rounded-full border border-border p-1"
+              role="group"
+              aria-label="View mode"
+            >
+              {(["grid", "list", "compact"] as ViewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={view === mode}
+                  onClick={() => setView(mode)}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-[0.7rem] font-semibold capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    view === mode
+                      ? "bg-foreground text-background"
+                      : "text-muted hover:text-foreground",
+                  )}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {previewFiltersActive ? (
+          <p className="text-[0.7rem] text-subtle">
+            Language, status, and collection filters are preview-only until
+            item metadata ships. Search and source still apply.
+          </p>
+        ) : null}
       </div>
 
-      {loading ? <div className="mt-8"><LibraryLoading /></div> : null}
-      {!loading && error ? (
-        <p role="alert" className="mt-6 text-sm text-danger">
-          {error}
-        </p>
+      <div
+        className="mt-4 flex flex-wrap items-center justify-between gap-2"
+        aria-live="polite"
+      >
+        {!loading && !error && items.length > 0 ? (
+          <p className="text-xs text-muted">
+            {hasQuery || source !== "all"
+              ? `${filtered.length} of ${items.length} ${items.length === 1 ? "item" : "items"}`
+              : `${items.length} ${items.length === 1 ? "item" : "items"}`}
+          </p>
+        ) : (
+          <span className="text-xs text-transparent">·</span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="mt-4" role="status" aria-live="polite">
+          <span className="sr-only">Loading library…</span>
+          <LibraryLoading />
+        </div>
       ) : null}
+
+      {!loading && error ? (
+        <div
+          role="alert"
+          className="mt-6 rounded-[1.5rem] border border-danger/35 bg-[color-mix(in_srgb,var(--danger)_7%,transparent)] px-5 py-6"
+        >
+          <p className="font-display text-lg font-semibold text-foreground">
+            Couldn’t load the shelf
+          </p>
+          <p className="mt-2 text-sm text-danger">{error}</p>
+          <button
+            type="button"
+            onClick={() => {
+              void refresh();
+            }}
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+
       {!loading && !error && items.length === 0 ? (
-        <div className="mt-8">
+        <div className="mt-6">
           <LibraryEmptyState />
         </div>
       ) : null}
+
       {!loading && !error && items.length > 0 && filtered.length === 0 ? (
-        <p className="mt-8 text-sm text-muted">No matches.</p>
+        <div className="mt-6 rounded-[1.5rem] border border-dashed border-border bg-surface/50 px-5 py-10 text-center">
+          <p className="font-display text-xl font-semibold text-foreground">
+            No matches
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+            {hasQuery
+              ? `Nothing matches “${query.trim()}”. Try another name or clear the search.`
+              : "No items for this source filter. Switch back to PDF or All sources."}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {hasQuery ? (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="inline-flex h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Clear search
+              </button>
+            ) : null}
+            {source !== "all" ? (
+              <button
+                type="button"
+                onClick={() => setSource("all")}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-border px-4 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Reset source
+              </button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
-      {!loading && filtered.length > 0 ? (
+
+      {!loading && !error && filtered.length > 0 ? (
         <LibraryViews items={filtered} view={view} />
       ) : null}
     </section>
@@ -192,18 +317,33 @@ function LibraryViews({
 }) {
   if (view === "list") {
     return (
-      <ul className="mt-8 list-none divide-y divide-border border-y border-border p-0">
+      <ul className="mt-2 list-none divide-y divide-border/80 border-y border-border/80 p-0">
         {items.map((item) => (
-          <li key={item.path} className="flex items-center gap-4 py-4">
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-foreground">{item.name}</p>
-              <p className="text-xs text-muted">{formatFileSize(item.size)}</p>
-            </div>
+          <li key={item.path}>
             <Link
               href={readerPathForStorage(item.storagePath)}
-              className="rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
+              className="group flex items-center gap-3 py-3.5 no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-4 sm:px-1"
             >
-              Open
+              <span
+                aria-hidden="true"
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-muted text-[0.65rem] font-bold text-foreground"
+              >
+                PDF
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-foreground">
+                  {item.name}
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  {formatFileSize(item.size)}
+                  {item.createdAt
+                    ? ` · ${formatUploadDate(item.createdAt)}`
+                    : ""}
+                </span>
+              </span>
+              <span className="shrink-0 rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background opacity-90 transition group-hover:opacity-100">
+                Open
+              </span>
             </Link>
           </li>
         ))}
@@ -213,17 +353,18 @@ function LibraryViews({
 
   if (view === "compact") {
     return (
-      <ul className="mt-8 columns-1 gap-3 p-0 sm:columns-2 xl:columns-3">
+      <ul className="mt-2 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <li key={item.path} className="mb-3 break-inside-avoid list-none">
+          <li key={item.path}>
             <Link
               href={readerPathForStorage(item.storagePath)}
-              className="flex items-center justify-between rounded-xl border border-border/70 bg-surface/50 px-3 py-2.5 text-sm no-underline hover:bg-surface-muted"
+              title={item.name}
+              className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/70 bg-surface/50 px-3 py-2.5 text-sm no-underline transition-colors hover:border-foreground/20 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="truncate font-medium text-foreground">
                 {item.name}
               </span>
-              <span className="ml-3 shrink-0 text-[0.7rem] text-subtle">
+              <span className="shrink-0 text-[0.7rem] tabular-nums text-subtle">
                 {formatFileSize(item.size)}
               </span>
             </Link>
@@ -234,41 +375,53 @@ function LibraryViews({
   }
 
   return (
-    <ul className="mt-8 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
+    <ul className="mt-2 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
         <li key={item.path}>
-          <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/70 bg-surface/50">
-            <div className="relative h-28 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--accent)_28%,transparent),transparent_55%),linear-gradient(135deg,var(--surface-muted),var(--background))]">
+          <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/70 bg-surface/50 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[var(--elevation-sm)]">
+            <div
+              aria-hidden="true"
+              className="relative h-28 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--accent)_28%,transparent),transparent_55%),linear-gradient(135deg,var(--surface-muted),var(--background))]"
+            >
               <div className="absolute inset-x-5 bottom-4 flex h-10 items-end gap-1 opacity-80">
                 {[30, 55, 40, 70, 45, 60, 35].map((h, i) => (
                   <span
                     key={i}
-                    className="er-wave-bar flex-1 rounded-full bg-accent/70"
-                    style={{ height: `${h}%`, animationDelay: `${i * 0.08}s` }}
+                    className="w-full rounded-full bg-accent/70"
+                    style={{ height: `${h}%` }}
                   />
                 ))}
               </div>
             </div>
             <div className="flex flex-1 flex-col p-5">
-              <h3 className="truncate font-display text-lg font-semibold tracking-tight text-foreground">
+              <h3
+                className="truncate font-display text-lg font-semibold tracking-tight text-foreground"
+                title={item.name}
+              >
                 {item.name}
               </h3>
               <p className="mt-2 text-sm text-muted">
-                {formatFileSize(item.size)}
+                <span className="tabular-nums">{formatFileSize(item.size)}</span>
                 {item.createdAt
-                  ? ` · ${new Date(item.createdAt).toLocaleDateString()}`
+                  ? ` · ${formatUploadDate(item.createdAt)}`
                   : ""}
+              </p>
+              <p className="mt-1 truncate font-mono text-[0.65rem] text-subtle">
+                PDF
               </p>
               <div className="mt-auto flex gap-2 pt-5">
                 <Link
                   href={readerPathForStorage(item.storagePath)}
-                  className="inline-flex h-9 flex-1 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background"
+                  className="inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Open studio
                 </Link>
                 <button
                   type="button"
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-border px-3 text-xs font-semibold text-muted"
+                  disabled
+                  title="Delete is coming soon"
+                  aria-label="Delete (coming soon)"
+                  className="inline-flex h-10 min-h-10 cursor-not-allowed items-center justify-center rounded-full border border-border px-3 text-xs font-semibold text-muted opacity-55"
                 >
                   Delete
                 </button>
@@ -281,24 +434,31 @@ function LibraryViews({
   );
 }
 
-function Select({
+function FilterSelect({
   label,
   value,
   onChange,
   options,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<[string, string]>;
+  disabled?: boolean;
 }) {
+  const id = `library-filter-${label.toLowerCase().replace(/\s+/g, "-")}`;
+
   return (
     <label className="flex items-center gap-2 text-[0.7rem] text-muted">
       <span className="sr-only">{label}</span>
       <select
+        id={id}
         value={value}
+        disabled={disabled}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-full border border-border bg-background px-3 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="h-9 max-w-[11rem] rounded-full border border-border bg-background px-3 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-55"
       >
         {options.map(([v, l]) => (
           <option key={v} value={v}>
@@ -308,4 +468,16 @@ function Select({
       </select>
     </label>
   );
+}
+
+function formatUploadDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }

@@ -8,6 +8,8 @@ import { getApiErrorMessage } from "@/utils";
 
 export type SummaryUiStatus = "idle" | "loading" | "success" | "error";
 
+export type SummaryCopyState = "idle" | "copied" | "failed";
+
 export type UseSummaryOptions = {
   storagePath: string;
   fileName: string;
@@ -18,7 +20,7 @@ export type UseSummaryState = {
   summary: SummaryResult | null;
   status: SummaryUiStatus;
   error: string | null;
-  copyState: "idle" | "copied";
+  copyState: SummaryCopyState;
   generate: (summaryType: SummaryType) => Promise<void>;
   regenerate: () => Promise<void>;
   copySummary: () => Promise<void>;
@@ -35,13 +37,14 @@ export function useSummary({
   const [summary, setSummary] = useState<SummaryResult | null>(null);
   const [status, setStatus] = useState<SummaryUiStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [copyState, setCopyState] = useState<SummaryCopyState>("idle");
 
   const generate = useCallback(
     async (summaryType: SummaryType, options?: { regenerate?: boolean }) => {
       setActiveType(summaryType);
       setStatus("loading");
       setError(null);
+      setCopyState("idle");
 
       try {
         const response = await fetch("/api/documents/summarize", {
@@ -119,8 +122,11 @@ export function useSummary({
         setCopyState("idle");
       }, 2000);
     } catch {
-      setError("Unable to copy summary to clipboard.");
-      setStatus("error");
+      // Keep the generated summary visible — copy failure is not a generation error.
+      setCopyState("failed");
+      window.setTimeout(() => {
+        setCopyState("idle");
+      }, 2500);
     }
   }, [summary]);
 

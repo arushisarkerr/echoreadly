@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { CloseIcon } from "@/components/icons";
 import { cn } from "@/utils";
@@ -34,6 +34,8 @@ export function SummaryPanel({
   const summary = useSummary({ storagePath, fileName });
   const isLoading = summary.status === "loading";
   const [activeTab, setActiveTab] = useState<"summary" | "chat">("summary");
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (!open) {
@@ -46,16 +48,21 @@ export function SummaryPanel({
       }
     }
 
-    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
+    document.addEventListener("keydown", onKeyDown);
 
+    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
     if (isMobile) {
-      document.addEventListener("keydown", onKeyDown);
       document.body.style.overflow = "hidden";
     }
+
+    const frame = window.requestAnimationFrame(() => {
+      closeRef.current?.focus();
+    });
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      window.cancelAnimationFrame(frame);
     };
   }, [onClose, open]);
 
@@ -66,7 +73,10 @@ export function SummaryPanel({
           <p className="text-[0.6rem] font-semibold tracking-[0.18em] text-accent uppercase">
             Studio AI
           </p>
-          <h2 className="mt-1 font-display text-lg font-semibold tracking-tight text-foreground">
+          <h2
+            id={titleId}
+            className="mt-1 font-display text-lg font-semibold tracking-tight text-foreground"
+          >
             Summary & chat
           </h2>
           <p className="mt-1 text-xs text-muted">
@@ -75,6 +85,7 @@ export function SummaryPanel({
         </div>
 
         <button
+          ref={closeRef}
           type="button"
           onClick={onClose}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -84,9 +95,15 @@ export function SummaryPanel({
         </button>
       </div>
 
-      <div className="flex gap-1.5 border-b border-border/60 px-4 py-3">
+      <div
+        className="flex gap-1.5 border-b border-border/60 px-4 py-3"
+        role="tablist"
+        aria-label="Studio AI panels"
+      >
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "summary"}
           onClick={() => setActiveTab("summary")}
           className={cn(
             "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -99,6 +116,8 @@ export function SummaryPanel({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "chat"}
           onClick={() => setActiveTab("chat")}
           className={cn(
             "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -113,7 +132,10 @@ export function SummaryPanel({
 
       {activeTab === "summary" ? (
         <>
-          <div className="space-y-4 px-4 py-4">
+          <div className="shrink-0 space-y-3 border-b border-border/50 px-4 py-4">
+            <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
+              Choose a length
+            </p>
             <SummaryButtons
               activeType={summary.activeType}
               disabled={isLoading}
@@ -123,7 +145,7 @@ export function SummaryPanel({
             />
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
             <SummaryContent
               status={summary.status}
               summary={summary.summary}
@@ -166,7 +188,7 @@ export function SummaryPanel({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-foreground/20 transition-opacity lg:hidden",
+          "fixed inset-0 z-40 bg-foreground/25 transition-opacity lg:hidden",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         aria-hidden={!open}
@@ -175,11 +197,13 @@ export function SummaryPanel({
 
       <aside
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[78vh] flex-col rounded-t-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] shadow-[var(--elevation-md)] backdrop-blur-xl transition-transform duration-300 lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[var(--elevation-md)] backdrop-blur-xl transition-transform duration-300 lg:hidden",
           open ? "translate-y-0" : "translate-y-full",
         )}
         aria-hidden={!open}
-        aria-label="AI Summary"
+        aria-labelledby={titleId}
+        aria-modal={open ? true : undefined}
+        role="dialog"
       >
         <div className="flex justify-center py-3" aria-hidden="true">
           <span className="h-1 w-10 rounded-full bg-border" />
@@ -189,8 +213,8 @@ export function SummaryPanel({
 
       {open ? (
         <aside
-          className="hidden h-full w-[22rem] shrink-0 border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl lg:flex lg:flex-col"
-          aria-label="AI Summary"
+          className="hidden h-full w-[22rem] shrink-0 border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl lg:flex lg:flex-col xl:w-[24rem]"
+          aria-labelledby={titleId}
         >
           {panelBody}
         </aside>

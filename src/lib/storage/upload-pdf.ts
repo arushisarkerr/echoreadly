@@ -133,7 +133,9 @@ export async function uploadPdf(
         message:
           validation.error === "too_large"
             ? "File too large for upload."
-            : "Only application/pdf files can be uploaded.",
+            : validation.error === "empty"
+              ? "Empty files cannot be uploaded."
+              : "Only application/pdf files can be uploaded.",
       },
     };
   }

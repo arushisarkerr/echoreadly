@@ -88,12 +88,15 @@ export function PdfViewer({
 
   const pageScale = fitMode === "custom" ? scale : undefined;
 
-  const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse") {
-      return;
-    }
-    pointerStartX.current = event.clientX;
-  }, []);
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.pointerType === "mouse") {
+        return;
+      }
+      pointerStartX.current = event.clientX;
+    },
+    [],
+  );
 
   const handlePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -120,8 +123,12 @@ export function PdfViewer({
   return (
     <div
       ref={containerRef}
+      role="region"
+      aria-label={`PDF page ${pageNumber}`}
+      tabIndex={0}
       className={cn(
-        "flex min-h-0 flex-1 touch-pan-y justify-center overflow-auto bg-surface-muted/40 px-4 py-6",
+        "flex min-h-0 flex-1 touch-pan-y justify-center overflow-auto bg-[color-mix(in_srgb,var(--surface-muted)_55%,transparent)] px-3 py-4 sm:px-5 sm:py-6",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
       )}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
@@ -149,7 +156,7 @@ export function PdfViewer({
           scale={pageScale}
           renderTextLayer={false}
           renderAnnotationLayer={false}
-          className="shadow-md"
+          className="rounded-sm shadow-[var(--elevation-md)]"
           loading={null}
           onRenderSuccess={(page) => {
             const viewport = page.getViewport({ scale: 1 });

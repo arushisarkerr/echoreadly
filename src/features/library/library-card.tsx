@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { readerPathForStorage } from "@/constants";
 import type { StoredPdfObject } from "@/lib/storage";
 import { formatFileSize } from "@/utils";
 
@@ -9,49 +10,50 @@ type LibraryCardProps = {
 
 /**
  * Single library item card.
- * Open navigates to the reader; Delete remains a UI placeholder.
+ * Open navigates to the reader; Delete remains a disabled UI placeholder.
  */
 export function LibraryCard({ item }: LibraryCardProps) {
   const uploadedLabel = formatUploadDate(item.createdAt);
-  const readerHref = `/dashboard/reader/${item.storagePath
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/")}`;
+  const readerHref = readerPathForStorage(item.storagePath);
 
   return (
-    <article className="flex h-full flex-col rounded-lg border border-border bg-surface p-5 transition-colors hover:border-foreground/15">
+    <article className="group flex h-full flex-col rounded-[1.75rem] border border-border/70 bg-surface/50 p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[var(--elevation-sm)]">
       <div className="flex items-start gap-3">
         <div
           aria-hidden="true"
-          className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface-muted text-foreground"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-muted text-foreground"
         >
           <PdfGlyph className="size-5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+          <h3
+            className="truncate text-sm font-semibold tracking-tight text-foreground"
+            title={item.name}
+          >
             {item.name}
           </h3>
           <p className="mt-1 text-xs text-muted">
-            {formatFileSize(item.size)}
+            <span className="tabular-nums">{formatFileSize(item.size)}</span>
             {uploadedLabel ? ` · ${uploadedLabel}` : null}
           </p>
-          <p className="mt-2 truncate font-mono text-[0.6875rem] text-subtle">
-            {item.storagePath}
-          </p>
+          <p className="mt-2 truncate text-[0.6875rem] text-subtle">PDF</p>
         </div>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
           href={readerHref}
-          className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90"
+          className="inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Open
+          Open studio
         </Link>
         <button
           type="button"
-          className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+          disabled
+          title="Delete is coming soon"
+          aria-label="Delete (coming soon)"
+          className="inline-flex h-10 min-h-10 cursor-not-allowed items-center justify-center rounded-full border border-border bg-background px-4 text-xs font-semibold text-muted opacity-55"
         >
           Delete
         </button>
