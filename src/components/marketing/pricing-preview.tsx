@@ -6,29 +6,28 @@ const PLANS = [
   {
     name: "Free",
     price: "$0",
-    blurb: "PDF listening studio — available now.",
+    blurb: "Import, prepare, and listen — available now.",
     features: [
-      "PDF upload",
-      "Online listening (TTS)",
-      "AI summary",
-      "AI chat",
+      "File import (PDF)",
+      "Preparing status",
+      "Natural AI audio listening",
+      "বাংলা as primary language",
     ],
-    cta: "Start Free",
+    cta: "Start free",
     href: ROUTES.signup,
     featured: false,
   },
   {
     name: "Pro",
     price: "Soon",
-    blurb: "Planned upgrades for voices, exports, and more sources.",
+    blurb: "Planned upgrades for voices, downloads, and more sources.",
     features: [
       "Everything in Free",
-      "Premium voices & styles (planned)",
-      "MP3 · M4A · WAV export (planned)",
-      "Additional import sources (planned)",
-      "Translation + collections (planned)",
+      "Richer listening voices (planned)",
+      "MP3 · M4A · WAV downloads (planned)",
+      "Link imports & more files (planned)",
     ],
-    cta: "Join Free for now",
+    cta: "Join free for now",
     href: ROUTES.signup,
     featured: true,
   },
@@ -64,8 +63,8 @@ export function PricingPreview() {
             Simple plans for serious listening.
           </h2>
           <p className="er-copy mx-auto mt-5 text-muted">
-            Start free with PDF upload, summary, chat, and listen. Paid tiers
-            are planned — not billed yet.
+            Start free to import, prepare, and listen. Paid tiers are planned —
+            not billed yet.
           </p>
         </Reveal>
 

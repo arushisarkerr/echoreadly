@@ -63,7 +63,7 @@ export function getTargetLanguageDefinition(
   );
 }
 
-export const DEFAULT_TARGET_LANGUAGE: TargetLanguageCode = "es";
+export const DEFAULT_TARGET_LANGUAGE: TargetLanguageCode = "bn";
 
 /** Max characters for selection-scope translation input. */
 export const MAX_TRANSLATION_SELECTION_CHARS = 8_000;

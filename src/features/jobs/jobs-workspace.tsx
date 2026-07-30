@@ -15,16 +15,16 @@ export function JobsWorkspace() {
 
   return (
     <WorkspaceCanvas
-      kicker="Background jobs"
-      title="Work that stays off the Reader."
-      description="Document processing, AI, TTS, export, and maintenance run in a durable queue with retries — so the studio stays responsive."
+      kicker="Preparing"
+      title="Preparing your audio…"
+      description="Status for work running in the background. You don’t need to manage this — open Library when an item is Ready."
       actionHref={ROUTES.library}
       actionLabel="Open Library"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          Active jobs poll every few seconds. Cancel only works before a worker
-          claims the job.
+          Items update automatically. Cancel only works before preparation
+          starts.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -34,7 +34,7 @@ export function JobsWorkspace() {
             }}
             className="inline-flex h-9 items-center rounded-full border border-border/80 bg-background/50 px-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted"
           >
-            Refresh
+            Refresh status
           </button>
           <button
             type="button"
@@ -43,7 +43,7 @@ export function JobsWorkspace() {
             }}
             className="inline-flex h-9 items-center rounded-full border border-foreground bg-foreground px-3.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
           >
-            Process now
+            Continue preparing
           </button>
         </div>
       </div>

@@ -1,5 +1,8 @@
-import { HistoryWorkspace } from "@/features/dashboard";
+import { redirect } from "next/navigation";
 
+import { ROUTES } from "@/constants";
+
+/** History folded into Library (home). */
 export default function HistoryPage() {
-  return <HistoryWorkspace />;
+  redirect(ROUTES.library);
 }

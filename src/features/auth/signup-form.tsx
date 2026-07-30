@@ -103,7 +103,7 @@ export function SignupForm() {
           Create Account
         </h1>
         <p className="text-sm text-muted">
-          Start building your private reading library.
+          Import content and build a library you can listen to.
         </p>
       </div>
 

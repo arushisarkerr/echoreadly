@@ -3,23 +3,23 @@ import { Reveal } from "@/components/marketing/reveal";
 const STORIES = [
   {
     id: "listen",
-    eyebrow: "Listen online",
-    title: "Audio that plays in the studio.",
-    copy: "Open a PDF and listen with text-to-speech as soon as the document is ready — no separate export step required for online playback.",
+    eyebrow: "Natural AI audio",
+    title: "Hear what you imported.",
+    copy: "When preparing finishes, press play. Your file or link becomes natural AI audio you can listen to right away.",
     visual: "wave",
   },
   {
-    id: "intelligence",
-    eyebrow: "AI chat & summary",
-    title: "Ask. Skim. Keep listening.",
-    copy: "Chat with the PDF and generate short, detailed, or bullet summaries in the Listening Studio — available now.",
+    id: "prepare",
+    eyebrow: "Import → Preparing → Listen",
+    title: "Status you can trust.",
+    copy: "Drop a file or paste a link, then follow preparing status until audio is ready. No guessing — just a clear path to listen.",
     visual: "chat",
   },
   {
-    id: "world",
-    eyebrow: "Translation & collections · Planned",
-    title: "Across languages. Across shelves.",
-    copy: "Translation, collections, and richer organization are planned. Today, keep documents on your library shelf and work in the studio.",
+    id: "bangla",
+    eyebrow: "বাংলা first",
+    title: "Built for listening in বাংলা.",
+    copy: "বাংলা is the primary listening language. More voices and languages are planned as EchoReadly grows.",
     visual: "orbit",
   },
 ] as const;
@@ -37,7 +37,7 @@ export function MarketingFeatureStories() {
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <Reveal>
           <h2 id="features-heading" className="er-display-lg max-w-[14ch] text-foreground">
-            Built around listening — not bolted onto reading.
+            Built for listening — from source to sound.
           </h2>
         </Reveal>
 
@@ -76,13 +76,13 @@ function StoryVisual({ kind }: { kind: (typeof STORIES)[number]["visual"] }) {
       <div className="er-glass rounded-[1.75rem] p-6">
         <div className="space-y-3">
           <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-surface-muted px-4 py-3 text-sm text-muted">
-            What are the three key arguments?
+            Import complete — preparing audio…
           </div>
           <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-md bg-foreground px-4 py-3 text-sm text-background">
-            1) Context · 2) Evidence · 3) Implications — want the short summary?
+            Almost ready. Natural AI audio is on the way.
           </div>
           <div className="max-w-[70%] rounded-2xl rounded-tl-md bg-surface-muted px-4 py-3 text-sm text-muted">
-            Yes — keep it concise.
+            Ready — press play to listen.
           </div>
         </div>
       </div>
@@ -95,9 +95,9 @@ function StoryVisual({ kind }: { kind: (typeof STORIES)[number]["visual"] }) {
         <div className="absolute inset-[18%] rounded-full border border-border" />
         <div className="absolute inset-[32%] rounded-full border border-dashed border-accent/40" />
         <div className="absolute inset-0 m-auto flex size-24 items-center justify-center rounded-full bg-foreground font-display text-sm font-bold text-background">
-          Planned
+          বাংলা
         </div>
-        {["EN", "BN", "HI", "PT"].map((label, i) => (
+        {["BN", "EN", "HI", "PT"].map((label, i) => (
           <span
             key={label}
             className="er-float-a absolute rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold"

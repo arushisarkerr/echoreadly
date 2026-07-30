@@ -26,7 +26,7 @@ export function MarketingFooter() {
             {siteConfig.name}
           </a>
           <p className="mt-3 text-sm leading-relaxed text-subtle">
-            PDF to audio — summarize, chat, and listen online.
+            {siteConfig.tagline}
           </p>
         </div>
 

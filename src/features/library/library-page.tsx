@@ -21,6 +21,7 @@ import { cn, formatFileSize } from "@/utils";
 
 import { LibraryEmptyState } from "./empty-state";
 import { DeleteDocumentButton } from "./delete-document-button";
+import { LibraryHomeHub } from "./library-home-hub";
 import { LibraryLoading } from "./loading";
 import { useLibrary } from "./use-library";
 
@@ -164,22 +165,30 @@ export function LibraryPage() {
             Library
           </p>
           <h1 className="font-display mt-2 text-[clamp(2.2rem,3vw,3.5rem)] font-bold tracking-[-0.045em] text-foreground">
-            The shelf
+            What should you listen to next?
           </h1>
           <p className="mt-3 max-w-md text-sm text-muted">
-            Search, sort, and switch density. PDF inventory is live from your
-            storage.
+            Continue a listen, check preparing items, or open anything ready.
           </p>
         </div>
         <Link
           href={ROUTES.addContent}
           className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Add content
+          Import
         </Link>
       </div>
 
-      <div className="mt-8 space-y-3 rounded-[1.75rem] border border-border/70 bg-surface/45 p-3 sm:p-4">
+      {!loading && loadedCount > 0 ? (
+        <div className="mt-8">
+          <LibraryHomeHub items={items} />
+        </div>
+      ) : null}
+
+      <div className="mt-10 space-y-3 rounded-[1.75rem] border border-border/70 bg-surface/45 p-3 sm:p-4">
+        <p className="px-1 text-[0.65rem] font-semibold tracking-[0.18em] text-subtle uppercase">
+          All audio
+        </p>
         <div className="relative">
           <label htmlFor="library-search" className="sr-only">
             Search library by name
@@ -473,7 +482,7 @@ function LibraryViews({
                 </span>
               </span>
               <span className="hidden shrink-0 rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background opacity-90 transition group-hover:opacity-100 sm:inline-flex">
-                {progress ? "Resume" : "Start Reading"}
+                {progress ? "Resume" : "Listen"}
               </span>
             </Link>
             <DeleteDocumentButton
@@ -570,7 +579,7 @@ function LibraryViews({
                   href={readerPathForStorage(item.storagePath)}
                   className="inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {progress ? "Resume" : "Start Reading"}
+                  {progress ? "Resume" : "Listen"}
                 </Link>
                 <DeleteDocumentButton
                   storagePath={item.storagePath}

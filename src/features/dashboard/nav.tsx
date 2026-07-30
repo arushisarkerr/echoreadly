@@ -27,14 +27,6 @@ function Icon(props: SVGProps<SVGSVGElement> & { children: ReactNode }) {
   );
 }
 
-function HomeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" />
-    </Icon>
-  );
-}
-
 function LibraryIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
@@ -47,70 +39,6 @@ function AddIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
       <path d="M12 5v14M5 12h14" />
-    </Icon>
-  );
-}
-
-function ListenIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M11 5v14" />
-      <path d="M7 9v6M15 8v8M4 11v2M18 11v2" />
-    </Icon>
-  );
-}
-
-function CollectionsIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M4 7h16v12H4z" />
-      <path d="M8 7V5h8v2" />
-    </Icon>
-  );
-}
-
-function HistoryIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M4 12a8 8 0 1 0 2.3-5.6" />
-      <path d="M4 4v4h4" />
-      <path d="M12 8v4l3 2" />
-    </Icon>
-  );
-}
-
-function ExportIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M12 4v10" />
-      <path d="M8 10l4 4 4-4" />
-      <path d="M5 18h14" />
-    </Icon>
-  );
-}
-
-function VoiceIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z" />
-      <path d="M6 11a6 6 0 0 0 12 0M12 17v3" />
-    </Icon>
-  );
-}
-
-function AnalyticsIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M4 19V9M10 19V5M16 19v-7M20 19H3" />
-    </Icon>
-  );
-}
-
-function JobsIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M4 7h16M4 12h16M4 17h10" />
-      <path d="M18 15l2 2 2-2" />
     </Icon>
   );
 }
@@ -143,18 +71,10 @@ export function ThemeIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 /**
- * Primary dashboard navigation — creative workspace IA.
+ * Primary product navigation — Import → Library (home) → Account.
  */
 export const DASHBOARD_NAV: DashboardNavItem[] = [
-  { label: "Home", href: ROUTES.dashboard, icon: HomeIcon, isHome: true },
-  { label: "Library", href: ROUTES.library, icon: LibraryIcon },
-  { label: "Add Content", href: ROUTES.addContent, icon: AddIcon },
-  { label: "Listen", href: ROUTES.listen, icon: ListenIcon },
-  { label: "Collections", href: ROUTES.collections, icon: CollectionsIcon },
-  { label: "History", href: ROUTES.history, icon: HistoryIcon },
-  { label: "Analytics", href: ROUTES.analytics, icon: AnalyticsIcon },
-  { label: "Jobs", href: ROUTES.jobs, icon: JobsIcon },
-  { label: "Exports", href: ROUTES.exports, icon: ExportIcon },
-  { label: "Voice Library", href: ROUTES.voices, icon: VoiceIcon },
-  { label: "Settings", href: ROUTES.settings, icon: SettingsIcon },
+  { label: "Import", href: ROUTES.addContent, icon: AddIcon },
+  { label: "Library", href: ROUTES.library, icon: LibraryIcon, isHome: true },
+  { label: "Account", href: ROUTES.settings, icon: SettingsIcon },
 ];

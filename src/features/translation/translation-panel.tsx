@@ -39,14 +39,14 @@ type TranslationPanelProps = {
 };
 
 const SCOPES: Array<{ id: TranslationScope; label: string }> = [
-  { id: "page", label: "Page" },
-  { id: "document", label: "Document" },
-  { id: "summary", label: "Summary" },
+  { id: "page", label: "This page" },
+  { id: "document", label: "Whole document" },
+  { id: "summary", label: "Quick Listen text" },
   { id: "selection", label: "Selection" },
 ];
 
 /**
- * Studio Translate tab — language picker, scopes, cache indicator, original/translated toggle.
+ * Listening Language controls — same translation engine under the hood.
  */
 export function TranslationPanel({
   storagePath,
@@ -111,7 +111,7 @@ export function TranslationPanel({
 
         <div>
           <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
-            Translate
+            Apply to
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {SCOPES.map((entry) => (
@@ -158,7 +158,7 @@ export function TranslationPanel({
         {translate.scope === "summary" ? (
           <label className="block">
             <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
-              Summary type
+              Mode text
             </span>
             <select
               value={translate.summaryType}
@@ -186,7 +186,7 @@ export function TranslationPanel({
             }}
             className="inline-flex h-10 items-center justify-center rounded-full border border-foreground bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? "Translating…" : "Translate"}
+            {busy ? "Preparing…" : "Apply language"}
           </button>
           {busy ? (
             <button

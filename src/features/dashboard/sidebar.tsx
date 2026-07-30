@@ -16,7 +16,7 @@ type DashboardSidebarProps = {
 };
 
 /**
- * Studio rail — vertical brand, sparse nav, account preserved at base.
+ * Product rail — Import, Library (home), Account.
  */
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const pathname = usePathname();
@@ -30,9 +30,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
 
       <div className="relative px-5 pt-6 pb-5">
         <Link
-          href={ROUTES.dashboard}
+          href={ROUTES.library}
           onClick={onNavigate}
-          aria-label={`${siteConfig.name} home`}
+          aria-label={`${siteConfig.name} library`}
           className="group block no-underline"
         >
           <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground font-display text-sm font-bold tracking-tight text-background transition-transform group-hover:scale-[1.03]">
@@ -42,20 +42,22 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             {siteConfig.name}
           </span>
           <span className="mt-1 block text-[0.65rem] font-semibold tracking-[0.22em] text-accent uppercase">
-            Studio
+            Listen
           </span>
         </Link>
       </div>
 
       <nav
-        aria-label="Workspace"
+        aria-label="Primary"
         className="relative flex-1 overflow-y-auto px-3 pb-4"
       >
         <ul className="list-none space-y-0.5 p-0">
           {DASHBOARD_NAV.map((item) => {
             const Icon = item.icon;
             const isActive = item.isHome
-              ? pathname === ROUTES.dashboard
+              ? pathname === ROUTES.dashboard ||
+                pathname === ROUTES.library ||
+                pathname.startsWith(`${ROUTES.library}/`)
               : pathname === item.href ||
                 pathname.startsWith(`${item.href}/`);
 

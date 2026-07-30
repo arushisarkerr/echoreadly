@@ -92,7 +92,7 @@ export function LoginForm() {
           Sign in
         </h1>
         <p className="text-sm text-muted">
-          Access your library, summaries, and reading tools.
+          Access your library and keep listening to natural AI audio.
         </p>
       </div>
 

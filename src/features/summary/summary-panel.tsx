@@ -54,14 +54,12 @@ type SummaryPanelProps = {
   }) => void;
 };
 
-type StudioTab = "summary" | "chat" | "translate";
+type StudioTab = "listen" | "language" | "advanced";
 
-const TAB_ORDER: StudioTab[] = ["summary", "chat", "translate"];
+const TAB_ORDER: StudioTab[] = ["listen", "language", "advanced"];
 
 /**
- * AI Summary panel for the PDF reader.
- * Desktop: collapsible right sidebar. Mobile: bottom sheet drawer.
- * Live tabs: Summary + Chat + Translate.
+ * Listen options panel — modes, listening language, advanced ask.
  */
 export function SummaryPanel({
   storagePath,
@@ -82,7 +80,7 @@ export function SummaryPanel({
   const summary = useSummary({ storagePath, fileName });
   const isLoading =
     summary.status === "loading" || summary.status === "streaming";
-  const [activeTab, setActiveTab] = useState<StudioTab>("summary");
+  const [activeTab, setActiveTab] = useState<StudioTab>("listen");
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const summaryTabId = useId();
@@ -141,17 +139,17 @@ export function SummaryPanel({
       <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-4">
         <div className="min-w-0">
           <p className="text-[0.6rem] font-semibold tracking-[0.18em] text-accent uppercase">
-            Studio AI
+            Listen
           </p>
           <h2
             id={titleId}
             className="mt-1 font-display text-lg font-semibold tracking-tight text-foreground"
           >
-            Summary, chat & translate
+            How do you want to listen?
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Live tools for this document. Generate a summary, ask questions, or
-            translate — nothing runs until you choose.
+            Choose a listening mode or language. Audio stays the focus —
+            everything else is optional.
           </p>
         </div>
 
@@ -160,7 +158,7 @@ export function SummaryPanel({
           type="button"
           onClick={onClose}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Close AI panel"
+          aria-label="Close listen options"
         >
           <CloseIcon className="size-4" />
         </button>
@@ -169,33 +167,33 @@ export function SummaryPanel({
       <div
         className="flex flex-wrap items-center gap-1.5 border-b border-border/60 px-4 py-3"
         role="tablist"
-        aria-label="Studio AI tools"
+        aria-label="Listen options"
         onKeyDown={onTabListKeyDown}
       >
         <TabButton
           id={summaryTabId}
           controls={summaryPanelId}
-          selected={activeTab === "summary"}
-          onSelect={() => setActiveTab("summary")}
-          label="Summary"
-        />
-        <TabButton
-          id={chatTabId}
-          controls={chatPanelId}
-          selected={activeTab === "chat"}
-          onSelect={() => setActiveTab("chat")}
-          label="Chat"
+          selected={activeTab === "listen"}
+          onSelect={() => setActiveTab("listen")}
+          label="Modes"
         />
         <TabButton
           id={translateTabId}
           controls={translatePanelId}
-          selected={activeTab === "translate"}
-          onSelect={() => setActiveTab("translate")}
-          label="Translate"
+          selected={activeTab === "language"}
+          onSelect={() => setActiveTab("language")}
+          label="Listening Language"
+        />
+        <TabButton
+          id={chatTabId}
+          controls={chatPanelId}
+          selected={activeTab === "advanced"}
+          onSelect={() => setActiveTab("advanced")}
+          label="Advanced"
         />
       </div>
 
-      {activeTab === "summary" ? (
+      {activeTab === "listen" ? (
         <div
           id={summaryPanelId}
           role="tabpanel"
@@ -204,7 +202,7 @@ export function SummaryPanel({
         >
           <div className="shrink-0 space-y-3 border-b border-border/50 px-4 py-4">
             <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
-              Choose a length
+              Listening mode
             </p>
             <SummaryButtons
               activeType={summary.activeType}
@@ -272,16 +270,7 @@ export function SummaryPanel({
             />
           </div>
         </div>
-      ) : activeTab === "chat" ? (
-        <div
-          id={chatPanelId}
-          role="tabpanel"
-          aria-labelledby={chatTabId}
-          className="min-h-0 flex-1 overflow-hidden px-4 py-4"
-        >
-          <ChatPanel storagePath={storagePath} fileName={fileName} />
-        </div>
-      ) : (
+      ) : activeTab === "language" ? (
         <div
           id={translatePanelId}
           role="tabpanel"
@@ -342,6 +331,19 @@ export function SummaryPanel({
               }
             }}
           />
+        </div>
+      ) : (
+        <div
+          id={chatPanelId}
+          role="tabpanel"
+          aria-labelledby={chatTabId}
+          className="min-h-0 flex-1 overflow-hidden px-4 py-4"
+        >
+          <p className="mb-3 text-xs text-muted">
+            Advanced — ask about this document. Optional; listening stays the
+            main experience.
+          </p>
+          <ChatPanel storagePath={storagePath} fileName={fileName} />
         </div>
       )}
     </div>

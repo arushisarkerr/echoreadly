@@ -77,12 +77,12 @@ export function ReaderToolbar({
             href={ROUTES.library}
             className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-background/50 px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            ← Shelf
+            ← Library
           </Link>
 
           <div className="min-w-0 flex-1">
             <p className="text-[0.6rem] font-semibold tracking-[0.18em] text-accent uppercase">
-              Listening studio
+              Listen
             </p>
             <p
               className="truncate text-sm font-semibold tracking-tight text-foreground"
@@ -103,11 +103,11 @@ export function ReaderToolbar({
 
           {onToggleSummary ? (
             <ToolbarButton
-              label={summaryOpen ? "Hide AI" : "AI panel"}
+              label={summaryOpen ? "Hide options" : "Listen options"}
               ariaLabel={
                 summaryOpen
-                  ? "Hide AI summary and chat panel"
-                  : "Open AI summary and chat panel"
+                  ? "Hide listen options"
+                  : "Open listen options"
               }
               disabled={disabled}
               active={summaryOpen}
@@ -120,7 +120,7 @@ export function ReaderToolbar({
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="toolbar"
-          aria-label="Reader controls"
+          aria-label="Listen controls"
         >
           <div
             className="flex items-center gap-1.5"
@@ -216,7 +216,7 @@ export function ReaderToolbar({
 
         <p className="sr-only">
           Keyboard: Left and Right arrows change page. Plus and Minus zoom when
-          the reader is focused. Open the AI panel for Summary and Chat.
+          the reader is focused. Open Listen options for modes and language.
         </p>
       </div>
     </header>

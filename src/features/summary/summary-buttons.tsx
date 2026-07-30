@@ -3,14 +3,14 @@
 import type { SummaryType } from "@/features/ai";
 import { cn } from "@/utils";
 
-const SUMMARY_OPTIONS: Array<{
+const LISTEN_MODE_OPTIONS: Array<{
   type: SummaryType;
   label: string;
   hint: string;
 }> = [
-  { type: "short", label: "Short", hint: "Quick overview" },
-  { type: "detailed", label: "Detailed", hint: "Deeper read" },
-  { type: "bullet", label: "Bullet", hint: "Key points" },
+  { type: "detailed", label: "Listen to Everything", hint: "Full document" },
+  { type: "short", label: "Quick Listen", hint: "Short take" },
+  { type: "bullet", label: "Key Moments", hint: "Highlights" },
 ];
 
 type SummaryButtonsProps = {
@@ -20,7 +20,7 @@ type SummaryButtonsProps = {
 };
 
 /**
- * Summary type selector buttons.
+ * Listening mode selector — same summary engine under the hood.
  */
 export function SummaryButtons({
   activeType,
@@ -29,11 +29,11 @@ export function SummaryButtons({
 }: SummaryButtonsProps) {
   return (
     <div
-      className="grid grid-cols-3 gap-2"
+      className="grid grid-cols-1 gap-2 sm:grid-cols-3"
       role="group"
-      aria-label="Summary type"
+      aria-label="Listening mode"
     >
-      {SUMMARY_OPTIONS.map((option) => {
+      {LISTEN_MODE_OPTIONS.map((option) => {
         const active = activeType === option.type;
         return (
           <button

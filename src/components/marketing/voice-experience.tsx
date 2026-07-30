@@ -45,15 +45,15 @@ export function MarketingVoiceExperience() {
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <Reveal>
           <p className="er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-            Voice experience · Coming soon
+            Listening quality · Coming soon
           </p>
           <h2 id="voices-heading" className="er-display-lg mt-4 max-w-[16ch] text-foreground">
-            A studio of voices. A palette of styles.
+            Voices that feel natural to hear.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            Listening uses the built-in studio TTS voice today. The multi-voice
-            library below is a preview of what is planned — not selectable in
-            production yet.
+            Today you listen with a clear default voice — বাংলা first. The
+            voices and styles below preview richer listening quality that is
+            planned, not selectable yet.
           </p>
         </Reveal>
 
@@ -61,10 +61,10 @@ export function MarketingVoiceExperience() {
           <Reveal delayClassName="er-reveal-delay-1">
             <div className="space-y-8">
               <div>
-                <h3 className="er-display-sm text-foreground">Voice library</h3>
+                <h3 className="er-display-sm text-foreground">Listening voices</h3>
                 <div
                   role="listbox"
-                  aria-label="Voice library"
+                  aria-label="Listening voices"
                   className="mt-4 flex flex-wrap gap-2"
                 >
                   {VOICES.map((item) => (
@@ -87,10 +87,10 @@ export function MarketingVoiceExperience() {
               </div>
 
               <div>
-                <h3 className="er-display-sm text-foreground">Voice styles</h3>
+                <h3 className="er-display-sm text-foreground">Listening styles</h3>
                 <div
                   role="listbox"
-                  aria-label="Voice styles"
+                  aria-label="Listening styles"
                   className="mt-4 flex flex-wrap gap-2"
                 >
                   {STYLES.map((item) => (
@@ -129,8 +129,8 @@ export function MarketingVoiceExperience() {
                 {style}
               </p>
               <p className="er-copy-sm mt-3 max-w-md text-muted">
-                Planned voice and style controls. Today, open a PDF in the
-                studio to listen with the default TTS voice.
+                Planned listening voices and styles. Today, import content and
+                listen with the default natural AI voice.
               </p>
               <div className="mt-10 flex h-28 items-end gap-1.5 sm:h-32">
                 {Array.from({ length: 28 }).map((_, i) => {

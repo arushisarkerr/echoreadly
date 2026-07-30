@@ -8,7 +8,7 @@ import { useVoicePreference } from "@/features/tts/use-voice-preference";
 import { cn } from "@/utils";
 
 /**
- * Voice library — browse, preview, and persist the studio narrator.
+ * Voice — browse, preview, and persist the studio narrator.
  */
 export function VoicesWorkspace() {
   const {
@@ -29,9 +29,9 @@ export function VoicesWorkspace() {
 
   return (
     <WorkspaceCanvas
-      kicker="Voice library"
+      kicker="Voice"
       title="Cast the narrator."
-      description="Choose the OpenAI studio voice used for page and summary listening. Previews play a short sample. Changing voice applies to the next listen — current playback is left alone."
+      description="Choose the OpenAI listening voice used for page and summary listening. Previews play a short sample. Changing voice applies to the next listen — current playback is left alone."
       actionHref={ROUTES.listen}
       actionLabel="Open Listen"
     >
@@ -209,7 +209,7 @@ export function VoicesWorkspace() {
           Where this applies
         </h3>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-          Page listen and summary listen in the studio both use your selected
+          Listening uses your selected
           voice. Open a document from the{" "}
           <Link
             href={ROUTES.library}

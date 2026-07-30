@@ -312,12 +312,28 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <ReaderToolbar {...toolbarProps} disabled={reader.documentLoading} />
 
+        <AudioPlayer
+          status={tts.status}
+          source={tts.source}
+          error={tts.error}
+          currentTime={tts.currentTime}
+          duration={tts.duration}
+          speed={tts.speed}
+          speeds={tts.speeds}
+          onPlay={tts.play}
+          onPause={tts.pause}
+          onResume={tts.resume}
+          onStop={tts.stop}
+          onSpeedChange={tts.setSpeed}
+          onSeek={tts.seek}
+        />
+
         <div className="flex min-h-0 flex-1">
           <div className="relative flex min-h-0 flex-1 flex-col">
             {reader.documentLoading ? (
               <div className="absolute inset-0 z-10 bg-background/65 backdrop-blur-[1px]">
                 <ReaderLoading
-                  message={isPdf ? "Rendering PDF…" : "Preparing document…"}
+                  message="Preparing document…"
                 />
               </div>
             ) : null}
@@ -386,22 +402,6 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
             }}
           />
         </div>
-
-        <AudioPlayer
-          status={tts.status}
-          source={tts.source}
-          error={tts.error}
-          currentTime={tts.currentTime}
-          duration={tts.duration}
-          speed={tts.speed}
-          speeds={tts.speeds}
-          onPlay={tts.play}
-          onPause={tts.pause}
-          onResume={tts.resume}
-          onStop={tts.stop}
-          onSpeedChange={tts.setSpeed}
-          onSeek={tts.seek}
-        />
       </div>
     </div>
   );

@@ -5,15 +5,13 @@ import Link from "next/link";
 import { ROUTES } from "@/constants";
 
 /**
- * Floating command orb — quick studio jumps.
+ * Floating quick actions — Import / Library / Account only.
  */
 export function CommandDock() {
   const items = [
     { href: ROUTES.addContent, label: "Import" },
-    { href: ROUTES.listen, label: "Listen" },
-    { href: ROUTES.library, label: "Shelf" },
-    { href: ROUTES.voices, label: "Voices" },
-    { href: ROUTES.exports, label: "Export" },
+    { href: ROUTES.library, label: "Library" },
+    { href: ROUTES.settings, label: "Account" },
   ] as const;
 
   return (

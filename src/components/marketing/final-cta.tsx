@@ -19,18 +19,18 @@ export function FinalCta() {
       <div className="relative mx-auto max-w-5xl px-5 py-28 text-center sm:px-8 sm:py-36">
         <Reveal>
           <h2 id="final-cta-heading" className="er-display-xl text-foreground">
-            Turn PDFs into natural audio.
+            Import. Listen.
           </h2>
           <p className="er-copy mx-auto mt-6 text-muted">
-            Join {siteConfig.name} to upload a PDF, summarize it, chat with it,
-            and listen in the studio.
+            Join {siteConfig.name} to turn files and links into natural AI
+            audio. {siteConfig.tagline}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href={ROUTES.signup}
               className="er-btn inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-background transition-transform hover:scale-[1.02]"
             >
-              Get Started Free
+              Start free — Import → Listen
             </a>
             <a
               href={ROUTES.login}

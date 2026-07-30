@@ -16,19 +16,20 @@ type DashboardShellProps = {
 };
 
 function titleForPath(pathname: string): string {
-  if (pathname === ROUTES.dashboard) return "Home";
-  if (pathname.startsWith(ROUTES.library)) return "Library";
-  if (pathname.startsWith(ROUTES.addContent)) return "Add Content";
-  if (pathname.startsWith(ROUTES.listen)) return "Listen";
+  if (pathname === ROUTES.dashboard || pathname.startsWith(ROUTES.library)) {
+    return "Library";
+  }
+  if (pathname.startsWith(ROUTES.addContent)) return "Import";
+  if (pathname.startsWith(ROUTES.listen)) return "Library";
   if (pathname.startsWith(ROUTES.collections)) return "Collections";
-  if (pathname.startsWith(ROUTES.history)) return "History";
-  if (pathname.startsWith(ROUTES.analytics)) return "Analytics";
-  if (pathname.startsWith(ROUTES.jobs)) return "Jobs";
-  if (pathname.startsWith(ROUTES.exports)) return "Exports";
-  if (pathname.startsWith(ROUTES.voices)) return "Voice Library";
-  if (pathname.startsWith(ROUTES.settings)) return "Settings";
-  if (pathname.startsWith("/dashboard/reader")) return "Listening Studio";
-  return "Workspace";
+  if (pathname.startsWith(ROUTES.history)) return "Library";
+  if (pathname.startsWith(ROUTES.analytics)) return "Account";
+  if (pathname.startsWith(ROUTES.jobs)) return "Library";
+  if (pathname.startsWith(ROUTES.exports)) return "Downloads";
+  if (pathname.startsWith(ROUTES.voices)) return "Voice";
+  if (pathname.startsWith(ROUTES.settings)) return "Account";
+  if (pathname.startsWith("/dashboard/reader")) return "Listen";
+  return "EchoReadly";
 }
 
 /**

@@ -4,17 +4,17 @@ const FORMATS = [
   {
     name: "MP3",
     line: "Coming soon",
-    detail: "Planned for phones, cars, playlists, and everyday listening.",
+    detail: "Take audio with you — phones, cars, and everyday playlists.",
   },
   {
     name: "M4A",
     line: "Coming soon",
-    detail: "Planned for modern devices without sacrificing presence.",
+    detail: "Download for modern devices without leaving your library behind.",
   },
   {
     name: "WAV",
     line: "Coming soon",
-    detail: "Planned for editing, archival, and production pipelines.",
+    detail: "A full-fidelity download when you need the original sound.",
   },
 ] as const;
 
@@ -32,14 +32,14 @@ export function MarketingAudioExport() {
         <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <Reveal>
             <p className="er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-              Export experience · Coming soon
+              Take audio with you · Coming soon
             </p>
             <h2 id="export-heading" className="er-display-lg mt-4 max-w-[14ch] text-foreground">
-              Listen online today. File export is next.
+              Listen now. Download later.
             </h2>
             <p className="er-copy mt-5 text-muted">
-              Stream PDF audio in the browser now. Downloadable MP3, M4A, and
-              WAV exports are planned — not available yet.
+              Stream natural AI audio in the browser today. Downloads in MP3,
+              M4A, and WAV are planned so you can take audio with you.
             </p>
 
             <ul className="mt-10 list-none space-y-0 divide-y divide-border border-y border-border p-0">
@@ -62,7 +62,7 @@ export function MarketingAudioExport() {
               <div className="er-glass rounded-[2rem] p-6 shadow-[var(--elevation-lg)]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold tracking-[0.14em] text-accent uppercase">
-                    Export queue
+                    Downloads
                   </span>
                   <span className="text-xs text-subtle">Coming soon</span>
                 </div>

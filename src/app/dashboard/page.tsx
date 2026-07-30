@@ -1,8 +1,10 @@
-import { HomeWorkspace } from "@/features/dashboard";
+import { redirect } from "next/navigation";
+
+import { ROUTES } from "@/constants";
 
 /**
- * Dashboard home — content-first creative workspace.
+ * Dashboard root — Library is the product home.
  */
 export default function DashboardPage() {
-  return <HomeWorkspace />;
+  redirect(ROUTES.library);
 }

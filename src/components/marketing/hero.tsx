@@ -72,7 +72,7 @@ export function MarketingHero() {
       >
         <div className="relative z-10 max-w-xl lg:pb-10">
           <p className="er-reveal er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-            PDF to audio
+            Import → Listen
           </p>
           <h1
             id="hero-brand"
@@ -80,19 +80,21 @@ export function MarketingHero() {
           >
             {siteConfig.name}
           </h1>
-          <p className="er-reveal er-reveal-delay-2 er-display-md mt-6 max-w-[14ch] text-foreground">
-            Turn PDFs into natural audio.
+          <p className="er-reveal er-reveal-delay-2 er-display-md mt-6 max-w-[16ch] text-foreground">
+            Drop any file.
+            <br />
+            Paste any link.
           </p>
           <p className="er-reveal er-reveal-delay-3 er-copy mt-6 text-muted">
-            Upload a PDF, generate AI summaries, chat with the document, and
-            listen online in the studio.
+            We&apos;ll turn it into natural AI audio — with বাংলা as the primary
+            listening language.
           </p>
           <div className="er-reveal er-reveal-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a href={ROUTES.signup} className={primaryCta}>
-              Start Free
+              Start free
             </a>
-            <a href="#transform" className={secondaryCta}>
-              Watch the transformation
+            <a href="#how-it-works" className={secondaryCta}>
+              See how it works
             </a>
           </div>
         </div>

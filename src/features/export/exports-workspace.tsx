@@ -22,11 +22,11 @@ export function ExportsWorkspace() {
 
   return (
     <WorkspaceCanvas
-      kicker="Exports"
-      title="Your narration files."
-      description="Download cached MP3 exports for page and summary narration. Exports stay private to your account and reuse prior audio when available."
-      actionHref={ROUTES.listen}
-      actionLabel="Open Listening Studio"
+      kicker="Downloads"
+      title="Take your audio with you."
+      description="Download prepared MP3 files. Private to your account — open Library when you want to listen again."
+      actionHref={ROUTES.library}
+      actionLabel="Open Library"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
@@ -84,8 +84,7 @@ export function ExportsWorkspace() {
             No exports yet
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-            Open a document in the Listening Studio and use Export on a page or
-            summary to create an MP3 download.
+            Open a document from Library and download audio when you listen.
           </p>
         </div>
       ) : null}

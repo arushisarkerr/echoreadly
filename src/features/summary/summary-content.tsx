@@ -68,7 +68,7 @@ export function SummaryContent({
             aria-hidden="true"
           />
         </article>
-        <p className="text-[0.7rem] text-subtle">Streaming summary…</p>
+        <p className="text-[0.7rem] text-subtle">Preparing listen mode…</p>
       </div>
     );
   }
@@ -107,10 +107,10 @@ export function SummaryContent({
             }
             ariaLabel={
               copyState === "copied"
-                ? "Summary copied"
+                ? "Copied"
                 : copyState === "failed"
                   ? "Copy failed, try again"
-                  : "Copy summary"
+                  : "Copy"
             }
             tone={
               copyState === "copied"
@@ -126,7 +126,7 @@ export function SummaryContent({
               onClick={onListen}
               label="Listen"
               disabled={listenDisabled}
-              ariaLabel="Listen to summary"
+              ariaLabel="Listen"
             />
           ) : null}
           {onExport ? (
@@ -149,12 +149,12 @@ export function SummaryContent({
         ) : null}
         {copyState === "copied" ? (
           <p role="status" className="sr-only">
-            Summary copied to clipboard.
+            Copied to clipboard.
           </p>
         ) : null}
 
         <article
-          aria-label="Generated summary"
+          aria-label="Listening mode text"
           className="mx-auto w-full rounded-[1.25rem] border border-border/70 bg-background/50 p-4 sm:p-5"
           style={{
             maxWidth: "var(--reader-content-max)",
@@ -222,11 +222,11 @@ export function SummaryContent({
   return (
     <div className="rounded-[1.25rem] border border-dashed border-border/80 bg-surface/40 px-4 py-10 text-center">
       <p className="font-display text-base font-semibold text-foreground">
-        No summary yet
+        Choose a listening mode
       </p>
       <p className="mx-auto mt-2 max-w-[16rem] text-sm leading-relaxed text-muted">
         Choose Short, Detailed, or Bullet above to generate an on-demand AI
-        summary of this document.
+        listening mode for this document.
       </p>
     </div>
   );

@@ -32,16 +32,16 @@ export function SettingsWorkspace() {
 
   return (
     <WorkspaceCanvas
-      kicker="Settings"
-      title="Tune your studio."
-      description="Display name, narrator, playback, reading, theme, and export preferences save to your account and restore on the next session."
-      actionHref={ROUTES.dashboard}
-      actionLabel="Back to Home"
+      kicker="Account"
+      title="Your listening preferences."
+      description="Language, voice, playback, downloads, and plan — keep listening effortless."
+      actionHref={ROUTES.library}
+      actionLabel="Open Library"
       wide={false}
     >
       {loading ? (
         <p role="status" className="text-sm text-muted">
-          Loading your settings…
+          Loading your account…
         </p>
       ) : null}
 
@@ -167,7 +167,7 @@ export function SettingsWorkspace() {
               Preferred voice
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Used for page and summary listening. Preview voices in the Voice
+              Used for listening. Preview voices in the Voice
               Library.
             </p>
             <label className="mt-4 block">
@@ -196,7 +196,7 @@ export function SettingsWorkspace() {
               href={ROUTES.voices}
               className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground no-underline hover:bg-surface-muted"
             >
-              Open Voice Library
+              Choose voice
             </Link>
           </section>
 
@@ -205,7 +205,7 @@ export function SettingsWorkspace() {
               Playback
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Default speed for the studio player. Auto-play advances to the
+              Default speed for the player. Auto-play advances to the
               next page after page narration ends.
             </p>
             <fieldset className="mt-4">
@@ -253,7 +253,7 @@ export function SettingsWorkspace() {
               Reading
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Adjust summary text size and reading width. Theme preference
+              Adjust text size and reading width. Theme preference
               applies across the workspace.
             </p>
             <fieldset className="mt-4">
@@ -340,7 +340,7 @@ export function SettingsWorkspace() {
               </div>
             </fieldset>
             <p className="mt-3 text-xs text-subtle">
-              MP3 is the only export format currently supported by the studio
+              MP3 is the only download format currently supported
               TTS provider.
             </p>
             <Link

@@ -1,6 +1,8 @@
 # EchoReadly
 
-PDF listening studio — upload a PDF, generate AI summaries, chat with the document, and listen online.
+Drop any file. Paste any link. We'll turn it into natural AI audio.
+
+EchoReadly imports your content, prepares it automatically, and lets you listen in natural AI speech — with বাংলা as the primary listening language.
 
 ## Stack
 
@@ -9,6 +11,12 @@ PDF listening studio — upload a PDF, generate AI summaries, chat with the docu
 - TypeScript
 - Tailwind CSS v4
 - ESLint
+
+## Product journey
+
+1. **Import** — drop a file (or paste a link when available)
+2. **Preparing** — automatic status on your item (never a separate app)
+3. **Listen** — player-first audio experience
 
 ## Project structure
 
