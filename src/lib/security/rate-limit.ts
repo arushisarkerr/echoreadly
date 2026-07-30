@@ -1,7 +1,16 @@
 /**
- * In-memory rate limiting by IP and authenticated user.
- * Suitable for single-instance public beta; replace with Redis for multi-instance.
+ * Rate limiting by authenticated user and client IP.
+ *
+ * Development (default): in-memory fixed-window counters.
+ * Production (default): shared durable counters in Supabase/Postgres so
+ * limits hold across multiple instances.
+ *
+ * Override with RATE_LIMIT_STORE=memory|supabase.
  */
+
+import { isProductionRuntime } from "@/config/validate-env";
+
+import { consumeDurableRateLimit } from "./rate-limit-store";
 
 export type RateLimitBucket = "upload" | "summarize" | "chat" | "tts";
 
@@ -76,9 +85,33 @@ export type EnforceRateLimitInput = {
 };
 
 /**
- * Enforce both per-user and per-IP limits for a bucket.
+ * Which store to use. Development stays in-memory unless explicitly overridden.
  */
-export function enforceRateLimit(input: EnforceRateLimitInput): RateLimitResult {
+export function shouldUseDurableRateLimitStore(): boolean {
+  const override = process.env.RATE_LIMIT_STORE?.trim().toLowerCase();
+
+  if (override === "memory") {
+    return false;
+  }
+
+  if (override === "supabase") {
+    return true;
+  }
+
+  if (!isProductionRuntime()) {
+    return false;
+  }
+
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
+}
+
+/**
+ * In-memory fixed-window enforcement (local / single-instance).
+ */
+function enforceMemoryRateLimit(input: EnforceRateLimitInput): RateLimitResult {
   const config = RATE_LIMITS[input.bucket];
   const now = Date.now();
 
@@ -123,6 +156,40 @@ export function enforceRateLimit(input: EnforceRateLimitInput): RateLimitResult 
     ),
     resetAt: Math.min(userCounter.resetAt, ipCounter.resetAt),
   };
+}
+
+/**
+ * Enforce both per-user and per-IP limits for a bucket.
+ * Same limits and result shape as before; durable in production by default.
+ */
+export async function enforceRateLimit(
+  input: EnforceRateLimitInput,
+): Promise<RateLimitResult> {
+  const config = RATE_LIMITS[input.bucket];
+  const userKey = `${input.bucket}:user:${input.userId}`;
+  const ipKey = `${input.bucket}:ip:${input.ip || "unknown"}`;
+
+  if (!shouldUseDurableRateLimitStore()) {
+    return enforceMemoryRateLimit(input);
+  }
+
+  try {
+    return await consumeDurableRateLimit({
+      userKey,
+      userLimit: config.userLimit,
+      ipKey,
+      ipLimit: config.ipLimit,
+      windowMs: config.windowMs,
+    });
+  } catch (error) {
+    // Keep API availability if the shared store is briefly unavailable.
+    // Log loudly so operators know multi-instance protection degraded.
+    console.error(
+      "[rate-limit] Durable store failed; falling back to in-memory counters.",
+      error instanceof Error ? error.message : error,
+    );
+    return enforceMemoryRateLimit(input);
+  }
 }
 
 /**

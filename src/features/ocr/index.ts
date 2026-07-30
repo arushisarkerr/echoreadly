@@ -1,6 +1,6 @@
 /**
- * OCR feature module — provider abstraction for scanned / image-only PDFs.
- * Not wired into the extraction pipeline yet.
+ * OCR feature module — optional provider for scanned / image-only PDFs.
+ * Not a marketed launch feature; used only as a configured fallback.
  */
 
 export type { OcrExtractResult, OcrProvider } from "./ocr-provider";

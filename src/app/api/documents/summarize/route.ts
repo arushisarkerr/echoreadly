@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
   }
 
-  const rate = enforceRateLimit({
+  const rate = await enforceRateLimit({
     bucket: "summarize",
     userId: auth.user.id,
     ip: getRequestIp(request),

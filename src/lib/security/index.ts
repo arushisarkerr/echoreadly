@@ -20,6 +20,7 @@ export {
   getRequestIp,
   RATE_LIMITS,
   resetRateLimitStore,
+  shouldUseDurableRateLimitStore,
   type EnforceRateLimitInput,
   type RateLimitBucket,
   type RateLimitConfig,

@@ -38,6 +38,8 @@ export {
   type TextSource,
 } from "./document-text";
 export {
+  EMPTY_PDF_NO_OCR_MESSAGE,
+  EMPTY_PDF_OCR_UNSUCCESSFUL_MESSAGE,
   extractTextFromPdfBytes,
   type TextExtractionError,
   type TextExtractionErrorCode,

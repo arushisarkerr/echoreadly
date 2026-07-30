@@ -68,8 +68,8 @@ export const serverEnv = {
   },
 
   /**
-   * Mistral API key for OCR fallback (optional until OCR is wired).
-   * Required when calling MistralOcrProvider.extractPdf.
+   * Mistral API key for optional OCR fallback (not a launch feature).
+   * Required only when calling MistralOcrProvider.extractPdf.
    */
   get mistralApiKey(): string | undefined {
     return normalizeEnv(process.env.MISTRAL_API_KEY);

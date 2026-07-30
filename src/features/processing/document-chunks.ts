@@ -83,7 +83,8 @@ export function chunkDocumentText(
         ok: false,
         error: {
           code: "no_extractable_text",
-          message: "No extractable text was available to chunk.",
+          message:
+            "This PDF has no extractable text (it may be scanned or image-only). OCR is not available in this launch. Please upload a text-based PDF with selectable text.",
         },
       };
     }

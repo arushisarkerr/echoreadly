@@ -235,6 +235,12 @@ function classifyDomainMessage(
     normalized.includes("invalid") ||
     normalized.includes("empty") ||
     normalized.includes("no text") ||
+    normalized.includes("no extractable") ||
+    normalized.includes("no readable") ||
+    normalized.includes("scanned") ||
+    normalized.includes("image-only") ||
+    normalized.includes("ocr is not available") ||
+    normalized.includes("text-based pdf") ||
     normalized.includes("no chunks") ||
     normalized.includes("no extracted") ||
     normalized.includes("must be") ||

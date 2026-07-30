@@ -1,9 +1,12 @@
 /**
- * PDF text extraction: PDFium primary, Mistral OCR fallback when empty.
+ * PDF text extraction: PDFium primary, optional Mistral OCR fallback when empty.
  * Does not change PDFium assembly / spacing behaviour.
  */
 
-import { createMistralOcrProvider } from "@/features/ocr";
+import {
+  createMistralOcrProvider,
+  MistralOcrProvider,
+} from "@/features/ocr";
 import {
   extractPagesWithPdfium,
   type PdfiumExtractErrorCode,
@@ -31,6 +34,14 @@ export type TextExtractionResult =
   | { ok: true; data: DocumentTextResult }
   | { ok: false; error: TextExtractionError };
 
+/** User-facing copy when PDFium finds no text and OCR is not configured for launch. */
+export const EMPTY_PDF_NO_OCR_MESSAGE =
+  "This PDF has no extractable text (it may be scanned or image-only). OCR is not available in this launch. Please upload a text-based PDF with selectable text.";
+
+/** User-facing copy when optional OCR ran but still produced no usable text. */
+export const EMPTY_PDF_OCR_UNSUCCESSFUL_MESSAGE =
+  "This PDF has no extractable text (it may be scanned or image-only). OCR did not recover usable text. Please upload a text-based PDF with selectable text.";
+
 function mapPdfiumErrorCode(
   code: PdfiumExtractErrorCode,
 ): TextExtractionErrorCode {
@@ -45,6 +56,11 @@ function mapPdfiumErrorCode(
     return code;
   }
   return "corrupted_pdf";
+}
+
+function isOcrConfigured(): boolean {
+  const provider = createMistralOcrProvider();
+  return provider instanceof MistralOcrProvider && provider.isConfigured();
 }
 
 async function tryMistralOcrFallback(
@@ -66,7 +82,7 @@ async function tryMistralOcrFallback(
 
 /**
  * Extract full text, per-page text, and page count from PDF bytes.
- * PDFium first; Mistral OCR only when PDFium text is effectively empty.
+ * PDFium first; optional Mistral OCR only when configured and text is empty.
  */
 export async function extractTextFromPdfBytes(
   data: Uint8Array,
@@ -91,8 +107,10 @@ export async function extractTextFromPdfBytes(
   const pdfiumResult = createDocumentTextResult(pageTexts, pageCount, "pdfium");
 
   let result = pdfiumResult;
+  let ocrAttempted = false;
 
-  if (needsOcr(pdfiumResult)) {
+  if (needsOcr(pdfiumResult) && isOcrConfigured()) {
+    ocrAttempted = true;
     const ocrResult = await tryMistralOcrFallback(data);
     if (ocrResult) {
       result = ocrResult;
@@ -104,8 +122,9 @@ export async function extractTextFromPdfBytes(
       ok: false,
       error: {
         code: "empty_pdf",
-        message:
-          "No readable text was found. Scanned PDFs need OCR, but no usable text could be extracted.",
+        message: ocrAttempted
+          ? EMPTY_PDF_OCR_UNSUCCESSFUL_MESSAGE
+          : EMPTY_PDF_NO_OCR_MESSAGE,
       },
     };
   }

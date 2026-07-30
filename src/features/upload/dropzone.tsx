@@ -165,6 +165,8 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
           className="mt-2 max-w-sm text-sm leading-relaxed text-muted"
         >
           Drag & drop a PDF here, tap to browse, or use the Select PDF button.
+          Text-based PDFs with selectable text work best — scanned or image-only
+          PDFs are not supported in this launch (OCR unavailable).
         </p>
         <p className="mt-4 text-xs text-subtle">
           PDF only · Max {MAX_PDF_UPLOAD_LABEL} · One file at a time
