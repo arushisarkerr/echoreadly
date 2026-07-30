@@ -3,27 +3,27 @@ import { Reveal } from "@/components/marketing/reveal";
 const FAQS = [
   {
     q: "What is EchoReadly?",
-    a: "A universal content-to-audio platform. Import content from almost anywhere and transform it into natural, high-quality audio using AI — then listen online or export in multiple formats.",
+    a: "A PDF listening studio. Upload a PDF, generate AI summaries, chat with the document, and listen online with text-to-speech.",
   },
   {
     q: "What can I import?",
-    a: "PDF, DOC/DOCX, TXT, Markdown, EPUB, website URLs, blogs, news, documentation, audio files, video files, and YouTube links. Google Docs, Notion, Drive, Dropbox, and OneDrive are coming soon.",
+    a: "PDF uploads are available today. DOC/DOCX, TXT, Markdown, EPUB, website URLs, audio, video, and YouTube are coming soon. Cloud connectors (Google Docs, Notion, Drive, Dropbox, OneDrive) are planned.",
   },
   {
     q: "Which voices and styles are available?",
-    a: "Voices include Male, Female, Child, Elder, Bangla, English, Portuguese, and Hindi. Styles include Natural, Storytelling, Teacher, Podcast, Documentary, News Reader, Professional, and Calm.",
+    a: "Listening uses the built-in studio TTS voice today. A multi-voice library (personas, languages, and styles) is coming soon.",
   },
   {
     q: "Can I download or export audio?",
-    a: "Yes. Listen online, download, and export as MP3, M4A, or WAV.",
+    a: "You can listen online in the studio today. File exports such as MP3, M4A, and WAV are coming soon.",
   },
   {
     q: "Does it include AI chat and summaries?",
-    a: "Yes. Chat with your content and generate summaries without leaving the listening flow. Translation, collections, and cross-device sync are part of the product.",
+    a: "Yes. Chat with your PDF and generate short, detailed, or bullet summaries in the Listening Studio. Translation and collections are planned.",
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Start free with core imports, online listening, basic summaries, and limited voices — then upgrade when you need more.",
+    a: "Yes. Start free with PDF upload, online listening, AI summaries, and AI chat. Premium voices, exports, and extra sources are planned for paid tiers.",
   },
 ] as const;
 

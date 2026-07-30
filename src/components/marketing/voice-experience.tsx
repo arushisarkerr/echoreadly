@@ -45,14 +45,15 @@ export function MarketingVoiceExperience() {
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <Reveal>
           <p className="er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-            Voice experience
+            Voice experience · Coming soon
           </p>
           <h2 id="voices-heading" className="er-display-lg mt-4 max-w-[16ch] text-foreground">
             A studio of voices. A palette of styles.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            Shape how your content sounds — personas, languages, and delivery —
-            before you hit play.
+            Listening uses the built-in studio TTS voice today. The multi-voice
+            library below is a preview of what is planned — not selectable in
+            production yet.
           </p>
         </Reveal>
 
@@ -120,7 +121,7 @@ export function MarketingVoiceExperience() {
                 className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-[color:var(--glow)] blur-3xl"
               />
               <p className="text-xs font-semibold tracking-[0.16em] text-subtle uppercase">
-                Preview
+                Preview · Coming soon
               </p>
               <p className="er-display-md mt-3 text-foreground">
                 {voice}
@@ -128,8 +129,8 @@ export function MarketingVoiceExperience() {
                 {style}
               </p>
               <p className="er-copy-sm mt-3 max-w-md text-muted">
-                “Content becomes conversation — clear, human, and ready to
-                listen wherever you are.”
+                Planned voice and style controls. Today, open a PDF in the
+                studio to listen with the default TTS voice.
               </p>
               <div className="mt-10 flex h-28 items-end gap-1.5 sm:h-32">
                 {Array.from({ length: 28 }).map((_, i) => {

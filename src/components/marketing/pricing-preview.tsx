@@ -6,12 +6,12 @@ const PLANS = [
   {
     name: "Free",
     price: "$0",
-    blurb: "Start converting content into natural audio.",
+    blurb: "PDF listening studio — available now.",
     features: [
-      "Core imports",
-      "Online listening",
-      "Basic AI summary",
-      "Limited voices",
+      "PDF upload",
+      "Online listening (TTS)",
+      "AI summary",
+      "AI chat",
     ],
     cta: "Start Free",
     href: ROUTES.signup,
@@ -20,27 +20,27 @@ const PLANS = [
   {
     name: "Pro",
     price: "Soon",
-    blurb: "Premium voices, styles, exports, and depth.",
+    blurb: "Planned upgrades for voices, exports, and more sources.",
     features: [
       "Everything in Free",
-      "Premium voices & styles",
-      "MP3 · M4A · WAV",
-      "AI chat & summaries",
-      "Translation + sync",
+      "Premium voices & styles (planned)",
+      "MP3 · M4A · WAV export (planned)",
+      "Additional import sources (planned)",
+      "Translation + collections (planned)",
     ],
-    cta: "Start Pro",
+    cta: "Join Free for now",
     href: ROUTES.signup,
     featured: true,
   },
   {
     name: "Enterprise",
     price: "Custom",
-    blurb: "Controls and scale for organizations.",
+    blurb: "Planned controls and scale for organizations.",
     features: [
-      "Everything in Pro",
-      "Team workspaces",
-      "API access",
-      "Custom integrations",
+      "Everything in Pro (planned)",
+      "Team workspaces (planned)",
+      "API access (planned)",
+      "Custom integrations (planned)",
     ],
     cta: "Contact sales",
     href: "#contact",
@@ -64,7 +64,8 @@ export function PricingPreview() {
             Simple plans for serious listening.
           </h2>
           <p className="er-copy mx-auto mt-5 text-muted">
-            Start free. Upgrade when your library — and your ears — ask for more.
+            Start free with PDF upload, summary, chat, and listen. Paid tiers
+            are planned — not billed yet.
           </p>
         </Reveal>
 
@@ -82,7 +83,7 @@ export function PricingPreview() {
                 >
                   {plan.featured ? (
                     <span className="absolute -top-3 left-7 rounded-full bg-accent px-3 py-1 text-[0.65rem] font-bold tracking-[0.12em] text-accent-foreground uppercase">
-                      Most popular
+                      Coming soon
                     </span>
                   ) : null}
                   <h3 className="font-display text-xl font-bold tracking-tight">

@@ -16,7 +16,7 @@ export function ListenWorkspace() {
   return (
     <WorkspaceCanvas
       kicker="Listen"
-      title="Press play on anything."
+      title="Press play on a PDF."
       description="Each tile opens the existing Listening Studio — reader, summary, chat, and TTS intact."
       actionHref={ROUTES.library}
       actionLabel="Browse shelf"

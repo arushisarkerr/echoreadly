@@ -7,7 +7,10 @@ import koffi from "koffi";
 
 import { assertServerRuntime } from "@/utils/server";
 
-import { resolvePdfiumLibraryPath } from "./pdfium-library";
+import {
+  probePdfiumLibrary,
+  resolvePdfiumLibraryPath,
+} from "./pdfium-library";
 
 export type PdfiumPointer = null | object;
 
@@ -45,6 +48,10 @@ export type PdfiumApi = {
   ) => number;
 };
 
+export type PdfiumNativeProbe =
+  | { ok: true; libraryPath: string }
+  | { ok: false; error: string };
+
 let api: PdfiumApi | null = null;
 
 function loadApi(): PdfiumApi {
@@ -54,39 +61,99 @@ function loadApi(): PdfiumApi {
     return api;
   }
 
-  const lib = koffi.load(resolvePdfiumLibraryPath());
+  if (process.env.NEXT_RUNTIME === "edge") {
+    throw Object.assign(
+      new Error(
+        "PDFium cannot run on the Edge runtime. Use the Node.js runtime for document processing.",
+      ),
+      { code: "native_error" as const },
+    );
+  }
 
-  api = {
-    FPDF_InitLibrary: lib.func("void FPDF_InitLibrary()"),
-    FPDF_DestroyLibrary: lib.func("void FPDF_DestroyLibrary()"),
-    FPDF_LoadMemDocument: lib.func(
-      "void *FPDF_LoadMemDocument(const void *data_buf, int size, const char *password)",
-    ),
-    FPDF_CloseDocument: lib.func("void FPDF_CloseDocument(void *document)"),
-    FPDF_GetPageCount: lib.func("int FPDF_GetPageCount(void *document)"),
-    FPDF_LoadPage: lib.func("void *FPDF_LoadPage(void *document, int page_index)"),
-    FPDF_ClosePage: lib.func("void FPDF_ClosePage(void *page)"),
-    FPDFText_LoadPage: lib.func("void *FPDFText_LoadPage(void *page)"),
-    FPDFText_ClosePage: lib.func("void FPDFText_ClosePage(void *text_page)"),
-    FPDFText_CountChars: lib.func("int FPDFText_CountChars(void *text_page)"),
-    FPDFText_GetUnicode: lib.func(
-      "uint32_t FPDFText_GetUnicode(void *text_page, int index)",
-    ),
-    FPDFText_IsGenerated: lib.func(
-      "int FPDFText_IsGenerated(void *text_page, int index)",
-    ),
-    FPDFText_GetFontSize: lib.func(
-      "double FPDFText_GetFontSize(void *text_page, int index)",
-    ),
-    FPDFText_GetCharBox: lib.func(
-      "int FPDFText_GetCharBox(void *text_page, int index, _Out_ double *left, _Out_ double *right, _Out_ double *bottom, _Out_ double *top)",
-    ),
-    FPDFText_GetCharOrigin: lib.func(
-      "int FPDFText_GetCharOrigin(void *text_page, int index, _Out_ double *x, _Out_ double *y)",
-    ),
-  };
+  let libraryPath: string;
+  try {
+    libraryPath = resolvePdfiumLibraryPath();
+  } catch (error) {
+    throw Object.assign(
+      new Error(
+        error instanceof Error
+          ? error.message
+          : "PDFium shared library is unavailable.",
+      ),
+      { code: "native_error" as const },
+    );
+  }
+
+  try {
+    const lib = koffi.load(libraryPath);
+
+    api = {
+      FPDF_InitLibrary: lib.func("void FPDF_InitLibrary()"),
+      FPDF_DestroyLibrary: lib.func("void FPDF_DestroyLibrary()"),
+      FPDF_LoadMemDocument: lib.func(
+        "void *FPDF_LoadMemDocument(const void *data_buf, int size, const char *password)",
+      ),
+      FPDF_CloseDocument: lib.func("void FPDF_CloseDocument(void *document)"),
+      FPDF_GetPageCount: lib.func("int FPDF_GetPageCount(void *document)"),
+      FPDF_LoadPage: lib.func("void *FPDF_LoadPage(void *document, int page_index)"),
+      FPDF_ClosePage: lib.func("void FPDF_ClosePage(void *page)"),
+      FPDFText_LoadPage: lib.func("void *FPDFText_LoadPage(void *page)"),
+      FPDFText_ClosePage: lib.func("void FPDFText_ClosePage(void *text_page)"),
+      FPDFText_CountChars: lib.func("int FPDFText_CountChars(void *text_page)"),
+      FPDFText_GetUnicode: lib.func(
+        "uint32_t FPDFText_GetUnicode(void *text_page, int index)",
+      ),
+      FPDFText_IsGenerated: lib.func(
+        "int FPDFText_IsGenerated(void *text_page, int index)",
+      ),
+      FPDFText_GetFontSize: lib.func(
+        "double FPDFText_GetFontSize(void *text_page, int index)",
+      ),
+      FPDFText_GetCharBox: lib.func(
+        "int FPDFText_GetCharBox(void *text_page, int index, _Out_ double *left, _Out_ double *right, _Out_ double *bottom, _Out_ double *top)",
+      ),
+      FPDFText_GetCharOrigin: lib.func(
+        "int FPDFText_GetCharOrigin(void *text_page, int index, _Out_ double *x, _Out_ double *y)",
+      ),
+    };
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Unknown koffi load failure.";
+    throw Object.assign(
+      new Error(
+        `Failed to load PDFium via koffi from ${libraryPath}. ${detail} Ensure the host OS/arch matches the installed pdfium-native binary and glibc (Linux) is compatible.`,
+      ),
+      { code: "native_error" as const },
+    );
+  }
 
   return api;
+}
+
+/**
+ * Probe whether the PDFium shared library is present and loadable.
+ * Does not run document extraction.
+ */
+export function probePdfiumNative(): PdfiumNativeProbe {
+  assertServerRuntime("PDFium native probe");
+
+  const library = probePdfiumLibrary();
+  if (!library.ok) {
+    return { ok: false, error: library.error };
+  }
+
+  try {
+    loadApi();
+    return { ok: true, libraryPath: library.path };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "PDFium native bindings failed to load.",
+    };
+  }
 }
 
 /**

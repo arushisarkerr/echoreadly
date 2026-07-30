@@ -3,18 +3,18 @@ import { Reveal } from "@/components/marketing/reveal";
 const FORMATS = [
   {
     name: "MP3",
-    line: "Everywhere playback",
-    detail: "Phones, cars, playlists, and everyday listening.",
+    line: "Coming soon",
+    detail: "Planned for phones, cars, playlists, and everyday listening.",
   },
   {
     name: "M4A",
-    line: "Efficient clarity",
-    detail: "Modern devices without sacrificing presence.",
+    line: "Coming soon",
+    detail: "Planned for modern devices without sacrificing presence.",
   },
   {
     name: "WAV",
-    line: "Studio fidelity",
-    detail: "Editing, archival, and production pipelines.",
+    line: "Coming soon",
+    detail: "Planned for editing, archival, and production pipelines.",
   },
 ] as const;
 
@@ -32,14 +32,14 @@ export function MarketingAudioExport() {
         <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <Reveal>
             <p className="er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-              Export experience
+              Export experience · Coming soon
             </p>
             <h2 id="export-heading" className="er-display-lg mt-4 max-w-[14ch] text-foreground">
-              Listen online. Keep the file.
+              Listen online today. File export is next.
             </h2>
             <p className="er-copy mt-5 text-muted">
-              Stream in the browser, download for offline, and export the format
-              your workflow already expects.
+              Stream PDF audio in the browser now. Downloadable MP3, M4A, and
+              WAV exports are planned — not available yet.
             </p>
 
             <ul className="mt-10 list-none space-y-0 divide-y divide-border border-y border-border p-0">
@@ -64,7 +64,7 @@ export function MarketingAudioExport() {
                   <span className="text-xs font-semibold tracking-[0.14em] text-accent uppercase">
                     Export queue
                   </span>
-                  <span className="text-xs text-subtle">Ready</span>
+                  <span className="text-xs text-subtle">Coming soon</span>
                 </div>
                 <div className="mt-8 space-y-4">
                   {["briefing.mp3", "chapter-03.m4a", "master.wav"].map(
@@ -80,13 +80,13 @@ export function MarketingAudioExport() {
                         <span className="flex-1 font-mono text-sm text-foreground">
                           {file}
                         </span>
-                        <span className="text-xs text-subtle">↓</span>
+                        <span className="text-xs text-subtle">Planned</span>
                       </div>
                     ),
                   )}
                 </div>
                 <div className="mt-8 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                  <div className="h-full w-[72%] rounded-full bg-accent" />
+                  <div className="h-full w-[28%] rounded-full bg-accent" />
                 </div>
               </div>
               <div

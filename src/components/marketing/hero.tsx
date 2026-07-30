@@ -72,7 +72,7 @@ export function MarketingHero() {
       >
         <div className="relative z-10 max-w-xl lg:pb-10">
           <p className="er-reveal er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-            Universal content-to-audio
+            PDF to audio
           </p>
           <h1
             id="hero-brand"
@@ -81,11 +81,11 @@ export function MarketingHero() {
             {siteConfig.name}
           </h1>
           <p className="er-reveal er-reveal-delay-2 er-display-md mt-6 max-w-[14ch] text-foreground">
-            Turn Anything Into Natural Audio.
+            Turn PDFs into natural audio.
           </p>
           <p className="er-reveal er-reveal-delay-3 er-copy mt-6 text-muted">
-            Import documents, websites, and media — then listen online or export
-            studio-ready files with premium AI voices.
+            Upload a PDF, generate AI summaries, chat with the document, and
+            listen online in the studio.
           </p>
           <div className="er-reveal er-reveal-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a href={ROUTES.signup} className={primaryCta}>
@@ -145,17 +145,17 @@ function HeroStage() {
           </div>
         </div>
         <p className="mt-2 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-          article.site
+          Web · Coming soon
         </p>
       </div>
 
-      {/* YouTube card */}
+      {/* Media card — planned */}
       <div className="er-float-c er-glass absolute bottom-[34%] left-[8%] w-[46%] rounded-2xl p-2.5">
         <div className="relative aspect-video overflow-hidden rounded-xl bg-[linear-gradient(135deg,_color-mix(in_srgb,var(--accent)_35%,#0a1210),_#0a1210)]">
           <span className="absolute inset-0 m-auto size-8 rounded-full border border-white/30 bg-white/15" />
         </div>
         <p className="mt-2 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-          Lecture · YouTube
+          Media · Coming soon
         </p>
       </div>
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 import { CloseIcon } from "@/components/icons";
 import { cn } from "@/utils";
@@ -19,9 +25,12 @@ type SummaryPanelProps = {
   onListenSummary?: (text: string) => void;
 };
 
+type StudioTab = "summary" | "chat";
+
 /**
  * AI Summary panel for the PDF reader.
  * Desktop: collapsible right sidebar. Mobile: bottom sheet drawer.
+ * Live tabs: Summary + Chat only.
  */
 export function SummaryPanel({
   storagePath,
@@ -33,9 +42,13 @@ export function SummaryPanel({
 }: SummaryPanelProps) {
   const summary = useSummary({ storagePath, fileName });
   const isLoading = summary.status === "loading";
-  const [activeTab, setActiveTab] = useState<"summary" | "chat">("summary");
+  const [activeTab, setActiveTab] = useState<StudioTab>("summary");
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const summaryTabId = useId();
+  const chatTabId = useId();
+  const summaryPanelId = useId();
+  const chatPanelId = useId();
 
   useEffect(() => {
     if (!open) {
@@ -66,10 +79,18 @@ export function SummaryPanel({
     };
   }, [onClose, open]);
 
+  function onTabListKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+    event.preventDefault();
+    setActiveTab((current) => (current === "summary" ? "chat" : "summary"));
+  }
+
   const panelBody = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-[0.6rem] font-semibold tracking-[0.18em] text-accent uppercase">
             Studio AI
           </p>
@@ -79,8 +100,9 @@ export function SummaryPanel({
           >
             Summary & chat
           </h2>
-          <p className="mt-1 text-xs text-muted">
-            Generate on demand — nothing runs until you choose a type.
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            Live tools for this document. Generate a summary or ask questions —
+            nothing runs until you choose.
           </p>
         </div>
 
@@ -89,49 +111,41 @@ export function SummaryPanel({
           type="button"
           onClick={onClose}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Close summary panel"
+          aria-label="Close AI panel"
         >
           <CloseIcon className="size-4" />
         </button>
       </div>
 
       <div
-        className="flex gap-1.5 border-b border-border/60 px-4 py-3"
+        className="flex flex-wrap items-center gap-1.5 border-b border-border/60 px-4 py-3"
         role="tablist"
-        aria-label="Studio AI panels"
+        aria-label="Studio AI tools"
+        onKeyDown={onTabListKeyDown}
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "summary"}
-          onClick={() => setActiveTab("summary")}
-          className={cn(
-            "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            activeTab === "summary"
-              ? "border-foreground bg-foreground text-background"
-              : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",
-          )}
-        >
-          Summary
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "chat"}
-          onClick={() => setActiveTab("chat")}
-          className={cn(
-            "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            activeTab === "chat"
-              ? "border-foreground bg-foreground text-background"
-              : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",
-          )}
-        >
-          Chat
-        </button>
+        <TabButton
+          id={summaryTabId}
+          controls={summaryPanelId}
+          selected={activeTab === "summary"}
+          onSelect={() => setActiveTab("summary")}
+          label="Summary"
+        />
+        <TabButton
+          id={chatTabId}
+          controls={chatPanelId}
+          selected={activeTab === "chat"}
+          onSelect={() => setActiveTab("chat")}
+          label="Chat"
+        />
       </div>
 
       {activeTab === "summary" ? (
-        <>
+        <div
+          id={summaryPanelId}
+          role="tabpanel"
+          aria-labelledby={summaryTabId}
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <div className="shrink-0 space-y-3 border-b border-border/50 px-4 py-4">
             <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
               Choose a length
@@ -175,9 +189,14 @@ export function SummaryPanel({
               }
             />
           </div>
-        </>
+        </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-hidden px-4 py-4">
+        <div
+          id={chatPanelId}
+          role="tabpanel"
+          aria-labelledby={chatTabId}
+          className="min-h-0 flex-1 overflow-hidden px-4 py-4"
+        >
           <ChatPanel storagePath={storagePath} fileName={fileName} />
         </div>
       )}
@@ -215,10 +234,45 @@ export function SummaryPanel({
         <aside
           className="hidden h-full w-[22rem] shrink-0 border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl lg:flex lg:flex-col xl:w-[24rem]"
           aria-labelledby={titleId}
+          aria-label="Studio AI sidebar"
         >
           {panelBody}
         </aside>
       ) : null}
     </>
+  );
+}
+
+function TabButton({
+  id,
+  controls,
+  selected,
+  onSelect,
+  label,
+}: {
+  id: string;
+  controls: string;
+  selected: boolean;
+  onSelect: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      aria-controls={controls}
+      tabIndex={selected ? 0 : -1}
+      onClick={onSelect}
+      className={cn(
+        "inline-flex h-9 min-h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        selected
+          ? "border-foreground bg-foreground text-background"
+          : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",
+      )}
+    >
+      {label}
+    </button>
   );
 }

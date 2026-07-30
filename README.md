@@ -1,6 +1,6 @@
 # EchoReadly
 
-AI-powered reading platform. Foundation phase — product features are not implemented yet.
+PDF listening studio — upload a PDF, generate AI summaries, chat with the document, and listen online.
 
 ## Stack
 
@@ -55,12 +55,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Command         | Description              |
-| --------------- | ------------------------ |
-| `npm run dev`   | Start development server |
-| `npm run build` | Production build         |
-| `npm run start` | Start production server  |
-| `npm run lint`  | Run ESLint               |
+| Command                | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `npm run dev`          | Start development server                                 |
+| `npm run build`        | Production build                                         |
+| `npm run start`        | Start production server                                  |
+| `npm run lint`         | Run ESLint                                               |
+| `npm run check:pdfium` | Verify PDFium native library + koffi on this host        |
+
+## PDF text extraction (PDFium)
+
+Server-side text extraction uses `pdfium-native` + `koffi` on the **Node.js** runtime.
+
+See [docs/PDFIUM.md](docs/PDFIUM.md) for the deployment compatibility matrix (Local Node, Docker, Vercel, VPS) and ops checklist.
+
+```bash
+npm run check:pdfium
+```
 
 ## Environment
 
@@ -71,6 +82,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
 ```
 
-`NEXT_PUBLIC_APP_URL` is used for absolute metadata URLs. Supabase variables are required when calling Supabase clients; the marketing site runs without them.
+`NEXT_PUBLIC_APP_URL` is used for absolute metadata URLs. Supabase variables are required for auth, storage, and APIs. OpenAI is required for summary, chat, and TTS.

@@ -1,7 +1,8 @@
 import { Reveal } from "@/components/marketing/reveal";
 
-const SOURCES = [
-  "PDF",
+const AVAILABLE = ["PDF"] as const;
+
+const COMING_SOON = [
   "DOC / DOCX",
   "TXT",
   "Markdown",
@@ -19,7 +20,8 @@ const SOURCES = [
  * Supported sources — dual-direction marquees, not a static chip grid.
  */
 export function MarketingSources() {
-  const loop = [...SOURCES, ...SOURCES];
+  const availableLoop = [...AVAILABLE, ...AVAILABLE, ...AVAILABLE, ...AVAILABLE];
+  const comingLoop = [...COMING_SOON, ...COMING_SOON];
 
   return (
     <section
@@ -30,10 +32,10 @@ export function MarketingSources() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <Reveal>
           <h2 id="sources-heading" className="er-display-lg max-w-[14ch] text-foreground">
-            Import from almost anywhere.
+            Start with PDF. More sources coming soon.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            One pipeline for files, pages, and media — ready for natural audio.
+            PDF upload is live. Additional files, pages, and media are planned.
           </p>
         </Reveal>
       </div>
@@ -50,28 +52,28 @@ export function MarketingSources() {
 
         <ul
           className="er-marquee-track flex w-max list-none gap-3 p-0"
-          aria-label="Supported import sources"
+          aria-label="Available import sources"
         >
-          {loop.map((source, i) => (
+          {availableLoop.map((source, i) => (
             <li
               key={`a-${source}-${i}`}
               className="er-glass shrink-0 rounded-full px-5 py-3 font-display text-sm font-semibold tracking-tight text-foreground"
             >
-              {source}
+              {source} · Available
             </li>
           ))}
         </ul>
 
         <ul
           className="er-marquee-track flex w-max list-none gap-3 p-0 [animation-direction:reverse] [animation-duration:48s]"
-          aria-hidden="true"
+          aria-label="Coming soon import sources"
         >
-          {[...loop].reverse().map((source, i) => (
+          {comingLoop.map((source, i) => (
             <li
               key={`b-${source}-${i}`}
               className="shrink-0 rounded-full border border-border bg-surface px-5 py-3 font-display text-sm font-semibold tracking-tight text-muted"
             >
-              {source}
+              {source} · Coming soon
             </li>
           ))}
         </ul>

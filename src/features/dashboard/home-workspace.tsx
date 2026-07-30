@@ -130,35 +130,42 @@ export function HomeWorkspace() {
       <section className="mt-14 grid gap-4 md:grid-cols-3">
         <StoryTile
           kicker="Audio"
-          title="Recent audio"
-          copy="Generated listens surface here as you use the studio."
+          title="Listen"
+          copy="Open a PDF in the studio to play page or summary audio."
           href={ROUTES.listen}
+          cta="Open →"
         />
         <StoryTile
-          kicker="Organize"
+          kicker="Coming soon"
           title="Collections"
-          copy="Pinned folders and favorites for long-form libraries."
+          copy="Folder rooms are a preview — membership and edits are not available yet."
           href={ROUTES.collections}
+          cta="Preview →"
         />
         <StoryTile
-          kicker="Deliver"
-          title="Recent exports"
-          copy="MP3, M4A, and WAV queues in the export center."
+          kicker="Coming soon"
+          title="Exports"
+          copy="MP3, M4A, and WAV file export is planned. Listen online in the studio today."
           href={ROUTES.exports}
+          cta="Preview →"
         />
       </section>
 
       <section className="mt-14 grid gap-10 border-t border-border/70 pt-10 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <Eyebrow>Favorite voices</Eyebrow>
+          <Eyebrow>Voices · Coming soon</Eyebrow>
+          <p className="mt-2 text-sm text-muted">
+            Multi-voice personas are planned. Listening uses the default studio
+            TTS voice today.
+          </p>
           <ul className="mt-4 flex list-none flex-wrap gap-2 p-0">
             {VOICES.map((voice) => (
               <li key={voice}>
                 <Link
                   href={ROUTES.voices}
-                  className="inline-flex rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-semibold text-foreground no-underline hover:border-foreground/30"
+                  className="inline-flex rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-semibold text-muted no-underline hover:border-foreground/30"
                 >
-                  {voice}
+                  {voice} · Soon
                 </Link>
               </li>
             ))}
@@ -216,11 +223,13 @@ function StoryTile({
   title,
   copy,
   href,
+  cta = "Open →",
 }: {
   kicker: string;
   title: string;
   copy: string;
   href: string;
+  cta?: string;
 }) {
   return (
     <Link
@@ -235,7 +244,7 @@ function StoryTile({
       </h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{copy}</p>
       <span className="mt-4 text-xs font-semibold text-foreground group-hover:underline">
-        Open →
+        {cta}
       </span>
     </Link>
   );

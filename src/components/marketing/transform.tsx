@@ -24,17 +24,19 @@ export function MarketingTransform() {
             From silent pages to living sound.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            EchoReadly doesn&apos;t just read text aloud. It turns whatever you
-            import into a natural listening experience — voices, pacing, and
-            export-ready audio.
+            EchoReadly turns your PDFs into a listening experience — AI
+            summaries, document chat, and online text-to-speech in one studio.
           </p>
         </Reveal>
 
         <div className="relative mt-16 grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <Reveal delayClassName="er-reveal-delay-1">
             <ul className="space-y-4">
-              {["PDF · DOC · EPUB", "Web · Blog · Docs", "Audio · Video · YouTube"].map(
-                (label) => (
+              {[
+                "PDF · Available now",
+                "DOC · EPUB · Web · Coming soon",
+                "Audio · Video · YouTube · Coming soon",
+              ].map((label) => (
                   <li
                     key={label}
                     className="er-glass rounded-2xl px-5 py-4 font-display text-lg font-semibold tracking-tight text-foreground"
@@ -68,8 +70,8 @@ export function MarketingTransform() {
                 Output
               </p>
               <p className="er-display-sm mt-3 text-foreground">
-                Natural AI audio with premium voices, styles, and multi-format
-                export.
+                Online listening with AI summary and chat. Multi-voice library
+                and file export are coming soon.
               </p>
               <div className="mt-8 flex h-20 items-end gap-1.5">
                 {[30, 55, 40, 75, 48, 82, 36, 68, 44, 70, 32, 60].map((h, i) => (

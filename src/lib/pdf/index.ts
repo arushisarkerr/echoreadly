@@ -12,6 +12,13 @@ export {
   type PdfiumExtractResult,
 } from "./pdfium-adapter";
 export {
+  probePdfiumNative,
+  withPdfium,
+  type PdfiumApi,
+  type PdfiumNativeProbe,
+  type PdfiumPointer,
+} from "./pdfium-bindings";
+export {
   assemblePageTextWithGeometry,
   formsSingleGrapheme,
   type PdfiumCharGeometry,
@@ -22,3 +29,8 @@ export {
   resolvePdfiumGeometryOptions,
   type PdfiumGeometryOptions,
 } from "./pdfium-geometry-options";
+export {
+  probePdfiumLibrary,
+  resolvePdfiumLibraryPath,
+  type PdfiumLibraryProbe,
+} from "./pdfium-library";

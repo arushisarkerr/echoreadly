@@ -189,28 +189,11 @@ export function ReaderToolbar({
               />
             </>
           ) : null}
-
-          <div className="ml-auto hidden items-center gap-1.5 xl:flex">
-            {["Transcript", "Translate", "Bookmarks", "Chapters", "Notes"].map(
-              (label) => (
-                <button
-                  key={label}
-                  type="button"
-                  disabled
-                  title={`${label} coming soon`}
-                  aria-label={`${label} (coming soon)`}
-                  className="rounded-full border border-dashed border-border/70 px-2.5 py-1 text-[0.65rem] font-medium text-subtle"
-                >
-                  {label}
-                </button>
-              ),
-            )}
-          </div>
         </div>
 
         <p className="sr-only">
           Keyboard: Left and Right arrows change page. Plus and Minus zoom when
-          the reader is focused.
+          the reader is focused. Open the AI panel for Summary and Chat.
         </p>
       </div>
     </header>

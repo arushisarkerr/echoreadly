@@ -7,7 +7,7 @@ const SECTIONS = [
   {
     id: "workspace",
     title: "Workspace",
-    body: "Default landing, density, and studio shortcuts.",
+    body: "Default landing and studio shortcuts — presentation only for now.",
   },
   {
     id: "appearance",
@@ -16,22 +16,22 @@ const SECTIONS = [
   },
   {
     id: "audio",
-    title: "Audio",
-    body: "Playback defaults for Listen and the Listening Studio.",
+    title: "Audio · Coming soon",
+    body: "Playback defaults are planned. Use player controls in the Listening Studio today.",
   },
   {
     id: "voices",
-    title: "Voices",
-    body: "Preferred narrator and style when opening new content.",
+    title: "Voices · Coming soon",
+    body: "Preferred narrator and style preferences are planned. Studio TTS uses the default voice today.",
   },
   {
     id: "notifications",
-    title: "Notifications",
-    body: "Export ready, processing finished, and weekly digests.",
+    title: "Notifications · Coming soon",
+    body: "Export-ready and processing alerts are planned — not wired yet.",
   },
   {
     id: "billing",
-    title: "Billing",
+    title: "Billing · Planned",
     body: "Plan and invoices — linked when billing ships.",
   },
   {
@@ -49,7 +49,7 @@ export function SettingsWorkspace() {
     <WorkspaceCanvas
       kicker="Settings"
       title="Tune the workspace."
-      description="Appearance, audio, voices, and profile — all presentation. Authentication stays on AccountMenu."
+      description="Appearance and theme are live. Audio defaults, voice preferences, and notifications are coming soon. Authentication stays on AccountMenu."
       actionHref={ROUTES.dashboard}
       actionLabel="Back to Home"
       wide={false}

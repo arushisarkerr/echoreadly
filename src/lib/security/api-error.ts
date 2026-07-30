@@ -216,6 +216,21 @@ function classifyDomainMessage(
   }
 
   if (
+    normalized.includes("pdfium") ||
+    normalized.includes("koffi") ||
+    normalized.includes("shared library") ||
+    (normalized.includes("native") && normalized.includes("unavailable")) ||
+    normalized.includes("edge runtime")
+  ) {
+    return {
+      code: "PROCESSING_ERROR",
+      publicMessage:
+        "Document text extraction is unavailable on this server. Deploy on a Node.js host with pdfium-native binaries, then retry.",
+      status: 503,
+    };
+  }
+
+  if (
     normalized.includes("required") ||
     normalized.includes("invalid") ||
     normalized.includes("empty") ||

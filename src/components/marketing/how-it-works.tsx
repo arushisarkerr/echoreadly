@@ -3,18 +3,18 @@ import { Reveal } from "@/components/marketing/reveal";
 const STEPS = [
   {
     n: "01",
-    title: "Bring anything in",
-    copy: "Drop a file, paste a URL, or link media. EchoReadly prepares the source for conversion.",
+    title: "Upload a PDF",
+    copy: "Drop a PDF into EchoReadly. We extract the text and prepare it for the studio.",
   },
   {
     n: "02",
-    title: "Shape the voice",
-    copy: "Pick a persona, language, and style — from calm teaching to documentary narration.",
+    title: "Summarize and chat",
+    copy: "Generate AI summaries and ask questions about the document without leaving the reader.",
   },
   {
     n: "03",
-    title: "Listen or take it with you",
-    copy: "Stream instantly, download, and export MP3, M4A, or WAV for any workflow.",
+    title: "Listen online",
+    copy: "Play page or summary audio in the studio. File exports (MP3, M4A, WAV) are coming soon.",
   },
 ] as const;
 
@@ -31,7 +31,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <Reveal>
           <h2 id="how-heading" className="er-display-lg max-w-[12ch] text-foreground">
-            Three moves. Infinite listening.
+            Three moves. Real listening.
           </h2>
         </Reveal>
 

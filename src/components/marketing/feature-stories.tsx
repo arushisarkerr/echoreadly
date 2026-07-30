@@ -3,23 +3,23 @@ import { Reveal } from "@/components/marketing/reveal";
 const STORIES = [
   {
     id: "listen",
-    eyebrow: "Listen anywhere",
-    title: "Audio that travels with your day.",
-    copy: "Play online the moment content is ready. No waiting on downloads when you only need to hear it now.",
+    eyebrow: "Listen online",
+    title: "Audio that plays in the studio.",
+    copy: "Open a PDF and listen with text-to-speech as soon as the document is ready — no separate export step required for online playback.",
     visual: "wave",
   },
   {
     id: "intelligence",
     eyebrow: "AI chat & summary",
     title: "Ask. Skim. Keep listening.",
-    copy: "Chat with the source and pull summaries while the audio keeps running — comprehension without stopping the flow.",
+    copy: "Chat with the PDF and generate short, detailed, or bullet summaries in the Listening Studio — available now.",
     visual: "chat",
   },
   {
     id: "world",
-    eyebrow: "Translation & sync",
-    title: "Across languages. Across devices.",
-    copy: "Translate meaning, organize collections, and stay aligned wherever you pick up next.",
+    eyebrow: "Translation & collections · Planned",
+    title: "Across languages. Across shelves.",
+    copy: "Translation, collections, and richer organization are planned. Today, keep documents on your library shelf and work in the studio.",
     visual: "orbit",
   },
 ] as const;
@@ -79,11 +79,10 @@ function StoryVisual({ kind }: { kind: (typeof STORIES)[number]["visual"] }) {
             What are the three key arguments?
           </div>
           <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-md bg-foreground px-4 py-3 text-sm text-background">
-            1) Context · 2) Evidence · 3) Implications — want the short summary
-            audio?
+            1) Context · 2) Evidence · 3) Implications — want the short summary?
           </div>
           <div className="max-w-[70%] rounded-2xl rounded-tl-md bg-surface-muted px-4 py-3 text-sm text-muted">
-            Yes — keep the calm style.
+            Yes — keep it concise.
           </div>
         </div>
       </div>
@@ -96,7 +95,7 @@ function StoryVisual({ kind }: { kind: (typeof STORIES)[number]["visual"] }) {
         <div className="absolute inset-[18%] rounded-full border border-border" />
         <div className="absolute inset-[32%] rounded-full border border-dashed border-accent/40" />
         <div className="absolute inset-0 m-auto flex size-24 items-center justify-center rounded-full bg-foreground font-display text-sm font-bold text-background">
-          Sync
+          Planned
         </div>
         {["EN", "BN", "HI", "PT"].map((label, i) => (
           <span

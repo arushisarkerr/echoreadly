@@ -26,7 +26,7 @@ export function MarketingFooter() {
             {siteConfig.name}
           </a>
           <p className="mt-3 text-sm leading-relaxed text-subtle">
-            Universal content-to-audio. Turn anything into natural audio.
+            PDF to audio — summarize, chat, and listen online.
           </p>
         </div>
 

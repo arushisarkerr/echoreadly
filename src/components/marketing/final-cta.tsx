@@ -19,11 +19,11 @@ export function FinalCta() {
       <div className="relative mx-auto max-w-5xl px-5 py-28 text-center sm:px-8 sm:py-36">
         <Reveal>
           <h2 id="final-cta-heading" className="er-display-xl text-foreground">
-            Turn anything into natural audio.
+            Turn PDFs into natural audio.
           </h2>
           <p className="er-copy mx-auto mt-6 text-muted">
-            Join {siteConfig.name} and transform the content you already have
-            into listening you&apos;ll actually finish.
+            Join {siteConfig.name} to upload a PDF, summarize it, chat with it,
+            and listen in the studio.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a

@@ -13,12 +13,24 @@ const FORMATS = [
 export function ExportsWorkspace() {
   return (
     <WorkspaceCanvas
-      kicker="Exports"
-      title="Ship the sound."
-      description="Format desk and queue board. Generation still rides the existing TTS path inside the studio."
+      kicker="Exports · Coming soon"
+      title="Ship the sound — soon."
+      description="File export (MP3, M4A, WAV) is planned. Online listening still runs through the existing TTS path in the Listening Studio."
       actionHref={ROUTES.listen}
-      actionLabel="Generate in Listen"
+      actionLabel="Listen online now"
     >
+      <div
+        role="status"
+        className="mb-6 rounded-[1.5rem] border border-dashed border-border/80 bg-surface/40 px-4 py-4 sm:px-5"
+      >
+        <p className="text-sm font-semibold text-foreground">
+          Export queue is not available yet
+        </p>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
+          Download and share controls below are disabled placeholders. Generate
+          and play audio inside Listen or the reader today.
+        </p>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <ul className="list-none space-y-3 p-0">
           {FORMATS.map((format) => (
@@ -30,14 +42,14 @@ export function ExportsWorkspace() {
                 <h2 className="font-display text-3xl font-bold tracking-tight text-foreground">
                   {format.name}
                 </h2>
-                <p className="mt-1 text-sm text-muted">{format.line}</p>
+                <p className="mt-1 text-sm text-muted">{format.line} · Coming soon</p>
               </div>
               <button
                 type="button"
                 disabled
                 className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted"
               >
-                Queue
+                Coming soon
               </button>
             </li>
           ))}

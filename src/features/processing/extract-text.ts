@@ -19,7 +19,8 @@ import {
 export type TextExtractionErrorCode =
   | "corrupted_pdf"
   | "empty_pdf"
-  | "unsupported_document";
+  | "unsupported_document"
+  | "native_unavailable";
 
 export type TextExtractionError = {
   code: TextExtractionErrorCode;
@@ -33,6 +34,9 @@ export type TextExtractionResult =
 function mapPdfiumErrorCode(
   code: PdfiumExtractErrorCode,
 ): TextExtractionErrorCode {
+  if (code === "native_error") {
+    return "native_unavailable";
+  }
   if (
     code === "corrupted_pdf" ||
     code === "empty_pdf" ||
@@ -74,7 +78,11 @@ export async function extractTextFromPdfBytes(
       ok: false,
       error: {
         code: mapPdfiumErrorCode(extraction.error.code),
-        message: extraction.error.message,
+        message:
+          extraction.error.code === "native_error"
+            ? extraction.error.message ||
+              "PDF text extraction is unavailable on this server (native PDFium/koffi failed to load)."
+            : extraction.error.message,
       },
     };
   }

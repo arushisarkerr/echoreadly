@@ -49,9 +49,9 @@ export function VoicesWorkspace() {
 
   return (
     <WorkspaceCanvas
-      kicker="Voice library"
-      title="Cast the narrator."
-      description="Browse by person, language, and style. Preview is frontend-only — generation still uses the existing TTS pipeline in the studio."
+      kicker="Voice library · Coming soon"
+      title="Cast the narrator — soon."
+      description="This page is a preview of planned voices and styles. Preview buttons do not synthesize audio. Listening today uses the default studio TTS voice in the reader."
       actionHref={ROUTES.listen}
       actionLabel="Open Listen"
     >
@@ -130,7 +130,7 @@ export function VoicesWorkspace() {
                   )
                 }
               >
-                {previewing === voice.name ? "Stop" : "Preview"}
+                {previewing === voice.name ? "Stop preview" : "Preview UI"}
               </button>
             </article>
           </li>

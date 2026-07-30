@@ -32,7 +32,7 @@ export function AddContentWorkspace() {
     <WorkspaceCanvas
       kicker="Add content"
       title="Import into the studio."
-      description="A wide drop zone for PDFs today. The constellation shows every source EchoReadly is built to welcome."
+      description="PDF upload is live. Other sources in the constellation are coming soon — not available for import yet."
       actionHref={ROUTES.library}
       actionLabel="Open shelf"
     >
@@ -76,7 +76,7 @@ export function AddContentWorkspace() {
 
         <div className="rounded-[2rem] border border-border/70 bg-surface/50 p-5 sm:p-7">
           <p className="mb-4 text-sm text-muted">
-            Live upload pipeline — validation, progress, and storage unchanged.
+            Live PDF upload — validation, progress, and storage.
           </p>
           <UploadCard />
         </div>
