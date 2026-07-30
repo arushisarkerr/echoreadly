@@ -6,6 +6,8 @@ export type ChatMessage = {
   content: string;
   /** Supporting source pages for assistant messages. */
   pages?: number[];
+  /** True while tokens are still arriving. */
+  streaming?: boolean;
   createdAt: string;
 };
 

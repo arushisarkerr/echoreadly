@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
+import { consumeAiSse } from "@/features/ai/consume-sse";
 import type { SummaryResult, SummaryType } from "@/features/ai";
 import { formatPageCitations } from "@/features/citations";
-import { getApiErrorMessage } from "@/utils";
 
-export type SummaryUiStatus = "idle" | "loading" | "success" | "error";
+export type SummaryUiStatus =
+  | "idle"
+  | "loading"
+  | "streaming"
+  | "success"
+  | "error";
 
 export type SummaryCopyState = "idle" | "copied" | "failed";
 
@@ -18,16 +23,18 @@ export type UseSummaryOptions = {
 export type UseSummaryState = {
   activeType: SummaryType | null;
   summary: SummaryResult | null;
+  streamingText: string;
   status: SummaryUiStatus;
   error: string | null;
   copyState: SummaryCopyState;
   generate: (summaryType: SummaryType) => Promise<void>;
   regenerate: () => Promise<void>;
+  stop: () => void;
   copySummary: () => Promise<void>;
 };
 
 /**
- * Client hook for on-demand AI summary generation in the reader.
+ * Client hook for on-demand AI summary generation with streaming.
  */
 export function useSummary({
   storagePath,
@@ -35,50 +42,92 @@ export function useSummary({
 }: UseSummaryOptions): UseSummaryState {
   const [activeType, setActiveType] = useState<SummaryType | null>(null);
   const [summary, setSummary] = useState<SummaryResult | null>(null);
+  const [streamingText, setStreamingText] = useState("");
   const [status, setStatus] = useState<SummaryUiStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<SummaryCopyState>("idle");
+  const abortRef = useRef<AbortController | null>(null);
+
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus((current) =>
+      current === "loading" || current === "streaming" ? "idle" : current,
+    );
+  }, []);
 
   const generate = useCallback(
     async (summaryType: SummaryType, options?: { regenerate?: boolean }) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setActiveType(summaryType);
       setStatus("loading");
       setError(null);
       setCopyState("idle");
+      setStreamingText("");
 
       try {
         const response = await fetch("/api/documents/summarize", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Accept: "text/event-stream",
           },
           body: JSON.stringify({
             storagePath,
             summaryType,
             originalFileName: fileName,
+            stream: true,
             ...(options?.regenerate ? { regenerate: true } : {}),
           }),
+          signal: controller.signal,
         });
 
-        const payload = (await response.json()) as
-          | { ok: true; data: SummaryResult }
-          | { ok: false; error: unknown };
+        const result = await consumeAiSse<SummaryResult>(response, {
+          signal: controller.signal,
+          displayMode: "summary",
+          onDisplayText: (text) => {
+            setStreamingText(text);
+            setStatus("streaming");
+          },
+        });
 
-        if (!response.ok || !payload.ok) {
-          setStatus("error");
-          setError(
-            payload.ok === false
-              ? getApiErrorMessage(payload.error, "Unable to generate summary.")
-              : "Unable to generate summary.",
-          );
+        if (controller.signal.aborted) {
           return;
         }
 
-        setSummary(payload.data);
+        if (!result.ok) {
+          if (result.aborted) {
+            setStatus(result.partialText ? "error" : "idle");
+            if (result.partialText) {
+              setStreamingText(result.partialText);
+              setError("Generation stopped. You can retry.");
+            }
+            return;
+          }
+          setStatus("error");
+          setError(result.error);
+          if (result.partialText) {
+            setStreamingText(result.partialText);
+          }
+          return;
+        }
+
+        setSummary(result.data);
+        setStreamingText("");
         setStatus("success");
       } catch {
+        if (controller.signal.aborted) {
+          return;
+        }
         setStatus("error");
         setError("Network error while generating summary.");
+      } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
       }
     },
     [fileName, storagePath],
@@ -122,7 +171,6 @@ export function useSummary({
         setCopyState("idle");
       }, 2000);
     } catch {
-      // Keep the generated summary visible — copy failure is not a generation error.
       setCopyState("failed");
       window.setTimeout(() => {
         setCopyState("idle");
@@ -133,11 +181,13 @@ export function useSummary({
   return {
     activeType,
     summary,
+    streamingText,
     status,
     error,
     copyState,
     generate,
     regenerate,
+    stop,
     copySummary,
   };
 }

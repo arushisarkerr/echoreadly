@@ -132,7 +132,29 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         </p>
 
         <div className={isUser ? "[&_code]:border-background/20 [&_code]:bg-background/15 [&_pre]:border-background/20 [&_pre]:bg-background/10" : undefined}>
-          <MessageBody content={message.content} />
+          {message.content.trim() ? (
+            <MessageBody content={message.content} />
+          ) : message.streaming ? (
+            <span className="inline-flex items-center gap-2 text-sm text-muted">
+              <span className="flex gap-1" aria-hidden="true">
+                <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+                <span
+                  className="size-1.5 animate-pulse rounded-full bg-accent"
+                  style={{ animationDelay: "0.15s" }}
+                />
+                <span
+                  className="size-1.5 animate-pulse rounded-full bg-accent"
+                  style={{ animationDelay: "0.3s" }}
+                />
+              </span>
+              Writing…
+            </span>
+          ) : (
+            <MessageBody content={message.content} />
+          )}
+          {message.streaming && message.content.trim() ? (
+            <span className="mt-1 inline-block h-3 w-0.5 animate-pulse bg-accent align-middle" aria-hidden="true" />
+          ) : null}
         </div>
 
         {citation ? (
@@ -148,7 +170,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </p>
         ) : null}
 
-        {!isUser ? (
+        {!isUser && !message.streaming ? (
           <div className="mt-2.5 flex items-center gap-2">
             <button
               type="button"
@@ -214,7 +236,8 @@ export function ChatHistory() {
           <MessageBubble key={m.id} message={m} />
         ))}
 
-        {status === "loading" ? (
+        {status === "loading" &&
+        !messages.some((message) => message.streaming) ? (
           <div className="flex justify-start" role="status" aria-live="polite">
             <div className="max-w-[85%] rounded-2xl border border-border/70 bg-background/55 px-3.5 py-3 text-sm">
               <span className="inline-flex items-center gap-2 text-muted">

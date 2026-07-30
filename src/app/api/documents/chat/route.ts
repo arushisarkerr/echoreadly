@@ -1,6 +1,5 @@
 /**
- * Document Q&A chat with page citations.
- * Hardened: auth, rate limits, payload validation, structured errors, logging.
+ * Document Q&A chat with page citations — buffered or SSE streaming.
  */
 
 import { serverEnv } from "@/config";
@@ -11,6 +10,8 @@ import {
   summarizeErrorType,
   type AiProvider,
 } from "@/features/ai";
+import { createSseResponse } from "@/features/ai/sse";
+import { streamTextWithFallback } from "@/features/ai/stream-text";
 import {
   collectAllowedPages,
   parseCitedAnswer,
@@ -47,11 +48,20 @@ type ChatRequestBody = {
   question?: unknown;
   history?: unknown;
   originalFileName?: unknown;
+  stream?: unknown;
 };
 
 function getFileNameFromStoragePath(storagePath: string): string {
   const segments = storagePath.split("/");
   return segments[segments.length - 1] || "document.pdf";
+}
+
+function wantsStream(request: Request, body: ChatRequestBody): boolean {
+  if (body.stream === true || body.stream === "true") {
+    return true;
+  }
+  const accept = request.headers.get("accept") ?? "";
+  return accept.includes("text/event-stream");
 }
 
 export async function POST(request: Request) {
@@ -110,6 +120,8 @@ export async function POST(request: Request) {
     return apiError(originalFileName.code, originalFileName.message, 400);
   }
 
+  const stream = wantsStream(request, body);
+
   try {
     const processed = await ensureDocumentProcessed({
       storagePath: storagePath.data,
@@ -118,11 +130,15 @@ export async function POST(request: Request) {
     });
 
     if (!processed.ok) {
-      logger.processingFailure("Chat document processing failed", {
-        route,
-        userId: auth.user.id,
-        storagePath: storagePath.data,
-      }, processed.error);
+      logger.processingFailure(
+        "Chat document processing failed",
+        {
+          route,
+          userId: auth.user.id,
+          storagePath: storagePath.data,
+        },
+        processed.error,
+      );
 
       return mapDomainFailure(processed.error, "processing");
     }
@@ -133,11 +149,22 @@ export async function POST(request: Request) {
     );
 
     if (!context) {
-      return apiSuccess({
+      const empty = {
         content: NOT_FOUND_IN_DOCUMENT,
-        pages: [],
+        pages: [] as number[],
         generatedAt: new Date().toISOString(),
         model: "none",
+      };
+      if (!stream) {
+        return apiSuccess(empty);
+      }
+      return createSseResponse({
+        signal: request.signal,
+        run: async (emit) => {
+          emit("meta", { kind: "chat", cached: false });
+          emit("delta", { text: empty.content });
+          emit("done", empty);
+        },
       });
     }
 
@@ -158,82 +185,155 @@ export async function POST(request: Request) {
       question: question.data,
     });
 
-    let generation = await provider.generateText({
-      instructions,
-      input: promptInput,
-      maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
-    });
+    if (!stream) {
+      let generation = await provider.generateText({
+        instructions,
+        input: promptInput,
+        maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
+        signal: request.signal,
+      });
 
-    if (
-      !generation.ok &&
-      shouldFallbackToGemini(generation.error) &&
-      provider.name !== "gemini"
-    ) {
-      const fallback = getSharedGeminiFallbackProvider();
-      if (fallback.isConfigured()) {
-        logger.warn("Chat falling back to Gemini", {
-          primaryProvider: provider.name,
-          fallbackProvider: "gemini",
-          errorType: summarizeErrorType(generation.error),
-        });
-
-        generation = await fallback.generateText({
-          instructions,
-          input: promptInput,
-          // Use Gemini's own default model — never reuse the OpenAI model id.
-          maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
-        });
-
-        if (generation.ok) {
-          logger.info("Chat Gemini fallback succeeded", {
-            provider: "gemini",
-            reason: "fallback_from_openai",
-          });
-        } else {
-          logger.error("Chat Gemini fallback failed", {
-            provider: "gemini",
-            originalProvider: "openai",
+      if (
+        !generation.ok &&
+        shouldFallbackToGemini(generation.error) &&
+        provider.name !== "gemini"
+      ) {
+        const fallback = getSharedGeminiFallbackProvider();
+        if (fallback.isConfigured()) {
+          logger.warn("Chat falling back to Gemini", {
+            primaryProvider: provider.name,
+            fallbackProvider: "gemini",
             errorType: summarizeErrorType(generation.error),
+          });
+
+          generation = await fallback.generateText({
+            instructions,
+            input: promptInput,
+            maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
+            signal: request.signal,
           });
         }
       }
+
+      if (!generation.ok) {
+        logger.aiFailure(
+          "Chat generation failed",
+          {
+            route,
+            userId: auth.user.id,
+            storagePath: storagePath.data,
+          },
+          generation.error.message,
+        );
+        return mapDomainFailure(generation.error.message, "ai");
+      }
+
+      const cited = parseCitedAnswer(generation.data.text, allowedPages);
+      const isNotFound =
+        cited.answer.trim() === NOT_FOUND_IN_DOCUMENT ||
+        cited.answer.toLowerCase().includes("couldn't find that information");
+
+      try {
+        await recordUsage(auth.user.id, "chat", gate.entitlement);
+      } catch (error) {
+        logger.warn(
+          "Chat usage record failed",
+          {
+            route,
+            userId: auth.user.id,
+          },
+          error,
+        );
+      }
+
+      return apiSuccess({
+        content: cited.answer,
+        pages: isNotFound ? [] : cited.pages,
+        generatedAt: new Date().toISOString(),
+        model: generation.data.model,
+      });
     }
 
-    if (!generation.ok) {
-      logger.aiFailure("Chat generation failed", {
+    return createSseResponse({
+      signal: request.signal,
+      run: async (emit) => {
+        emit("meta", { kind: "chat", cached: false });
+
+        let finalText = "";
+        let model = "unknown";
+
+        for await (const chunk of streamTextWithFallback(
+          provider,
+          {
+            instructions,
+            input: promptInput,
+            maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
+            signal: request.signal,
+          },
+          { route },
+        )) {
+          if (request.signal.aborted) {
+            return;
+          }
+          if (chunk.type === "delta") {
+            emit("delta", { text: chunk.text });
+            continue;
+          }
+          if (chunk.type === "error") {
+            emit("error", {
+              message: chunk.error.message,
+              code: chunk.error.code,
+            });
+            return;
+          }
+          if (chunk.type === "done") {
+            finalText = chunk.text;
+            model = chunk.model;
+          }
+        }
+
+        if (request.signal.aborted) {
+          return;
+        }
+
+        const cited = parseCitedAnswer(finalText, allowedPages);
+        const isNotFound =
+          cited.answer.trim() === NOT_FOUND_IN_DOCUMENT ||
+          cited.answer
+            .toLowerCase()
+            .includes("couldn't find that information");
+
+        try {
+          await recordUsage(auth.user.id, "chat", gate.entitlement);
+        } catch (error) {
+          logger.warn(
+            "Chat usage record failed",
+            {
+              route,
+              userId: auth.user.id,
+            },
+            error,
+          );
+        }
+
+        emit("done", {
+          content: cited.answer,
+          pages: isNotFound ? [] : cited.pages,
+          generatedAt: new Date().toISOString(),
+          model,
+        });
+      },
+    });
+  } catch (error) {
+    logger.aiFailure(
+      "Chat threw",
+      {
         route,
         userId: auth.user.id,
         storagePath: storagePath.data,
-      }, generation.error.message);
-      return mapDomainFailure(generation.error.message, "ai");
-    }
-
-    const cited = parseCitedAnswer(generation.data.text, allowedPages);
-    const isNotFound =
-      cited.answer.trim() === NOT_FOUND_IN_DOCUMENT ||
-      cited.answer.toLowerCase().includes("couldn't find that information");
-
-    try {
-      await recordUsage(auth.user.id, "chat", gate.entitlement);
-    } catch (error) {
-      logger.warn("Chat usage record failed", {
-        route,
-        userId: auth.user.id,
-      }, error);
-    }
-
-    return apiSuccess({
-      content: cited.answer,
-      pages: isNotFound ? [] : cited.pages,
-      generatedAt: new Date().toISOString(),
-      model: generation.data.model,
-    });
-  } catch (error) {
-    logger.aiFailure("Chat threw", {
-      route,
-      userId: auth.user.id,
-      storagePath: storagePath.data,
-    }, error);
+      },
+      error,
+    );
     return apiError(
       "AI_ERROR",
       "Unable to complete the AI request. Please try again.",

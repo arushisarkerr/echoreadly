@@ -2,7 +2,10 @@
  * Translate owned document content (document / page / selection / summary).
  */
 
-import { translateDocumentContent } from "@/features/translation/translate-service";
+import {
+  translateDocumentContent,
+  translateDocumentContentStreaming,
+} from "@/features/translation/translate-service";
 import type { TranslateRequestInput } from "@/features/translation/types";
 import {
   recordUsage,
@@ -37,10 +40,19 @@ type TranslateBody = {
   text?: unknown;
   targetLanguage?: unknown;
   regenerate?: unknown;
+  stream?: unknown;
 };
 
 function parseRegenerate(value: unknown): boolean {
   return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function wantsStream(request: Request, body: TranslateBody): boolean {
+  if (body.stream === true || body.stream === "true") {
+    return true;
+  }
+  const accept = request.headers.get("accept") ?? "";
+  return accept.includes("text/event-stream");
 }
 
 export async function POST(request: Request) {
@@ -172,6 +184,44 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (wantsStream(request, body)) {
+      const streamed = await translateDocumentContentStreaming({
+        input: payload,
+        userId: auth.user.id,
+        signal: request.signal,
+        entitlement: gate.entitlement,
+        route,
+      });
+
+      if (!streamed.ok) {
+        if (streamed.code === "FORBIDDEN") {
+          return apiError("FORBIDDEN", streamed.error, 403);
+        }
+        if (streamed.code === "NOT_FOUND") {
+          return apiError("NOT_FOUND", streamed.error, 404);
+        }
+        if (streamed.code === "VALIDATION") {
+          return apiError("VALIDATION", streamed.error, 400);
+        }
+        logger.error(
+          "Translation stream failed",
+          {
+            route,
+            userId: auth.user.id,
+            scope: scope.data,
+          },
+          streamed.error,
+        );
+        return mapDomainFailure(streamed.error, "ai");
+      }
+
+      if (streamed.data.mode === "json") {
+        return apiSuccess(streamed.data.data);
+      }
+
+      return streamed.data.response;
+    }
+
     const translated = await translateDocumentContent(payload, auth.user.id);
     if (!translated.ok) {
       if (translated.code === "FORBIDDEN") {

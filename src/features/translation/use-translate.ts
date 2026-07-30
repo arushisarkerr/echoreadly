@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { consumeAiSse } from "@/features/ai/consume-sse";
 import {
   DEFAULT_TARGET_LANGUAGE,
   type TargetLanguageCode,
 } from "@/constants";
 import type { SummaryType } from "@/features/ai";
 
-import { requestTranslation } from "./translate-client";
 import type {
   TranslateUiStatus,
   TranslationResult,
@@ -17,9 +17,10 @@ import type {
 } from "./types";
 
 export type UseTranslateState = {
-  status: TranslateUiStatus;
+  status: TranslateUiStatus | "streaming";
   error: string | null;
   result: TranslationResult | null;
+  streamingText: string;
   scope: TranslationScope;
   targetLanguage: TargetLanguageCode;
   viewMode: TranslationViewMode;
@@ -37,16 +38,18 @@ export type UseTranslateState = {
     documentId?: string | null;
     regenerate?: boolean;
   }) => Promise<void>;
+  stop: () => void;
   reset: () => void;
 };
 
 /**
- * Translation panel state — progress, cache result, original/translated toggle.
+ * Translation panel state — streaming, cache result, original/translated toggle.
  */
 export function useTranslate(): UseTranslateState {
-  const [status, setStatus] = useState<TranslateUiStatus>("idle");
+  const [status, setStatus] = useState<TranslateUiStatus | "streaming">("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TranslationResult | null>(null);
+  const [streamingText, setStreamingText] = useState("");
   const [scope, setScope] = useState<TranslationScope>("page");
   const [targetLanguage, setTargetLanguage] = useState<TargetLanguageCode>(
     DEFAULT_TARGET_LANGUAGE,
@@ -54,6 +57,15 @@ export function useTranslate(): UseTranslateState {
   const [viewMode, setViewMode] = useState<TranslationViewMode>("translated");
   const [selectionText, setSelectionText] = useState("");
   const [summaryType, setSummaryType] = useState<SummaryType>("short");
+  const abortRef = useRef<AbortController | null>(null);
+
+  function stop() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus((current) =>
+      current === "loading" || current === "streaming" ? "idle" : current,
+    );
+  }
 
   async function translate(input: {
     storagePath: string;
@@ -62,11 +74,28 @@ export function useTranslate(): UseTranslateState {
     documentId?: string | null;
     regenerate?: boolean;
   }) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setStatus("loading");
     setError(null);
+    setStreamingText("");
 
     try {
-      let response;
+      let payload:
+        | {
+            scope: TranslationScope;
+            storagePath?: string;
+            originalFileName?: string;
+            pageNumber?: number;
+            documentId?: string;
+            summaryType?: SummaryType;
+            text?: string;
+            targetLanguage: TargetLanguageCode;
+            regenerate?: boolean;
+          }
+        | null = null;
 
       if (scope === "summary") {
         if (!input.documentId) {
@@ -74,53 +103,95 @@ export function useTranslate(): UseTranslateState {
           setError("Generate a summary first, then translate it.");
           return;
         }
-        response = await requestTranslation({
+        payload = {
           scope: "summary",
           documentId: input.documentId,
           summaryType,
           targetLanguage,
           regenerate: input.regenerate,
-        });
+        };
       } else if (scope === "selection") {
-        response = await requestTranslation({
+        payload = {
           scope: "selection",
           storagePath: input.storagePath,
           originalFileName: input.fileName,
           text: selectionText,
           targetLanguage,
           regenerate: input.regenerate,
-        });
+        };
       } else if (scope === "page") {
-        response = await requestTranslation({
+        payload = {
           scope: "page",
           storagePath: input.storagePath,
           originalFileName: input.fileName,
           pageNumber: input.pageNumber,
           targetLanguage,
           regenerate: input.regenerate,
-        });
+        };
       } else {
-        response = await requestTranslation({
+        payload = {
           scope: "document",
           storagePath: input.storagePath,
           originalFileName: input.fileName,
           targetLanguage,
           regenerate: input.regenerate,
-        });
+        };
       }
 
-      if (!response.ok) {
-        setStatus("error");
-        setError(response.error);
+      const response = await fetch("/api/documents/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({ ...payload, stream: true }),
+        signal: controller.signal,
+      });
+
+      const streamed = await consumeAiSse<TranslationResult>(response, {
+        signal: controller.signal,
+        displayMode: "plain",
+        onDisplayText: (text) => {
+          setStreamingText(text);
+          setStatus("streaming");
+        },
+      });
+
+      if (controller.signal.aborted) {
         return;
       }
 
-      setResult(response.data);
+      if (!streamed.ok) {
+        if (streamed.aborted) {
+          setStatus(streamed.partialText ? "error" : "idle");
+          if (streamed.partialText) {
+            setStreamingText(streamed.partialText);
+            setError("Translation stopped. You can retry.");
+          }
+          return;
+        }
+        setStatus("error");
+        setError(streamed.error);
+        if (streamed.partialText) {
+          setStreamingText(streamed.partialText);
+        }
+        return;
+      }
+
+      setResult(streamed.data);
+      setStreamingText("");
       setViewMode("translated");
       setStatus("success");
     } catch {
+      if (controller.signal.aborted) {
+        return;
+      }
       setStatus("error");
       setError("Unable to translate.");
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
     }
   }
 
@@ -128,6 +199,7 @@ export function useTranslate(): UseTranslateState {
     status,
     error,
     result,
+    streamingText,
     scope,
     targetLanguage,
     viewMode,
@@ -139,10 +211,14 @@ export function useTranslate(): UseTranslateState {
     setSelectionText,
     setSummaryType,
     translate,
+    stop,
     reset: () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
       setStatus("idle");
       setError(null);
       setResult(null);
+      setStreamingText("");
       setViewMode("translated");
     },
   };

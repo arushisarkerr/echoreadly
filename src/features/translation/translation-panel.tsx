@@ -59,12 +59,16 @@ export function TranslationPanel({
   onExportTranslated,
 }: TranslationPanelProps) {
   const translate = useTranslate();
-  const busy = translate.status === "loading";
+  const busy =
+    translate.status === "loading" || translate.status === "streaming";
   const language = getTargetLanguageDefinition(translate.targetLanguage);
   const displayText =
-    translate.viewMode === "original"
-      ? translate.result?.sourceText
-      : translate.result?.translatedText;
+    translate.status === "streaming" ||
+    (translate.status === "error" && translate.streamingText)
+      ? translate.streamingText
+      : translate.viewMode === "original"
+        ? translate.result?.sourceText
+        : translate.result?.translatedText;
 
   function runTranslate(regenerate = false) {
     void translate.translate({
@@ -184,6 +188,17 @@ export function TranslationPanel({
           >
             {busy ? "Translating…" : "Translate"}
           </button>
+          {busy ? (
+            <button
+              type="button"
+              onClick={() => {
+                translate.stop();
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground hover:bg-surface-muted"
+            >
+              Stop
+            </button>
+          ) : null}
           {translate.result ? (
             <button
               type="button"
@@ -200,10 +215,30 @@ export function TranslationPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-        {busy ? (
+        {busy && !translate.streamingText ? (
           <p role="status" className="text-sm text-muted">
             Translating to {language.name}…
           </p>
+        ) : null}
+
+        {translate.streamingText &&
+        (translate.status === "streaming" ||
+          translate.status === "loading" ||
+          translate.status === "error") ? (
+          <div className="mb-4 space-y-2">
+            <article className="rounded-[1.25rem] border border-border/70 bg-background/50 p-4 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+              {translate.streamingText}
+              {translate.status === "streaming" ? (
+                <span
+                  className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent align-middle"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </article>
+            {translate.status === "streaming" ? (
+              <p className="text-[0.7rem] text-subtle">Streaming translation…</p>
+            ) : null}
+          </div>
         ) : null}
 
         {translate.status === "error" && translate.error ? (

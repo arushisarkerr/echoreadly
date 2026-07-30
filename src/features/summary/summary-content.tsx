@@ -12,12 +12,14 @@ import type { SummaryCopyState, SummaryUiStatus } from "./use-summary";
 type SummaryContentProps = {
   status: SummaryUiStatus;
   summary: SummaryResult | null;
+  streamingText?: string;
   error: string | null;
   copyState: SummaryCopyState;
   listenDisabled?: boolean;
   onRegenerate: () => void;
   onCopy: () => void;
   onRetry: () => void;
+  onStop?: () => void;
   onListen?: () => void;
   onExport?: () => void;
   exportDisabled?: boolean;
@@ -32,12 +34,14 @@ type SummaryContentProps = {
 export function SummaryContent({
   status,
   summary,
+  streamingText = "",
   error,
   copyState,
   listenDisabled = false,
   onRegenerate,
   onCopy,
   onRetry,
+  onStop,
   onListen,
   onExport,
   exportDisabled = false,
@@ -45,12 +49,41 @@ export function SummaryContent({
   exportError = null,
   exportFileName = null,
 }: SummaryContentProps) {
-  if (status === "loading") {
+  if (status === "loading" && !streamingText) {
     return <SummaryLoading />;
   }
 
+  if ((status === "streaming" || status === "loading") && streamingText) {
+    return (
+      <div className="flex flex-col gap-3" role="status" aria-live="polite">
+        <div className="flex flex-wrap gap-2">
+          {onStop ? (
+            <ActionButton onClick={onStop} label="Stop" />
+          ) : null}
+        </div>
+        <article className="rounded-[1.25rem] border border-border/70 bg-background/50 p-4 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+          {streamingText}
+          <span
+            className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent align-middle"
+            aria-hidden="true"
+          />
+        </article>
+        <p className="text-[0.7rem] text-subtle">Streaming summary…</p>
+      </div>
+    );
+  }
+
   if (status === "error" && error) {
-    return <SummaryError message={error} onRetry={onRetry} />;
+    return (
+      <div className="space-y-3">
+        {streamingText ? (
+          <article className="rounded-[1.25rem] border border-border/70 bg-background/50 p-4 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+            {streamingText}
+          </article>
+        ) : null}
+        <SummaryError message={error} onRetry={onRetry} />
+      </div>
+    );
   }
 
   if (status === "success" && summary) {

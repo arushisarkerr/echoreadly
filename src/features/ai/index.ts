@@ -2,13 +2,23 @@
  * AI feature module — provider abstraction and document summarization.
  */
 
-export type { AiGenerateInput, AiGenerateOutput, AiGenerateResult, AiProvider } from "./ai-provider";
+export type {
+  AiGenerateInput,
+  AiGenerateOutput,
+  AiGenerateResult,
+  AiProvider,
+  AiStreamChunk,
+} from "./ai-provider";
 export {
   createGeminiProvider,
   GeminiProvider,
   type GeminiProviderOptions,
 } from "./gemini-provider";
-export { createOpenAiProvider, OpenAiProvider, type OpenAiProviderOptions } from "./openai-provider";
+export {
+  createOpenAiProvider,
+  OpenAiProvider,
+  type OpenAiProviderOptions,
+} from "./openai-provider";
 export {
   buildSummaryInput,
   buildSummaryInstructions,
@@ -27,6 +37,15 @@ export {
   summarizeErrorType,
   type GenerateSummaryInput,
 } from "./summary-service";
+export {
+  consumeAiSse,
+  type ConsumeAiSseOptions,
+  type ConsumeAiSseResult,
+} from "./consume-sse";
+export {
+  extractStreamingDisplayText,
+  type StreamingExtractMode,
+} from "./extract-streaming-text";
 export {
   DEFAULT_SUMMARY_MODEL,
   MAX_SUMMARY_SOURCE_CHARS,

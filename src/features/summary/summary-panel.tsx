@@ -80,7 +80,8 @@ export function SummaryPanel({
   onExportPageTranslated,
 }: SummaryPanelProps) {
   const summary = useSummary({ storagePath, fileName });
-  const isLoading = summary.status === "loading";
+  const isLoading =
+    summary.status === "loading" || summary.status === "streaming";
   const [activeTab, setActiveTab] = useState<StudioTab>("summary");
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -218,6 +219,7 @@ export function SummaryPanel({
             <SummaryContent
               status={summary.status}
               summary={summary.summary}
+              streamingText={summary.streamingText}
               error={summary.error}
               copyState={summary.copyState}
               listenDisabled={listenDisabled}
@@ -231,6 +233,9 @@ export function SummaryPanel({
                 if (summary.activeType) {
                   void summary.generate(summary.activeType);
                 }
+              }}
+              onStop={() => {
+                summary.stop();
               }}
               onListen={
                 onListenSummary

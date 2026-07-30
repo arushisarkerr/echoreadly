@@ -6,7 +6,12 @@
 
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
-import type { AiGenerateInput, AiGenerateResult, AiProvider } from "./ai-provider";
+import type {
+  AiGenerateInput,
+  AiGenerateResult,
+  AiProvider,
+  AiStreamChunk,
+} from "./ai-provider";
 import type { AiError } from "./types";
 
 /** Provider-owned default — do not change shared DEFAULT_SUMMARY_MODEL. */
@@ -93,13 +98,13 @@ export class GeminiProvider implements AiProvider {
         config: {
           systemInstruction: input.instructions,
           maxOutputTokens: input.maxOutputTokens,
-          // Force JSON mode so summaries/chat parse as structured citation payloads.
-          responseMimeType: "application/json",
-          // Gemini 3.x uses thinkingLevel (not thinkingBudget: 0 — that is Gemini 2.5).
-          // MINIMAL is the Flash-supported lowest-latency setting in the official SDK.
+          ...(input.responseFormat === "text"
+            ? {}
+            : { responseMimeType: "application/json" as const }),
           thinkingConfig: {
             thinkingLevel: ThinkingLevel.MINIMAL,
           },
+          abortSignal: input.signal,
         },
       });
 
@@ -123,10 +128,96 @@ export class GeminiProvider implements AiProvider {
         },
       };
     } catch (error) {
+      if (input.signal?.aborted) {
+        return {
+          ok: false,
+          error: { code: "api_error", message: "Generation aborted." },
+        };
+      }
       return {
         ok: false,
         error: classifyGeminiError(error),
       };
+    }
+  }
+
+  async *streamText(
+    input: AiGenerateInput,
+  ): AsyncGenerator<AiStreamChunk, void, void> {
+    if (!this.client) {
+      yield {
+        type: "error",
+        error: {
+          code: "missing_api_key",
+          message:
+            "Gemini API key is not configured. Set GEMINI_API_KEY in .env.local.",
+        },
+      };
+      return;
+    }
+
+    const model = input.model?.trim() || this.defaultModel;
+    let accumulated = "";
+
+    try {
+      const stream = await this.client.models.generateContentStream({
+        model,
+        contents: input.input,
+        config: {
+          systemInstruction: input.instructions,
+          maxOutputTokens: input.maxOutputTokens,
+          ...(input.responseFormat === "text"
+            ? {}
+            : { responseMimeType: "application/json" as const }),
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL,
+          },
+          abortSignal: input.signal,
+        },
+      });
+
+      for await (const chunk of stream) {
+        if (input.signal?.aborted) {
+          break;
+        }
+        const delta = chunk.text ?? "";
+        if (!delta) {
+          continue;
+        }
+        accumulated += delta;
+        yield { type: "delta", text: delta };
+      }
+
+      if (input.signal?.aborted) {
+        yield {
+          type: "error",
+          error: { code: "api_error", message: "Generation aborted." },
+        };
+        return;
+      }
+
+      const text = accumulated.trim();
+      if (!text) {
+        yield {
+          type: "error",
+          error: {
+            code: "api_error",
+            message: "Gemini returned an empty response.",
+          },
+        };
+        return;
+      }
+
+      yield { type: "done", text, model };
+    } catch (error) {
+      if (input.signal?.aborted) {
+        yield {
+          type: "error",
+          error: { code: "api_error", message: "Generation aborted." },
+        };
+        return;
+      }
+      yield { type: "error", error: classifyGeminiError(error) };
     }
   }
 }

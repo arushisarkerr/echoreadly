@@ -5,7 +5,12 @@
 
 import OpenAI from "openai";
 
-import type { AiGenerateInput, AiGenerateResult, AiProvider } from "./ai-provider";
+import type {
+  AiGenerateInput,
+  AiGenerateResult,
+  AiProvider,
+  AiStreamChunk,
+} from "./ai-provider";
 import { DEFAULT_SUMMARY_MODEL, type AiError } from "./types";
 
 function classifyOpenAiError(error: unknown): AiError {
@@ -121,12 +126,15 @@ export class OpenAiProvider implements AiProvider {
     const model = input.model ?? this.defaultModel;
 
     try {
-      const response = await this.client.responses.create({
-        model,
-        instructions: input.instructions,
-        input: input.input,
-        max_output_tokens: input.maxOutputTokens,
-      });
+      const response = await this.client.responses.create(
+        {
+          model,
+          instructions: input.instructions,
+          input: input.input,
+          max_output_tokens: input.maxOutputTokens,
+        },
+        input.signal ? { signal: input.signal } : undefined,
+      );
 
       const text = response.output_text?.trim();
 
@@ -148,10 +156,101 @@ export class OpenAiProvider implements AiProvider {
         },
       };
     } catch (error) {
+      if (input.signal?.aborted) {
+        return {
+          ok: false,
+          error: {
+            code: "api_error",
+            message: "Generation aborted.",
+          },
+        };
+      }
       return {
         ok: false,
         error: classifyOpenAiError(error),
       };
+    }
+  }
+
+  async *streamText(
+    input: AiGenerateInput,
+  ): AsyncGenerator<AiStreamChunk, void, void> {
+    if (!this.client) {
+      yield {
+        type: "error",
+        error: {
+          code: "missing_api_key",
+          message:
+            "OpenAI API key is not configured. Set OPENAI_API_KEY in .env.local.",
+        },
+      };
+      return;
+    }
+
+    const model = input.model ?? this.defaultModel;
+    let accumulated = "";
+
+    try {
+      const stream = this.client.responses.stream(
+        {
+          model,
+          instructions: input.instructions,
+          input: input.input,
+          max_output_tokens: input.maxOutputTokens,
+        },
+        input.signal ? { signal: input.signal } : undefined,
+      );
+
+      for await (const event of stream) {
+        if (input.signal?.aborted) {
+          break;
+        }
+        if (event.type === "response.output_text.delta") {
+          const delta =
+            typeof event.delta === "string" ? event.delta : "";
+          if (!delta) {
+            continue;
+          }
+          accumulated += delta;
+          yield { type: "delta", text: delta };
+        }
+      }
+
+      if (input.signal?.aborted) {
+        yield {
+          type: "error",
+          error: { code: "api_error", message: "Generation aborted." },
+        };
+        return;
+      }
+
+      const final = await stream.finalResponse();
+      const text = (final.output_text ?? accumulated).trim();
+      if (!text) {
+        yield {
+          type: "error",
+          error: {
+            code: "api_error",
+            message: "OpenAI returned an empty response.",
+          },
+        };
+        return;
+      }
+
+      yield {
+        type: "done",
+        text,
+        model: final.model ?? model,
+      };
+    } catch (error) {
+      if (input.signal?.aborted) {
+        yield {
+          type: "error",
+          error: { code: "api_error", message: "Generation aborted." },
+        };
+        return;
+      }
+      yield { type: "error", error: classifyOpenAiError(error) };
     }
   }
 }

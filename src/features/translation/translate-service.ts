@@ -14,12 +14,17 @@ import {
   shouldFallbackToGemini,
   type SummaryType,
 } from "@/features/ai";
+import { createSseResponse } from "@/features/ai/sse";
+import { streamTextWithFallback } from "@/features/ai/stream-text";
+import { recordUsage } from "@/features/billing/gate";
+import type { BillingEntitlement } from "@/features/billing/types";
 import {
   getDocumentById,
   getDocumentSummaryByType,
 } from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
 import { joinPageChunkText } from "@/features/tts";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -283,6 +288,7 @@ export async function translateDocumentContent(
       instructions,
       input: prompt,
       maxOutputTokens: getTranslationMaxOutputTokens(sourceText.length),
+      responseFormat: "text",
     });
 
     if (!generation.ok && shouldFallbackToGemini(generation.error)) {
@@ -292,6 +298,7 @@ export async function translateDocumentContent(
           instructions,
           input: prompt,
           maxOutputTokens: getTranslationMaxOutputTokens(sourceText.length),
+          responseFormat: "text",
         });
       }
     }
@@ -366,3 +373,214 @@ export async function translateDocumentContent(
 
 /** Hash helper for selection identity. */
 export { hashText as hashTranslationSourceText };
+
+export type StreamTranslateInput = {
+  input: TranslateRequestInput;
+  userId: string;
+  signal: AbortSignal;
+  entitlement: BillingEntitlement;
+  route: string;
+};
+
+export type StreamTranslateOutcome =
+  | { mode: "json"; data: TranslationResult }
+  | { mode: "sse"; response: Response };
+
+/**
+ * Cache hits return JSON. Fresh translations stream plain-text deltas over SSE.
+ */
+export async function translateDocumentContentStreaming(
+  args: StreamTranslateInput,
+): Promise<TranslateServiceResult<StreamTranslateOutcome>> {
+  try {
+    const resolved = await resolveSource(args.input, args.userId);
+    if (!resolved.ok) {
+      return resolved;
+    }
+
+    const {
+      documentId,
+      sourceText,
+      pageNumber,
+      summaryType,
+      selectionHash,
+      documentTitle,
+    } = resolved.data;
+
+    const sourceContentHash = hashText(sourceText);
+    const client = await createClient();
+
+    const existing = await findDocumentTranslation(
+      {
+        userId: args.userId,
+        documentId,
+        scope: args.input.scope,
+        pageNumber,
+        summaryType,
+        selectionHash,
+        targetLanguage: args.input.targetLanguage,
+        sourceContentHash,
+      },
+      client,
+    );
+
+    if (!existing.ok) {
+      return { ok: false, code: "INTERNAL", error: existing.error };
+    }
+
+    if (existing.data && !args.input.regenerate) {
+      return {
+        ok: true,
+        data: {
+          mode: "json",
+          data: {
+            translationId: existing.data.id,
+            documentId,
+            scope: existing.data.scope,
+            pageNumber: existing.data.page_number,
+            summaryType: existing.data.summary_type,
+            targetLanguage: existing.data
+              .target_language as TargetLanguageCode,
+            sourceText: existing.data.source_text,
+            translatedText: existing.data.translated_text,
+            sourceContentHash: existing.data.source_content_hash,
+            model: existing.data.model,
+            cached: true,
+            generatedAt: existing.data.generated_at,
+          },
+        },
+      };
+    }
+
+    const provider = getDefaultAiProvider();
+    const instructions = buildTranslationInstructions(
+      args.input.targetLanguage,
+    );
+    const prompt = buildTranslationInput({
+      scope: args.input.scope,
+      targetLanguage: args.input.targetLanguage,
+      sourceText,
+      documentTitle: documentTitle ?? undefined,
+      pageNumber,
+    });
+
+    const response = createSseResponse({
+      signal: args.signal,
+      run: async (emit) => {
+        emit("meta", {
+          kind: "translation",
+          cached: false,
+          scope: args.input.scope,
+          targetLanguage: args.input.targetLanguage,
+        });
+
+        let finalText = "";
+        let model = "unknown";
+
+        for await (const chunk of streamTextWithFallback(
+          provider,
+          {
+            instructions,
+            input: prompt,
+            maxOutputTokens: getTranslationMaxOutputTokens(sourceText.length),
+            signal: args.signal,
+            responseFormat: "text",
+          },
+          { route: args.route },
+        )) {
+          if (args.signal.aborted) {
+            return;
+          }
+          if (chunk.type === "delta") {
+            emit("delta", { text: chunk.text });
+            continue;
+          }
+          if (chunk.type === "error") {
+            emit("error", {
+              message: chunk.error.message,
+              code: chunk.error.code,
+            });
+            return;
+          }
+          if (chunk.type === "done") {
+            finalText = chunk.text;
+            model = chunk.model;
+          }
+        }
+
+        if (args.signal.aborted) {
+          return;
+        }
+
+        const translatedText = finalText.trim();
+        if (!translatedText) {
+          emit("error", {
+            message: "Translation returned empty text.",
+            code: "empty",
+          });
+          return;
+        }
+
+        const saved = await upsertDocumentTranslation(
+          {
+            id: existing.data?.id ?? randomUUID(),
+            userId: args.userId,
+            documentId,
+            scope: args.input.scope,
+            pageNumber,
+            summaryType,
+            selectionHash,
+            targetLanguage: args.input.targetLanguage,
+            sourceContentHash,
+            sourceText,
+            translatedText,
+            model,
+          },
+          client,
+        );
+
+        if (!saved.ok) {
+          emit("error", { message: saved.error, code: "persist_error" });
+          return;
+        }
+
+        try {
+          await recordUsage(args.userId, "translation", args.entitlement);
+        } catch (error) {
+          logger.warn(
+            "Translation usage record failed",
+            { route: args.route, userId: args.userId },
+            error,
+          );
+        }
+
+        emit("done", {
+          translationId: saved.data.id,
+          documentId,
+          scope: saved.data.scope,
+          pageNumber: saved.data.page_number,
+          summaryType: saved.data.summary_type,
+          targetLanguage: saved.data.target_language as TargetLanguageCode,
+          sourceText: saved.data.source_text,
+          translatedText: saved.data.translated_text,
+          sourceContentHash: saved.data.source_content_hash,
+          model: saved.data.model,
+          cached: false,
+          generatedAt: saved.data.generated_at,
+        } satisfies TranslationResult);
+      },
+    });
+
+    return { ok: true, data: { mode: "sse", response } };
+  } catch (error) {
+    return {
+      ok: false,
+      code: "INTERNAL",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to translate document.",
+    };
+  }
+}
+

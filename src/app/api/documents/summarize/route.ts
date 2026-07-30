@@ -1,11 +1,9 @@
 /**
- * Summarize a processed document via OpenAI.
- * Hardened: auth, rate limits, payload validation, structured errors, logging.
+ * Summarize a processed document — JSON for cache hits, SSE for fresh generation.
  */
 
 import { logger } from "@/lib/logger";
 import {
-  recordUsage,
   requireFeatureAndQuota,
 } from "@/features/billing/gate";
 import {
@@ -21,7 +19,7 @@ import {
   validateSummaryType,
 } from "@/lib/security";
 import { requireUser } from "@/server/auth";
-import { summarizeDocumentByStoragePath } from "@/server/summarize-document";
+import { summarizeDocumentStreaming } from "@/server/stream-summarize";
 
 type SummarizeRequestBody = {
   storagePath?: unknown;
@@ -29,7 +27,16 @@ type SummarizeRequestBody = {
   originalFileName?: unknown;
   fileSize?: unknown;
   regenerate?: unknown;
+  stream?: unknown;
 };
+
+function wantsStream(request: Request, body: SummarizeRequestBody): boolean {
+  if (body.stream === true || body.stream === "true") {
+    return true;
+  }
+  const accept = request.headers.get("accept") ?? "";
+  return accept.includes("text/event-stream");
+}
 
 export async function POST(request: Request) {
   const route = "/api/documents/summarize";
@@ -91,41 +98,108 @@ export async function POST(request: Request) {
     return apiError(fileSize.code, fileSize.message, 400);
   }
 
+  const stream = wantsStream(request, body);
+
   try {
-    const result = await summarizeDocumentByStoragePath({
+    if (!stream) {
+      const { summarizeDocumentByStoragePath } = await import(
+        "@/server/summarize-document"
+      );
+      const { recordUsage } = await import("@/features/billing/gate");
+
+      const result = await summarizeDocumentByStoragePath({
+        storagePath: storagePath.data,
+        summaryType: summaryType.data,
+        originalFileName: originalFileName.data,
+        fileSize: fileSize.data,
+        regenerate: body.regenerate === true,
+      });
+
+      if (!result.ok) {
+        logger.aiFailure(
+          "Summarize failed",
+          {
+            route,
+            userId: auth.user.id,
+            storagePath: storagePath.data,
+            summaryType: summaryType.data,
+          },
+          result.error,
+        );
+        return mapDomainFailure(result.error, "ai");
+      }
+
+      try {
+        await recordUsage(auth.user.id, "summaries", gate.entitlement);
+      } catch (error) {
+        logger.warn(
+          "Summary usage record failed",
+          {
+            route,
+            userId: auth.user.id,
+          },
+          error,
+        );
+      }
+
+      return apiSuccess(result.data);
+    }
+
+    const streamed = await summarizeDocumentStreaming({
+      userId: auth.user.id,
       storagePath: storagePath.data,
       summaryType: summaryType.data,
       originalFileName: originalFileName.data,
       fileSize: fileSize.data,
       regenerate: body.regenerate === true,
+      signal: request.signal,
+      entitlement: gate.entitlement,
+      route,
     });
 
-    if (!result.ok) {
-      logger.aiFailure("Summarize failed", {
+    if (!streamed.ok) {
+      logger.aiFailure(
+        "Summarize stream setup failed",
+        {
+          route,
+          userId: auth.user.id,
+          storagePath: storagePath.data,
+        },
+        streamed.error,
+      );
+      return mapDomainFailure(streamed.error, "ai");
+    }
+
+    if (streamed.outcome.mode === "json") {
+      const { recordUsage } = await import("@/features/billing/gate");
+      // Cached summary — still count toward quota for consistency with prior behavior.
+      try {
+        await recordUsage(auth.user.id, "summaries", gate.entitlement);
+      } catch (error) {
+        logger.warn(
+          "Summary usage record failed",
+          { route, userId: auth.user.id },
+          error,
+        );
+      }
+      return apiSuccess(streamed.outcome.data);
+    }
+
+    return streamed.outcome.response;
+  } catch (error) {
+    logger.aiFailure(
+      "Summarize threw",
+      {
         route,
         userId: auth.user.id,
         storagePath: storagePath.data,
-        summaryType: summaryType.data,
-      }, result.error);
-      return mapDomainFailure(result.error, "ai");
-    }
-
-    try {
-      await recordUsage(auth.user.id, "summaries", gate.entitlement);
-    } catch (error) {
-      logger.warn("Summary usage record failed", {
-        route,
-        userId: auth.user.id,
-      }, error);
-    }
-
-    return apiSuccess(result.data);
-  } catch (error) {
-    logger.aiFailure("Summarize threw", {
-      route,
-      userId: auth.user.id,
-      storagePath: storagePath.data,
-    }, error);
-    return apiError("AI_ERROR", "Unable to complete the AI request. Please try again.", 500);
+      },
+      error,
+    );
+    return apiError(
+      "AI_ERROR",
+      "Unable to complete the AI request. Please try again.",
+      500,
+    );
   }
 }
