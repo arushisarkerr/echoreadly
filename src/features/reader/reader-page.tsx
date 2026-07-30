@@ -260,7 +260,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
               setSummaryOpen(false);
             }}
             listenDisabled={ttsBusy}
-            onListenSummary={(text) => {
+            onListenSummary={(input) => {
               const seekTo =
                 playbackResume?.source === "summary"
                   ? playbackResume.seconds
@@ -268,7 +268,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
               if (seekTo != null) {
                 clearPlaybackResume();
               }
-              void tts.listenSummary(text, { seekTo });
+              void tts.listenSummary(input, { seekTo });
             }}
           />
         </div>

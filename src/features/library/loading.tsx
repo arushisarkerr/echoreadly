@@ -1,13 +1,15 @@
 /**
  * Skeleton placeholders shown while the library loads from Storage.
  */
-export function LibraryLoading() {
+export function LibraryLoading({ count = 6 }: { count?: number }) {
+  const safeCount = Math.min(12, Math.max(1, Math.floor(count)));
+
   return (
     <ul
       aria-hidden="true"
       className="grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3"
     >
-      {Array.from({ length: 6 }).map((_, index) => (
+      {Array.from({ length: safeCount }).map((_, index) => (
         <li
           key={index}
           className="overflow-hidden rounded-[1.75rem] border border-border/70 bg-surface/50"

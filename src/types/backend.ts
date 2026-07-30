@@ -70,6 +70,22 @@ type DocumentListeningProgressRow = {
   updated_at: string;
 };
 
+type CollectionsRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type CollectionDocumentsRow = {
+  id: string;
+  user_id: string;
+  collection_id: string;
+  storage_path: string;
+  added_at: string;
+};
+
 /**
  * Supabase database schema for EchoReadly persistence tables.
  */
@@ -119,6 +135,25 @@ export type Database = {
           storage_path: string;
         };
         Update: Partial<DocumentListeningProgressRow>;
+        Relationships: [];
+      };
+      collections: {
+        Row: CollectionsRow;
+        Insert: Partial<CollectionsRow> & {
+          user_id: string;
+          name: string;
+        };
+        Update: Partial<CollectionsRow>;
+        Relationships: [];
+      };
+      collection_documents: {
+        Row: CollectionDocumentsRow;
+        Insert: Partial<CollectionDocumentsRow> & {
+          user_id: string;
+          collection_id: string;
+          storage_path: string;
+        };
+        Update: Partial<CollectionDocumentsRow>;
         Relationships: [];
       };
     };

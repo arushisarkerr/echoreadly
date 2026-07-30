@@ -10,4 +10,4 @@ export { LibraryGrid } from "./library-grid";
 export { LibraryLoading } from "./loading";
 export { LibraryPage } from "./library-page";
 export { notifyLibraryChanged } from "./library-events";
-export { useLibrary } from "./use-library";
+export { useLibrary, type UseLibraryOptions } from "./use-library";

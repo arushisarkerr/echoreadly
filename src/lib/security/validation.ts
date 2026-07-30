@@ -212,6 +212,32 @@ export function validateSummaryType(
   return { ok: true, data: value };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function validateDocumentId(
+  value: unknown,
+): ValidationResult<string> {
+  if (typeof value !== "string" || !value.trim()) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "documentId is required.",
+    };
+  }
+
+  const documentId = value.trim();
+  if (!UUID_RE.test(documentId)) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "documentId must be a valid UUID.",
+    };
+  }
+
+  return { ok: true, data: documentId };
+}
+
 export function validateChatQuestion(
   value: unknown,
 ): ValidationResult<string> {

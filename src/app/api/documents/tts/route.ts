@@ -1,9 +1,14 @@
 /**
- * Text-to-speech for summary text or a document page.
- * Hardened: auth, rate limits, payload validation, structured errors, logging.
+ * Text-to-speech for a stored document summary or a document page.
+ * Hardened: auth, rate limits, payload validation, ownership checks,
+ * structured errors, logging. Summary TTS never trusts client text.
  */
 
 import { serverEnv } from "@/config";
+import {
+  getDocumentById,
+  getDocumentSummaryByType,
+} from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
 import {
   createOpenAiTtsProvider,
@@ -18,21 +23,26 @@ import {
   getRequestIp,
   mapDomainFailure,
   rateLimitedResponse,
+  validateDocumentId,
   validateFileName,
   validatePageNumber,
   validateStoragePath,
+  validateSummaryType,
   validateTtsSource,
-  validateTtsText,
 } from "@/lib/security";
 import { requireUser } from "@/server/auth";
 
 type TtsRequestBody = {
   source?: unknown;
   text?: unknown;
+  documentId?: unknown;
+  summaryType?: unknown;
   storagePath?: unknown;
   pageNumber?: unknown;
   originalFileName?: unknown;
 };
+
+const SUMMARY_UNAVAILABLE_MESSAGE = "Summary is not available.";
 
 function getFileNameFromStoragePath(storagePath: string): string {
   const segments = storagePath.split("/");
@@ -79,11 +89,83 @@ export async function POST(request: Request) {
 
   try {
     if (source.data === "summary") {
-      const validated = validateTtsText(body.text);
-      if (!validated.ok) {
-        return apiError(validated.code, validated.message, 400);
+      if (body.text !== undefined) {
+        return apiError(
+          "VALIDATION",
+          "text is not allowed for summary TTS.",
+          400,
+        );
       }
-      text = validated.data;
+
+      const documentId = validateDocumentId(body.documentId);
+      if (!documentId.ok) {
+        return apiError(documentId.code, documentId.message, 400);
+      }
+
+      const summaryType = validateSummaryType(body.summaryType);
+      if (!summaryType.ok) {
+        return apiError(summaryType.code, summaryType.message, 400);
+      }
+
+      const document = await getDocumentById(
+        documentId.data,
+        auth.user.id,
+      );
+
+      if (!document.ok) {
+        logger.ttsFailure("TTS summary document lookup failed", {
+          route,
+          userId: auth.user.id,
+          documentId: documentId.data,
+        }, document.error);
+        return apiError(
+          "TTS_ERROR",
+          "Unable to generate speech. Please try again.",
+          500,
+        );
+      }
+
+      if (!document.data) {
+        return apiError("NOT_FOUND", SUMMARY_UNAVAILABLE_MESSAGE, 404);
+      }
+
+      const summary = await getDocumentSummaryByType(
+        documentId.data,
+        auth.user.id,
+        summaryType.data,
+      );
+
+      if (!summary.ok) {
+        logger.ttsFailure("TTS summary lookup failed", {
+          route,
+          userId: auth.user.id,
+          documentId: documentId.data,
+          summaryType: summaryType.data,
+        }, summary.error);
+        return apiError(
+          "TTS_ERROR",
+          "Unable to generate speech. Please try again.",
+          500,
+        );
+      }
+
+      if (!summary.data) {
+        return apiError("NOT_FOUND", SUMMARY_UNAVAILABLE_MESSAGE, 404);
+      }
+
+      text = summary.data.content.trim();
+
+      if (!text) {
+        return apiError(
+          "VALIDATION",
+          "Summary has no text to narrate.",
+          400,
+        );
+      }
+
+      if (text.length > MAX_TTS_INPUT_CHARS) {
+        text = text.slice(0, MAX_TTS_INPUT_CHARS);
+      }
     } else {
       const storagePath = validateStoragePath(body.storagePath);
       if (!storagePath.ok) {

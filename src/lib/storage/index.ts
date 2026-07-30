@@ -17,8 +17,14 @@ export {
   type DownloadPdfResult,
 } from "./download-pdf";
 export {
+  LIBRARY_PAGE_SIZE,
+  LIBRARY_PAGE_SIZE_MAX,
   listPdfs,
+  listPdfsPage,
+  type ListPdfsPageInput,
+  type ListPdfsPageResult,
   type ListPdfsResult,
+  type ListPdfsSort,
   type StoredPdfObject,
 } from "./list-pdfs";
 export {

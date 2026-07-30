@@ -190,11 +190,11 @@ export function HomeWorkspace() {
           cta="Open →"
         />
         <StoryTile
-          kicker="Coming soon"
+          kicker="Organize"
           title="Collections"
-          copy="Folder rooms are a preview — membership and edits are not available yet."
+          copy="Group shelf documents into reusable rooms — create, rename, and manage membership."
           href={ROUTES.collections}
-          cta="Preview →"
+          cta="Open →"
         />
         <StoryTile
           kicker="Coming soon"

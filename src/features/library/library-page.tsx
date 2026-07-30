@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 
 import { ROUTES, readerPathForStorage } from "@/constants";
+import {
+  listCollectionStoragePaths,
+  listCollections,
+  toCollectionStoragePath,
+  type CollectionSummary,
+} from "@/features/collections";
 import {
   formatLastOpened,
   progressForStoragePath,
@@ -22,11 +28,10 @@ type ViewMode = "grid" | "list" | "compact";
 type SortMode = "newest" | "oldest" | "name";
 
 /**
- * Editorial library shelf — same useLibrary / listPdfs data.
- * Presentation and client filter UX only; fetching unchanged.
+ * Editorial library shelf — paginated useLibrary / listPdfsPage data.
+ * Presentation and client filter UX only; Storage fetches one page at a time.
  */
 export function LibraryPage() {
-  const { items, loading, error, refresh, removeItem } = useLibrary();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortMode>("newest");
@@ -35,38 +40,97 @@ export function LibraryPage() {
   const [status, setStatus] = useState("all");
   const [collection, setCollection] = useState("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [collectionOptions, setCollectionOptions] = useState<
+    CollectionSummary[]
+  >([]);
+  const [membershipFilter, setMembershipFilter] = useState<{
+    collectionId: string;
+    paths: Set<string>;
+  } | null>(null);
+
+  const {
+    items,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadedCount,
+    refresh,
+    loadMore,
+    removeItem,
+  } = useLibrary({ sort });
+
+  useEffect(() => {
+    let cancelled = false;
+    void listCollections().then((result) => {
+      if (cancelled || !result.ok) {
+        return;
+      }
+      setCollectionOptions(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [statusMessage]);
+
+  useEffect(() => {
+    if (collection === "all") {
+      return;
+    }
+
+    let cancelled = false;
+
+    void listCollectionStoragePaths(collection).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (!result.ok) {
+        setMembershipFilter({ collectionId: collection, paths: new Set() });
+        return;
+      }
+      setMembershipFilter({
+        collectionId: collection,
+        paths: new Set(
+          result.data.map((path) => toCollectionStoragePath(path)),
+        ),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collection]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const activePaths =
+      collection !== "all" && membershipFilter?.collectionId === collection
+        ? membershipFilter.paths
+        : null;
 
-    let next = items.filter((item) => {
-      // Source: only PDF exists today — non-PDF choices intentionally empty.
+    return items.filter((item) => {
       if (source !== "all" && source !== "pdf") {
         return false;
       }
 
-      // Language / status / collection are UI previews until metadata exists.
-      // They must not short-circuit name search.
+      if (collection !== "all") {
+        if (!activePaths) {
+          return false;
+        }
+        if (!activePaths.has(toCollectionStoragePath(item.storagePath))) {
+          return false;
+        }
+      }
+
       if (!q) {
         return true;
       }
       return item.name.toLowerCase().includes(q);
     });
-
-    next = [...next].sort((a, b) => {
-      if (sort === "name") {
-        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-      }
-      const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
-      const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
-      return sort === "newest" ? bTime - aTime : aTime - bTime;
-    });
-
-    return next;
-  }, [items, query, sort, source]);
+  }, [items, query, source, collection, membershipFilter]);
 
   const hasQuery = query.trim().length > 0;
-  const previewFiltersActive =
-    language !== "all" || status !== "all" || collection !== "all";
+  const previewFiltersActive = language !== "all" || status !== "all";
 
   function clearSearch() {
     setQuery("");
@@ -83,6 +147,13 @@ export function LibraryPage() {
       event.preventDefault();
       clearSearch();
     }
+  }
+
+  function handleLoadMore() {
+    if (loadingMore || !hasMore) {
+      return;
+    }
+    void loadMore();
   }
 
   return (
@@ -175,8 +246,9 @@ export function LibraryPage() {
               onChange={setCollection}
               options={[
                 ["all", "All collections"],
-                ["pinned", "Pinned"],
-                ["favorites", "Favorites"],
+                ...collectionOptions.map(
+                  (entry) => [entry.id, entry.name] as [string, string],
+                ),
               ]}
             />
             <FilterSelect
@@ -226,8 +298,8 @@ export function LibraryPage() {
 
         {previewFiltersActive ? (
           <p className="text-[0.7rem] text-subtle">
-            Language, status, and collection filters are preview-only until
-            item metadata ships. Search and source still apply.
+            Language and status filters are preview-only until item metadata
+            ships. Search, source, and collections still apply.
           </p>
         ) : null}
       </div>
@@ -236,11 +308,11 @@ export function LibraryPage() {
         className="mt-4 flex flex-wrap items-center justify-between gap-2"
         aria-live="polite"
       >
-        {!loading && !error && items.length > 0 ? (
+        {!loading && !error && loadedCount > 0 ? (
           <p className="text-xs text-muted">
             {hasQuery || source !== "all"
-              ? `${filtered.length} of ${items.length} ${items.length === 1 ? "item" : "items"}`
-              : `${items.length} ${items.length === 1 ? "item" : "items"}`}
+              ? `${filtered.length} of ${loadedCount} loaded`
+              : `${loadedCount} loaded${hasMore ? " · more available" : ""}`}
           </p>
         ) : (
           <span className="text-xs text-transparent">·</span>
@@ -259,7 +331,7 @@ export function LibraryPage() {
         </div>
       ) : null}
 
-      {!loading && error ? (
+      {!loading && error && loadedCount === 0 ? (
         <div
           role="alert"
           className="mt-6 rounded-[1.5rem] border border-danger/35 bg-[color-mix(in_srgb,var(--danger)_7%,transparent)] px-5 py-6"
@@ -280,13 +352,13 @@ export function LibraryPage() {
         </div>
       ) : null}
 
-      {!loading && !error && items.length === 0 ? (
+      {!loading && !error && loadedCount === 0 ? (
         <div className="mt-6">
           <LibraryEmptyState />
         </div>
       ) : null}
 
-      {!loading && !error && items.length > 0 && filtered.length === 0 ? (
+      {!loading && loadedCount > 0 && filtered.length === 0 ? (
         <div className="mt-6 rounded-[1.5rem] border border-dashed border-border bg-surface/50 px-5 py-10 text-center">
           <p className="font-display text-xl font-semibold text-foreground">
             No matches
@@ -319,12 +391,40 @@ export function LibraryPage() {
         </div>
       ) : null}
 
-      {!loading && !error && filtered.length > 0 ? (
-        <LibraryViews
-          items={filtered}
-          view={view}
-          onDeleted={handleDeleted}
-        />
+      {!loading && filtered.length > 0 ? (
+        <>
+          <LibraryViews
+            items={filtered}
+            view={view}
+            onDeleted={handleDeleted}
+          />
+
+          {error ? (
+            <p role="alert" className="mt-4 text-center text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
+
+          {loadingMore ? (
+            <div className="mt-4" role="status" aria-live="polite">
+              <span className="sr-only">Loading more documents…</span>
+              <LibraryLoading count={3} />
+            </div>
+          ) : null}
+
+          {hasMore ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
     </section>
   );

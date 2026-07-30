@@ -35,6 +35,7 @@ export {
   isSummaryType,
   validateChatHistory,
   validateChatQuestion,
+  validateDocumentId,
   validateFileName,
   validateFileSize,
   validatePageNumber,

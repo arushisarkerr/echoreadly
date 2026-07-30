@@ -6,6 +6,7 @@ import {
   deleteDocumentsByStoragePath,
   deleteListeningProgressByStoragePath,
 } from "@/features/persistence";
+import { deleteCollectionMembershipsByStoragePath } from "@/features/collections/delete-memberships";
 import { forgetDocumentByStoragePath } from "@/features/processing";
 import { createClient } from "@/lib/supabase/server";
 import { removePdfObject } from "@/lib/storage";
@@ -94,6 +95,20 @@ export async function deleteOwnedDocument(
         ok: false,
         code: "INTERNAL",
         error: progressResult.error,
+      };
+    }
+
+    const membershipResult = await deleteCollectionMembershipsByStoragePath(
+      trimmed,
+      user.id,
+      client,
+    );
+
+    if (!membershipResult.ok) {
+      return {
+        ok: false,
+        code: "INTERNAL",
+        error: membershipResult.error,
       };
     }
 

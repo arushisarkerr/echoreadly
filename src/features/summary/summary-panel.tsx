@@ -10,6 +10,7 @@ import {
 
 import { CloseIcon } from "@/components/icons";
 import { cn } from "@/utils";
+import type { SummaryType } from "@/features/ai";
 import { ChatPanel } from "@/features/chat";
 
 import { SummaryButtons } from "./summary-buttons";
@@ -22,7 +23,10 @@ type SummaryPanelProps = {
   open: boolean;
   onClose: () => void;
   listenDisabled?: boolean;
-  onListenSummary?: (text: string) => void;
+  onListenSummary?: (input: {
+    documentId: string;
+    summaryType: SummaryType;
+  }) => void;
 };
 
 type StudioTab = "summary" | "chat";
@@ -180,10 +184,14 @@ export function SummaryPanel({
               onListen={
                 onListenSummary
                   ? () => {
-                      const text = summary.summary?.content?.trim();
-                      if (text) {
-                        onListenSummary(text);
+                      const current = summary.summary;
+                      if (!current?.documentId || !current.summaryType) {
+                        return;
                       }
+                      onListenSummary({
+                        documentId: current.documentId,
+                        summaryType: current.summaryType,
+                      });
                     }
                   : undefined
               }

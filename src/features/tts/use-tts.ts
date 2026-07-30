@@ -9,6 +9,7 @@ import {
   type TtsPlaybackStatus,
   type TtsSource,
 } from "./types";
+import type { SummaryType } from "@/features/ai";
 
 export type UseTtsState = {
   status: TtsPlaybackStatus;
@@ -18,7 +19,10 @@ export type UseTtsState = {
   duration: number | null;
   speed: TtsPlaybackSpeed;
   speeds: TtsPlaybackSpeed[];
-  listenSummary: (text: string, options?: { seekTo?: number }) => Promise<void>;
+  listenSummary: (
+    input: { documentId: string; summaryType: SummaryType },
+    options?: { seekTo?: number },
+  ) => Promise<void>;
   listenPage: (input: {
     storagePath: string;
     pageNumber: number;
@@ -200,16 +204,23 @@ export function useTts(): UseTtsState {
   );
 
   const listenSummary = useCallback(
-    async (text: string, options?: { seekTo?: number }) => {
-      const trimmed = text.trim();
-      if (!trimmed) {
+    async (
+      input: { documentId: string; summaryType: SummaryType },
+      options?: { seekTo?: number },
+    ) => {
+      const documentId = input.documentId.trim();
+      if (!documentId) {
         setStatus("error");
         setError("Generate a summary before listening.");
         return;
       }
 
       await loadAndPlay(
-        { source: "summary", text: trimmed },
+        {
+          source: "summary",
+          documentId,
+          summaryType: input.summaryType,
+        },
         "summary",
         options,
       );

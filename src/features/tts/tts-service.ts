@@ -4,12 +4,15 @@
 
 import { getApiErrorMessage } from "@/utils";
 
+import type { SummaryType } from "@/features/ai";
+
 import type { TtsSource } from "./types";
 
 export type TtsRequestPayload =
   | {
       source: "summary";
-      text: string;
+      documentId: string;
+      summaryType: SummaryType;
     }
   | {
       source: "page";
