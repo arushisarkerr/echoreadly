@@ -1,6 +1,7 @@
 /**
  * Upload a validated PDF to the private `pdfs` Supabase Storage bucket.
- * Returns object paths only — never fabricates a public URL for a private bucket.
+ * Objects are stored at `{userId}/{fileId}.pdf`. Returns paths only —
+ * never fabricates a public URL for a private bucket.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -24,9 +25,9 @@ export type PdfUploadError = {
 
 export type PdfUploadResult = {
   status: PdfUploadStatus;
-  /** Object key within the bucket (includes `.pdf`). */
+  /** Object key within the bucket (`{userId}/{fileId}.pdf`). */
   path: string | null;
-  /** Bucket-qualified storage path (`pdfs/<object-key>`). Not a public URL. */
+  /** Bucket-qualified storage path (`pdfs/{userId}/{fileId}.pdf`). Not a public URL. */
   storagePath: string | null;
   error: PdfUploadError | null;
 };
@@ -47,9 +48,12 @@ export type UploadPdfOptions = {
 };
 
 /**
- * Build a unique object key that always ends with `.pdf`.
+ * Build a unique object key: `{userId}/{fileId}.pdf`.
  */
-export function createPdfObjectKey(originalFileName: string): string {
+export function createPdfObjectKey(
+  userId: string,
+  originalFileName: string,
+): string {
   const uniqueId =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
@@ -62,8 +66,8 @@ export function createPdfObjectKey(originalFileName: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 
-  const prefix = safeBase.length > 0 ? `${safeBase}-` : "";
-  return `${prefix}${uniqueId}.pdf`;
+  const fileId = safeBase.length > 0 ? `${safeBase}-${uniqueId}` : uniqueId;
+  return `${userId}/${fileId}.pdf`;
 }
 
 function toStoragePath(objectKey: string): string {
@@ -114,7 +118,7 @@ function classifyStorageError(error: unknown): PdfUploadError {
 }
 
 /**
- * Upload a PDF file to Supabase Storage.
+ * Upload a PDF file to Supabase Storage under the signed-in user's folder.
  * Re-validates the file, then writes to the private `pdfs` bucket.
  */
 export async function uploadPdf(
@@ -141,7 +145,25 @@ export async function uploadPdf(
   }
 
   const client = options.client ?? createClient();
-  const path = createPdfObjectKey(file.name);
+
+  const {
+    data: { user },
+    error: authError,
+  } = await client.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "error",
+      path: null,
+      storagePath: null,
+      error: {
+        code: "upload_failed",
+        message: "You must be signed in to upload.",
+      },
+    };
+  }
+
+  const path = createPdfObjectKey(user.id, file.name);
 
   options.onProgress?.({ percent: null });
 

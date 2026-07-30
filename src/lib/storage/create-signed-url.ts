@@ -1,12 +1,15 @@
 /**
  * Create short-lived signed URLs for private PDF objects.
  * Never generates a permanent public URL for the `pdfs` bucket.
+ * Only signs objects owned by the signed-in user (`{userId}/…`).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PDFS_BUCKET } from "@/constants";
 import { createClient } from "@/lib/supabase/client";
+
+import { isOwnedPdfObjectKey } from "./ownership";
 
 /** Default signed URL lifetime: 1 hour. */
 export const PDF_SIGNED_URL_EXPIRES_IN = 60 * 60;
@@ -18,7 +21,7 @@ export type PdfSignedUrlResult = {
 
 /**
  * Normalize a storage path or object key into a bucket object key.
- * Accepts `pdfs/file.pdf` or `file.pdf`.
+ * Accepts `pdfs/{userId}/file.pdf` or `{userId}/file.pdf`.
  */
 export function toPdfObjectKey(storagePath: string): string {
   const trimmed = storagePath.replace(/^\/+/, "").trim();
@@ -31,7 +34,7 @@ export function toPdfObjectKey(storagePath: string): string {
 }
 
 /**
- * Create a temporary signed URL for a private PDF object.
+ * Create a temporary signed URL for a private PDF object owned by the caller.
  */
 export async function createPdfSignedUrl(
   storagePath: string,
@@ -53,6 +56,25 @@ export async function createPdfSignedUrl(
   const expiresIn = options?.expiresIn ?? PDF_SIGNED_URL_EXPIRES_IN;
 
   try {
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+
+    if (authError || !user) {
+      return {
+        signedUrl: null,
+        error: "Authentication required.",
+      };
+    }
+
+    if (!isOwnedPdfObjectKey(objectKey, user.id)) {
+      return {
+        signedUrl: null,
+        error: "You do not have access to this PDF.",
+      };
+    }
+
     const { data, error } = await client.storage
       .from(PDFS_BUCKET)
       .createSignedUrl(objectKey, expiresIn);

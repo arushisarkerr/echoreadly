@@ -18,6 +18,10 @@ export {
   type StoredPdfObject,
 } from "./list-pdfs";
 export {
+  isOwnedPdfObjectKey,
+  userPdfFolderPrefix,
+} from "./ownership";
+export {
   createPdfObjectKey,
   uploadPdf,
   type PdfUploadError,

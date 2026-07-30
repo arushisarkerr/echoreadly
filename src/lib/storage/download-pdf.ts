@@ -1,6 +1,7 @@
 /**
  * Download private PDF object bytes from Supabase Storage.
  * Callers must pass an authenticated Supabase client (SSR user client on the server).
+ * Only downloads objects owned by the signed-in user (`{userId}/…`).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -8,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PDFS_BUCKET } from "@/constants";
 
 import { toPdfObjectKey } from "./create-signed-url";
+import { isOwnedPdfObjectKey } from "./ownership";
 
 export type DownloadPdfResult = {
   data: Uint8Array | null;
@@ -31,6 +33,25 @@ export async function downloadPdfBytes(
   }
 
   try {
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+
+    if (authError || !user) {
+      return {
+        data: null,
+        error: "Authentication required.",
+      };
+    }
+
+    if (!isOwnedPdfObjectKey(objectKey, user.id)) {
+      return {
+        data: null,
+        error: "You do not have access to this PDF.",
+      };
+    }
+
     const { data, error } = await client.storage
       .from(PDFS_BUCKET)
       .download(objectKey);
