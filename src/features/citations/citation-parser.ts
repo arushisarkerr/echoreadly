@@ -2,6 +2,8 @@
  * Parse structured citation payloads returned by the AI model.
  */
 
+import { logger } from "@/lib/logger";
+
 import {
   flattenSectionPages,
   normalizePages,
@@ -10,35 +12,99 @@ import type { CitedAnswer, CitedSection, CitedSummary } from "./types";
 
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
 
-  if (fenced?.[1]) {
-    return fenced[1].trim();
+  // Entire payload is a single fenced block.
+  const whole = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (whole?.[1]) {
+    return whole[1].trim();
+  }
+
+  // Defensive: model returned prose wrapping a fenced JSON block.
+  const embedded = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (embedded?.[1]) {
+    return embedded[1].trim();
   }
 
   return trimmed;
 }
 
-function extractJsonObject(raw: string): unknown | null {
-  const cleaned = stripCodeFences(raw);
+/**
+ * Unwrap JSON that was double-encoded as a string, or wrapped in a
+ * single-element array — without changing the expected citation schema.
+ */
+function normalizeParsedJson(value: unknown): unknown {
+  let current = value;
+
+  for (let depth = 0; depth < 2; depth += 1) {
+    if (typeof current !== "string") {
+      break;
+    }
+
+    const trimmed = current.trim();
+    const looksLikeJson =
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'));
+
+    if (!looksLikeJson) {
+      break;
+    }
+
+    try {
+      current = JSON.parse(trimmed) as unknown;
+    } catch {
+      break;
+    }
+  }
+
+  if (Array.isArray(current) && current.length === 1 && isRecord(current[0])) {
+    return current[0];
+  }
+
+  return current;
+}
+
+type ExtractJsonResult = {
+  cleaned: string;
+  value: unknown | null;
+  parseError: string | null;
+};
+
+function extractJsonObject(raw: string): ExtractJsonResult {
+  const cleaned = stripCodeFences(raw.replace(/^\uFEFF/, ""));
+  let parseError: string | null = null;
 
   try {
-    return JSON.parse(cleaned) as unknown;
-  } catch {
-    // Fall through — try to locate the outermost object.
+    return {
+      cleaned,
+      value: normalizeParsedJson(JSON.parse(cleaned) as unknown),
+      parseError: null,
+    };
+  } catch (error) {
+    parseError = error instanceof Error ? error.message : String(error);
   }
 
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
 
   if (start === -1 || end === -1 || end <= start) {
-    return null;
+    return { cleaned, value: null, parseError };
   }
 
   try {
-    return JSON.parse(cleaned.slice(start, end + 1)) as unknown;
-  } catch {
-    return null;
+    return {
+      cleaned,
+      value: normalizeParsedJson(
+        JSON.parse(cleaned.slice(start, end + 1)) as unknown,
+      ),
+      parseError,
+    };
+  } catch (error) {
+    return {
+      cleaned,
+      value: null,
+      parseError: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -79,7 +145,8 @@ export function parseCitedSummary(
   raw: string,
   allowedPages?: ReadonlySet<number>,
 ): CitedSummary {
-  const parsed = extractJsonObject(raw);
+  const { cleaned, value: parsed, parseError } = extractJsonObject(raw);
+  const cleanedPreview = cleaned.slice(0, 300);
 
   if (isRecord(parsed) && Array.isArray(parsed.sections)) {
     const sections = parsed.sections
@@ -87,6 +154,13 @@ export function parseCitedSummary(
       .filter((section): section is CitedSection => section !== null);
 
     if (sections.length > 0) {
+      // TEMPORARY diagnostics
+      logger.warn("parseCitedSummary diagnostics", {
+        cleanedPreview,
+        jsonParseError: parseError,
+        usedPlainTextFallback: false,
+      });
+
       return {
         sections,
         pages: flattenSectionPages(sections),
@@ -111,6 +185,13 @@ export function parseCitedSummary(
         allowedPages,
       );
 
+      // TEMPORARY diagnostics
+      logger.warn("parseCitedSummary diagnostics", {
+        cleanedPreview,
+        jsonParseError: parseError,
+        usedPlainTextFallback: false,
+      });
+
       return {
         sections: [{ text, pages }],
         pages,
@@ -119,6 +200,13 @@ export function parseCitedSummary(
   }
 
   const fallback = raw.trim();
+
+  // TEMPORARY diagnostics — plain-text fallback path.
+  logger.warn("parseCitedSummary diagnostics", {
+    cleanedPreview,
+    jsonParseError: parseError,
+    usedPlainTextFallback: true,
+  });
 
   return {
     sections: fallback ? [{ text: fallback, pages: [] }] : [],
@@ -134,7 +222,7 @@ export function parseCitedAnswer(
   raw: string,
   allowedPages?: ReadonlySet<number>,
 ): CitedAnswer {
-  const parsed = extractJsonObject(raw);
+  const parsed = extractJsonObject(raw).value;
 
   if (isRecord(parsed)) {
     const answer =
