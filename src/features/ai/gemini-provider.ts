@@ -4,9 +4,9 @@
  * Used as summarization fallback when OpenAI is rate-limited / unavailable.
  */
 
-import { GoogleGenAI, type GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
-import { logger } from "@/lib/logger";
+import { setPendingGeminiResponseDiagnostics } from "@/features/citations";
 
 import type { AiGenerateInput, AiGenerateResult, AiProvider } from "./ai-provider";
 import type { AiError } from "./types";
@@ -18,33 +18,6 @@ export type GeminiProviderOptions = {
   apiKey?: string;
   defaultModel?: string;
 };
-
-/**
- * TEMPORARY truncation diagnostics — metadata only; never log prompt/response text.
- */
-function logGeminiResponseDiagnostics(
-  response: GenerateContentResponse,
-  options: {
-    maxOutputTokens: number | undefined;
-    textLength: number;
-  },
-): void {
-  const candidates = response.candidates ?? [];
-  const finishReason = candidates[0]?.finishReason ?? null;
-  const truncated =
-    finishReason === "MAX_TOKENS" ||
-    String(finishReason).toUpperCase().includes("MAX_TOKEN");
-
-  logger.warn("Gemini generateContent truncation diagnostics", {
-    finishReason,
-    outputTokenCount: response.usageMetadata?.candidatesTokenCount ?? null,
-    thoughtsTokenCount: response.usageMetadata?.thoughtsTokenCount ?? null,
-    totalTokenCount: response.usageMetadata?.totalTokenCount ?? null,
-    candidateCount: candidates.length,
-    responseTextLength: options.textLength,
-    ...(truncated ? { maxOutputTokens: options.maxOutputTokens ?? null } : {}),
-  });
-}
 
 function classifyGeminiError(error: unknown): AiError {
   const message =
@@ -128,12 +101,7 @@ export class GeminiProvider implements AiProvider {
       });
 
       const text = response.text?.trim() ?? "";
-
-      // TEMPORARY — investigate truncated JSON / MAX_TOKENS (no document contents).
-      logGeminiResponseDiagnostics(response, {
-        maxOutputTokens: input.maxOutputTokens,
-        textLength: text.length,
-      });
+      const candidates = response.candidates ?? [];
 
       if (!text) {
         return {
@@ -144,6 +112,17 @@ export class GeminiProvider implements AiProvider {
           },
         };
       }
+
+      // TEMPORARY — stash metadata for success-path diagnostics in parseCitedSummary.
+      // Never includes document or summary text.
+      setPendingGeminiResponseDiagnostics({
+        finishReason: candidates[0]?.finishReason ?? null,
+        outputTokenCount: response.usageMetadata?.candidatesTokenCount ?? null,
+        thoughtsTokenCount: response.usageMetadata?.thoughtsTokenCount ?? null,
+        totalTokenCount: response.usageMetadata?.totalTokenCount ?? null,
+        candidateCount: candidates.length,
+        responseTextLength: text.length,
+      });
 
       return {
         ok: true,

@@ -10,6 +10,60 @@ import {
 } from "./citation-utils";
 import type { CitedAnswer, CitedSection, CitedSummary } from "./types";
 
+/** TEMPORARY — Gemini response metadata for success-path parse diagnostics. */
+export type GeminiResponseDiagnostics = {
+  finishReason: string | null;
+  outputTokenCount: number | null;
+  thoughtsTokenCount: number | null;
+  totalTokenCount: number | null;
+  candidateCount: number;
+  responseTextLength: number;
+};
+
+let pendingGeminiResponseDiagnostics: GeminiResponseDiagnostics | null = null;
+
+/**
+ * TEMPORARY — stash Gemini metadata so parseCitedSummary can log it on success.
+ * Does not affect parsing behavior.
+ */
+export function setPendingGeminiResponseDiagnostics(
+  diagnostics: GeminiResponseDiagnostics,
+): void {
+  pendingGeminiResponseDiagnostics = diagnostics;
+}
+
+/**
+ * TEMPORARY — emit combined Gemini + parse diagnostics once, then clear.
+ * Never logs document or summary text.
+ */
+function flushGeminiParseDiagnostics(
+  parsed: unknown,
+  jsonParseSucceeded: boolean,
+): void {
+  const pending = pendingGeminiResponseDiagnostics;
+  if (!pending) {
+    return;
+  }
+
+  pendingGeminiResponseDiagnostics = null;
+
+  const hasSections = isRecord(parsed) && Array.isArray(parsed.sections);
+
+  logger.warn("Gemini success-path parse diagnostics", {
+    finishReason: pending.finishReason,
+    outputTokenCount: pending.outputTokenCount,
+    thoughtsTokenCount: pending.thoughtsTokenCount,
+    totalTokenCount: pending.totalTokenCount,
+    candidateCount: pending.candidateCount,
+    responseTextLength: pending.responseTextLength,
+    jsonParseSucceeded,
+    hasSections,
+    ...(hasSections
+      ? { sectionsLength: (parsed as { sections: unknown[] }).sections.length }
+      : {}),
+  });
+}
+
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
 
@@ -145,8 +199,8 @@ export function parseCitedSummary(
   raw: string,
   allowedPages?: ReadonlySet<number>,
 ): CitedSummary {
-  const { cleaned, value: parsed, parseError } = extractJsonObject(raw);
-  const cleanedPreview = cleaned.slice(0, 300);
+  const { value: parsed } = extractJsonObject(raw);
+  const parseOk = parsed !== null;
 
   if (isRecord(parsed) && Array.isArray(parsed.sections)) {
     const sections = parsed.sections
@@ -154,13 +208,7 @@ export function parseCitedSummary(
       .filter((section): section is CitedSection => section !== null);
 
     if (sections.length > 0) {
-      // TEMPORARY diagnostics
-      logger.warn("parseCitedSummary diagnostics", {
-        cleanedPreview,
-        jsonParseError: parseError,
-        usedPlainTextFallback: false,
-      });
-
+      flushGeminiParseDiagnostics(parsed, parseOk);
       return {
         sections,
         pages: flattenSectionPages(sections),
@@ -185,13 +233,7 @@ export function parseCitedSummary(
         allowedPages,
       );
 
-      // TEMPORARY diagnostics
-      logger.warn("parseCitedSummary diagnostics", {
-        cleanedPreview,
-        jsonParseError: parseError,
-        usedPlainTextFallback: false,
-      });
-
+      flushGeminiParseDiagnostics(parsed, parseOk);
       return {
         sections: [{ text, pages }],
         pages,
@@ -201,12 +243,7 @@ export function parseCitedSummary(
 
   const fallback = raw.trim();
 
-  // TEMPORARY diagnostics — plain-text fallback path.
-  logger.warn("parseCitedSummary diagnostics", {
-    cleanedPreview,
-    jsonParseError: parseError,
-    usedPlainTextFallback: true,
-  });
+  flushGeminiParseDiagnostics(parsed, parseOk);
 
   return {
     sections: fallback ? [{ text: fallback, pages: [] }] : [],
