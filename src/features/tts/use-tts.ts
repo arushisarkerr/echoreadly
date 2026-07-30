@@ -35,6 +35,12 @@ export type UseTtsState = {
   stop: () => void;
   setSpeed: (speed: TtsPlaybackSpeed) => void;
   seek: (time: number) => void;
+  setOnNaturalEnd: (handler: (() => void) | null) => void;
+};
+
+export type UseTtsOptions = {
+  /** Preferred playback rate from user settings. */
+  preferredSpeed?: TtsPlaybackSpeed;
 };
 
 function revokeUrl(url: string | null) {
@@ -46,17 +52,22 @@ function revokeUrl(url: string | null) {
 /**
  * Client hook for OpenAI-backed TTS playback in the reader.
  */
-export function useTts(): UseTtsState {
+export function useTts(options?: UseTtsOptions): UseTtsState {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const requestIdRef = useRef(0);
+  const naturalEndRef = useRef<(() => void) | null>(null);
+  const sourceRef = useRef<TtsSource | null>(null);
 
   const [status, setStatus] = useState<TtsPlaybackStatus>("idle");
   const [source, setSource] = useState<TtsSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number | null>(null);
-  const [speed, setSpeedState] = useState<TtsPlaybackSpeed>(1);
+  const [manualSpeed, setManualSpeed] = useState<TtsPlaybackSpeed | null>(
+    null,
+  );
+  const speed = manualSpeed ?? options?.preferredSpeed ?? 1;
 
   const ensureAudio = useCallback(() => {
     if (!audioRef.current) {
@@ -85,6 +96,9 @@ export function useTts(): UseTtsState {
       setStatus("ready");
       setCurrentTime(0);
       audio.currentTime = 0;
+      if (sourceRef.current === "page") {
+        naturalEndRef.current?.();
+      }
     }
 
     function onError() {
@@ -108,6 +122,20 @@ export function useTts(): UseTtsState {
       audioRef.current = null;
     };
   }, [ensureAudio]);
+
+  useEffect(() => {
+    sourceRef.current = source;
+  }, [source]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed;
+    }
+  }, [speed]);
+
+  const setOnNaturalEnd = useCallback((handler: (() => void) | null) => {
+    naturalEndRef.current = handler;
+  }, []);
 
   const stop = useCallback(() => {
     requestIdRef.current += 1;
@@ -295,7 +323,7 @@ export function useTts(): UseTtsState {
   }, []);
 
   const setSpeed = useCallback((next: TtsPlaybackSpeed) => {
-    setSpeedState(next);
+    setManualSpeed(next);
     if (audioRef.current) {
       audioRef.current.playbackRate = next;
     }
@@ -328,5 +356,6 @@ export function useTts(): UseTtsState {
     stop,
     setSpeed,
     seek,
+    setOnNaturalEnd,
   };
 }

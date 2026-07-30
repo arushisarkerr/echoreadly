@@ -6,7 +6,7 @@ export { AudioPlayer } from "./audio-player";
 export { createOpenAiTtsProvider, OpenAiTtsProvider } from "./openai-tts";
 export { joinPageChunkText, requestTtsAudio } from "./tts-service";
 export type { TtsProvider } from "./tts-provider";
-export { useTts, type UseTtsState } from "./use-tts";
+export { useTts, type UseTtsOptions, type UseTtsState } from "./use-tts";
 export { useVoicePreference } from "./use-voice-preference";
 export { VoicesWorkspace } from "./voices-workspace";
 export {

@@ -122,7 +122,11 @@ export function SummaryContent({
 
         <article
           aria-label="Generated summary"
-          className="rounded-[1.25rem] border border-border/70 bg-background/50 p-4 sm:p-5"
+          className="mx-auto w-full rounded-[1.25rem] border border-border/70 bg-background/50 p-4 sm:p-5"
+          style={{
+            maxWidth: "var(--reader-content-max)",
+            fontSize: "calc(0.9375rem * var(--reader-font-scale))",
+          }}
         >
           {isBullet ? (
             <ul className="list-none space-y-3 p-0">

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useProgressPersistence } from "@/features/progress";
 import { useAudioExport } from "@/features/export";
+import { useStudioPreferences } from "@/features/settings";
 import { SummaryPanel } from "@/features/summary";
 import { AudioPlayer, useTts } from "@/features/tts";
 
@@ -39,12 +40,19 @@ function isTypingTarget(target: EventTarget | null): boolean {
  */
 export function ReaderPage({ storagePath }: ReaderPageProps) {
   const reader = useReader(storagePath);
-  const tts = useTts();
+  const { preferences } = useStudioPreferences();
+  const tts = useTts({ preferredSpeed: preferences.playbackSpeed });
   const pageExport = useAudioExport();
   const summaryExport = useAudioExport();
   const [summaryOpen, setSummaryOpen] = useState(false);
   const ttsBusy = tts.status === "loading";
   const controlsLocked = reader.documentLoading || reader.loadingUrl;
+  const autoPlayPendingRef = useRef(false);
+  const ttsRef = useRef(tts);
+
+  useEffect(() => {
+    ttsRef.current = tts;
+  }, [tts]);
 
   const playbackActive =
     tts.status === "playing" ||
@@ -102,6 +110,54 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
     }
     restoredPageRef.current = pageNumber;
   }, [progressHydrated, pageNumber, playbackResume?.source, clearPlaybackResume]);
+
+  useEffect(() => {
+    const autoPlay = preferences.autoPlayNextPage;
+    const numPages = reader.numPages;
+    const currentPage = reader.pageNumber;
+    const goNext = reader.goToNextPage;
+
+    ttsRef.current.setOnNaturalEnd(() => {
+      if (!autoPlay) {
+        return;
+      }
+      if (!numPages || currentPage >= numPages) {
+        return;
+      }
+      autoPlayPendingRef.current = true;
+      goNext();
+    });
+
+    return () => {
+      ttsRef.current.setOnNaturalEnd(null);
+    };
+  }, [
+    preferences.autoPlayNextPage,
+    reader.numPages,
+    reader.pageNumber,
+    reader.goToNextPage,
+  ]);
+
+  useEffect(() => {
+    if (!autoPlayPendingRef.current) {
+      return;
+    }
+    if (ttsBusy || reader.documentLoading) {
+      return;
+    }
+    autoPlayPendingRef.current = false;
+    void ttsRef.current.listenPage({
+      storagePath,
+      pageNumber: reader.pageNumber,
+      originalFileName: reader.fileName,
+    });
+  }, [
+    reader.pageNumber,
+    reader.documentLoading,
+    reader.fileName,
+    storagePath,
+    ttsBusy,
+  ]);
 
   const toolbarProps = {
     fileName: reader.fileName,

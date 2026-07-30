@@ -177,17 +177,38 @@ export type Database = {
         Row: {
           user_id: string;
           preferred_tts_voice: string;
+          display_name: string | null;
+          playback_speed: number;
+          auto_play_next_page: boolean;
+          font_size: string;
+          reading_width: string;
+          theme_preference: string;
+          preferred_export_format: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           user_id: string;
           preferred_tts_voice?: string;
+          display_name?: string | null;
+          playback_speed?: number;
+          auto_play_next_page?: boolean;
+          font_size?: string;
+          reading_width?: string;
+          theme_preference?: string;
+          preferred_export_format?: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<{
           preferred_tts_voice: string;
+          display_name: string | null;
+          playback_speed: number;
+          auto_play_next_page: boolean;
+          font_size: string;
+          reading_width: string;
+          theme_preference: string;
+          preferred_export_format: string;
           updated_at: string;
         }>;
         Relationships: [];

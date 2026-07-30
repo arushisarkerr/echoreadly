@@ -2,50 +2,53 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  persistThemePreference,
+  readStoredThemePreference,
+  type ThemePreference,
+} from "@/features/settings";
+
 import { ThemeIcon } from "./nav";
 
-type ThemeMode = "light" | "dark" | "system";
-
-const STORAGE_KEY = "echoreadly-theme";
-
-function applyTheme(mode: ThemeMode) {
-  const root = document.documentElement;
-  if (mode === "system") {
-    root.removeAttribute("data-theme");
-    return;
-  }
-  root.setAttribute("data-theme", mode);
-}
-
 /**
- * Cycles light → dark → system. Client-only; no backend.
+ * Cycles light → dark → system. Syncs local storage; account Settings is source of truth when loaded.
  */
 export function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>("system");
+  const [mode, setMode] = useState<ThemePreference>("system");
   const labelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initial: ThemeMode =
-      stored === "light" || stored === "dark" || stored === "system"
-        ? stored
-        : "system";
-    applyTheme(initial);
+    const initial = readStoredThemePreference();
+    persistThemePreference(initial);
     const frame = requestAnimationFrame(() => {
       setMode(initial);
       if (labelRef.current) {
         labelRef.current.textContent = initial;
       }
     });
-    return () => cancelAnimationFrame(frame);
+
+    function onThemeEvent(event: Event) {
+      const detail = (event as CustomEvent<ThemePreference>).detail;
+      if (detail === "light" || detail === "dark" || detail === "system") {
+        setMode(detail);
+        if (labelRef.current) {
+          labelRef.current.textContent = detail;
+        }
+      }
+    }
+
+    window.addEventListener("echoreadly-theme", onThemeEvent);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("echoreadly-theme", onThemeEvent);
+    };
   }, []);
 
   function cycle() {
-    const next: ThemeMode =
+    const next: ThemePreference =
       mode === "light" ? "dark" : mode === "dark" ? "system" : "light";
     setMode(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
+    persistThemePreference(next);
   }
 
   const label =

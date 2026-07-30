@@ -11,7 +11,7 @@ export { HistoryWorkspace } from "./history-workspace";
 export { HomeWorkspace } from "./home-workspace";
 export { ListenWorkspace } from "./listen-workspace";
 export { DASHBOARD_NAV } from "./nav";
-export { SettingsWorkspace } from "./settings-workspace";
+export { SettingsWorkspace } from "@/features/settings";
 export { DashboardShell } from "./shell";
 export { DashboardSidebar } from "./sidebar";
 export { ThemeToggle } from "./theme-toggle";
