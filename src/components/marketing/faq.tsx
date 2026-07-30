@@ -1,84 +1,66 @@
-import { Container } from "@/components/layout";
+import { Reveal } from "@/components/marketing/reveal";
 
 const FAQS = [
   {
-    question: "What is EchoReadly?",
-    answer:
-      "EchoReadly is an AI-powered reading platform that helps you upload documents, generate clear summaries, read with focus, and listen with text-to-speech.",
+    q: "What is EchoReadly?",
+    a: "A universal content-to-audio platform. Import content from almost anywhere and transform it into natural, high-quality audio using AI — then listen online or export in multiple formats.",
   },
   {
-    question: "Which file types are supported?",
-    answer:
-      "PDF upload is available for the current MVP. Support for images, audio, websites, and YouTube is planned for future releases.",
+    q: "What can I import?",
+    a: "PDF, DOC/DOCX, TXT, Markdown, EPUB, website URLs, blogs, news, documentation, audio files, video files, and YouTube links. Google Docs, Notion, Drive, Dropbox, and OneDrive are coming soon.",
   },
   {
-    question: "Will OCR be available?",
-    answer:
-      "Yes. OCR is on the product roadmap so scanned documents and images can become readable text inside EchoReadly.",
+    q: "Which voices and styles are available?",
+    a: "Voices include Male, Female, Child, Elder, Bangla, English, Portuguese, and Hindi. Styles include Natural, Storytelling, Teacher, Podcast, Documentary, News Reader, Professional, and Calm.",
   },
   {
-    question: "Can I listen instead of reading?",
-    answer:
-      "Yes. Text-to-speech lets you listen to your content with natural voices whenever reading on-screen is not convenient.",
+    q: "Can I download or export audio?",
+    a: "Yes. Listen online, download, and export as MP3, M4A, or WAV.",
   },
   {
-    question: "Which languages will be supported?",
-    answer:
-      "Translation support is planned so you can read across languages while preserving meaning and tone. Coverage will expand over time.",
+    q: "Does it include AI chat and summaries?",
+    a: "Yes. Chat with your content and generate summaries without leaving the listening flow. Translation, collections, and cross-device sync are part of the product.",
   },
   {
-    question: "Is there a free plan?",
-    answer:
-      "Yes. EchoReadly includes a Free plan with PDF reading, basic AI summaries, and limited text-to-speech so you can start without commitment.",
+    q: "Is there a free plan?",
+    a: "Yes. Start free with core imports, online listening, basic summaries, and limited voices — then upgrade when you need more.",
   },
 ] as const;
 
 /**
- * Landing FAQ using native disclosure widgets — CSS-only accordion, no JS packages.
+ * FAQ — calm editorial accordion.
  */
 export function Faq() {
   return (
     <section
       id="faq"
       aria-labelledby="faq-heading"
-      className="scroll-mt-20 border-t border-border bg-background"
+      className="scroll-mt-24 border-t border-border"
     >
-      <Container className="py-20 sm:py-24">
-        <header className="mx-auto max-w-2xl text-center">
-          <h2
-            id="faq-heading"
-            className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-          >
-            Frequently asked questions
+      <div className="mx-auto max-w-3xl px-5 py-24 sm:px-8 sm:py-28">
+        <Reveal className="text-center">
+          <h2 id="faq-heading" className="er-display-lg text-foreground">
+            Questions, answered.
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-            Quick answers about what EchoReadly is and what is coming next.
-          </p>
-        </header>
+        </Reveal>
 
-        <div className="mx-auto mt-12 max-w-2xl divide-y divide-border rounded-lg border border-border bg-surface">
+        <div className="mt-12 divide-y divide-border border-y border-border">
           {FAQS.map((item) => (
-            <details
-              key={item.question}
-              name="faq"
-              className="group px-5 open:bg-background sm:px-6"
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-left text-base font-medium tracking-tight text-foreground transition-colors hover:text-foreground/80 [&::-webkit-details-marker]:hidden">
-                <span>{item.question}</span>
+            <details key={item.q} name="faq" className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-6 text-left font-display text-lg font-semibold tracking-tight text-foreground [&::-webkit-details-marker]:hidden">
+                {item.q}
                 <span
                   aria-hidden="true"
-                  className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border text-sm text-subtle transition-transform group-open:rotate-45"
+                  className="text-subtle transition-transform group-open:rotate-45"
                 >
                   +
                 </span>
               </summary>
-              <p className="pb-5 text-sm leading-relaxed text-muted sm:text-base">
-                {item.answer}
-              </p>
+              <p className="er-copy pb-6 text-muted">{item.a}</p>
             </details>
           ))}
         </div>
-      </Container>
+      </div>
     </section>
   );
 }

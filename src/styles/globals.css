@@ -1,15 +1,10 @@
 /**
  * Global entry stylesheet.
- *
- * Import order matters:
- * 1. Tailwind base/utilities
- * 2. Design tokens + theme bridge
- * 3. Shared animations
- * 4. Base element styles
  */
 
 @import "tailwindcss";
 @import "./theme.css";
+@import "./typography.css";
 @import "./animations.css";
 
 @layer base {
@@ -34,14 +29,17 @@
     min-height: 100%;
     background: var(--background);
     color: var(--foreground);
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
     color: var(--foreground);
   }
 

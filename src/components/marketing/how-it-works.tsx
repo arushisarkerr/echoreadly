@@ -1,154 +1,56 @@
-import type { ReactNode } from "react";
+import { Reveal } from "@/components/marketing/reveal";
 
-import { Container } from "@/components/layout";
-
-type Step = {
-  number: string;
-  title: string;
-  description: string;
-  icon: ReactNode;
-};
-
-const STEPS: Step[] = [
+const STEPS = [
   {
-    number: "01",
-    title: "Upload your content",
-    description:
-      "Upload a PDF today. More formats like images, audio, websites and YouTube are coming soon.",
-    icon: <UploadIcon />,
+    n: "01",
+    title: "Bring anything in",
+    copy: "Drop a file, paste a URL, or link media. EchoReadly prepares the source for conversion.",
   },
   {
-    number: "02",
-    title: "AI understands everything",
-    description:
-      "EchoReadly extracts, organizes and prepares the content for reading.",
-    icon: <UnderstandIcon />,
+    n: "02",
+    title: "Shape the voice",
+    copy: "Pick a persona, language, and style — from calm teaching to documentary narration.",
   },
   {
-    number: "03",
-    title: "Read or listen",
-    description:
-      "Choose between reading the content yourself or listening with natural AI voices.",
-    icon: <ReadListenIcon />,
+    n: "03",
+    title: "Listen or take it with you",
+    copy: "Stream instantly, download, and export MP3, M4A, or WAV for any workflow.",
   },
-  {
-    number: "04",
-    title: "Learn faster",
-    description:
-      "Save time with summaries, translations and smart reading tools.",
-    icon: <LearnIcon />,
-  },
-];
-
-const cardClassName =
-  "flex flex-col rounded-lg border border-border bg-surface p-6 transition-colors hover:border-foreground/15 hover:bg-background";
+] as const;
 
 /**
- * Four-step product walkthrough for the marketing landing page.
+ * How it works — editorial horizontal steps, not a card grid.
  */
 export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      aria-labelledby="how-it-works-heading"
-      className="scroll-mt-20 border-t border-border bg-surface-muted/40"
+      aria-labelledby="how-heading"
+      className="scroll-mt-24 border-t border-border bg-[color-mix(in_srgb,var(--surface-muted)_55%,var(--background))]"
     >
-      <Container className="py-20 sm:py-24">
-        <header className="max-w-2xl">
-          <h2
-            id="how-it-works-heading"
-            className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-          >
-            How it works
+      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
+        <Reveal>
+          <h2 id="how-heading" className="er-display-lg max-w-[12ch] text-foreground">
+            Three moves. Infinite listening.
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-            Four simple steps from upload to deeper understanding.
-          </p>
-        </header>
+        </Reveal>
 
-        <ol className="mt-12 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-          {STEPS.map((step) => (
-            <li key={step.number} className={cardClassName}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-xs font-medium tracking-wider text-subtle">
-                  {step.number}
-                </span>
-                <div
-                  aria-hidden="true"
-                  className="flex size-10 items-center justify-center rounded-md border border-border bg-surface-muted text-foreground"
-                >
-                  {step.icon}
+        <ol className="mt-16 list-none space-y-0 p-0">
+          {STEPS.map((step, index) => (
+            <li key={step.n} className="border-t border-border py-10 last:border-b">
+              <Reveal delayClassName={`er-reveal-delay-${Math.min(index + 1, 3)}`}>
+                <div className="grid gap-6 md:grid-cols-[6rem_1fr_1.2fr] md:items-end">
+                  <span className="font-mono text-sm tracking-[0.2em] text-accent">
+                    {step.n}
+                  </span>
+                  <h3 className="er-display-md text-foreground">{step.title}</h3>
+                  <p className="er-copy text-muted md:justify-self-end">{step.copy}</p>
                 </div>
-              </div>
-
-              <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {step.description}
-              </p>
+              </Reveal>
             </li>
           ))}
         </ol>
-      </Container>
+      </div>
     </section>
-  );
-}
-
-function IconFrame({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-5"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <IconFrame>
-      <path d="M12 16V6" />
-      <path d="M8 10l4-4 4 4" />
-      <path d="M5 18h14" />
-    </IconFrame>
-  );
-}
-
-function UnderstandIcon() {
-  return (
-    <IconFrame>
-      <path d="M12 4v3" />
-      <path d="M8 20h8" />
-      <path d="M9 9a3 3 0 0 1 6 0c0 2-3 3-3 5" />
-      <path d="M12 17h.01" />
-    </IconFrame>
-  );
-}
-
-function ReadListenIcon() {
-  return (
-    <IconFrame>
-      <path d="M5 6h9v12H5z" />
-      <path d="M17 9v6" />
-      <path d="M20 11v2" />
-    </IconFrame>
-  );
-}
-
-function LearnIcon() {
-  return (
-    <IconFrame>
-      <path d="M5 19V7l7-3 7 3v12" />
-      <path d="M12 10v9" />
-      <path d="M5 19h14" />
-    </IconFrame>
   );
 }

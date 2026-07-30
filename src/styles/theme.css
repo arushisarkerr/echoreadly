@@ -1,57 +1,104 @@
 /**
- * Design tokens and Tailwind theme bridge.
- *
- * Semantic CSS variables live on `:root` (and dark-mode overrides).
- * `@theme inline` exposes them as Tailwind utilities (`bg-background`, `text-muted`, etc.).
+ * Design tokens — EchoReadly immersive marketing system.
+ * Teal / Ink. Light + dark. No purple / orange templates.
  */
 
 :root {
-  /* Surfaces */
-  --background: #f7f7f5;
-  --foreground: #111111;
-  --surface: #ffffff;
-  --surface-muted: #efeee9;
-
-  /* Text */
-  --muted: #5c5c57;
-  --subtle: #8a8a84;
-
-  /* Borders & focus */
-  --border: #e4e3dc;
-  --ring: #1d4ed8;
-
-  /* Brand accent — restrained blue, readable on light surfaces */
-  --accent: #1d4ed8;
+  --background: #eef3f1;
+  --foreground: #0a1210;
+  --surface: #f7faf8;
+  --surface-muted: #dde6e2;
+  --glass: rgb(255 255 255 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.45);
+  --muted: #52605b;
+  --subtle: #7d8a84;
+  --border: #c9d5cf;
+  --ring: #0d9488;
+  --accent: #0f766e;
+  --accent-soft: #14b8a6;
   --accent-foreground: #ffffff;
-
-  /* Feedback */
   --success: #0f766e;
   --warning: #b45309;
   --danger: #b91c1c;
-
-  /* Elevation (mapped into Tailwind --shadow-* below) */
-  --elevation-sm: 0 1px 2px rgb(17 17 17 / 0.04);
-  --elevation-md: 0 8px 24px rgb(17 17 17 / 0.06);
+  --ink-deep: #06100e;
+  --glow: rgb(15 118 110 / 0.28);
+  --elevation-sm: 0 1px 2px rgb(10 18 16 / 0.05);
+  --elevation-md: 0 18px 48px rgb(10 18 16 / 0.1);
+  --elevation-lg: 0 32px 80px rgb(10 18 16 / 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0c0b;
-    --foreground: #f4f4f0;
-    --surface: #161614;
-    --surface-muted: #1e1e1b;
-    --muted: #a3a39c;
-    --subtle: #7a7a74;
-    --border: #2a2a26;
-    --ring: #60a5fa;
-    --accent: #3b82f6;
-    --accent-foreground: #0c0c0b;
+  :root:not([data-theme="light"]) {
+    --background: #070b0a;
+    --foreground: #eef6f3;
+    --surface: #101816;
+    --surface-muted: #16201d;
+    --glass: rgb(16 24 22 / 0.62);
+    --glass-border: rgb(255 255 255 / 0.08);
+    --muted: #9aaba4;
+    --subtle: #6f7f78;
+    --border: #24302c;
+    --ring: #2dd4bf;
+    --accent: #14b8a6;
+    --accent-soft: #5eead4;
+    --accent-foreground: #042f2e;
     --success: #2dd4bf;
     --warning: #fbbf24;
     --danger: #f87171;
-    --elevation-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-    --elevation-md: 0 8px 24px rgb(0 0 0 / 0.45);
+    --ink-deep: #020605;
+    --glow: rgb(45 212 191 / 0.22);
+    --elevation-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --elevation-md: 0 18px 48px rgb(0 0 0 / 0.45);
+    --elevation-lg: 0 32px 80px rgb(0 0 0 / 0.55);
   }
+}
+
+html[data-theme="dark"] {
+  --background: #070b0a;
+  --foreground: #eef6f3;
+  --surface: #101816;
+  --surface-muted: #16201d;
+  --glass: rgb(16 24 22 / 0.62);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --muted: #9aaba4;
+  --subtle: #6f7f78;
+  --border: #24302c;
+  --ring: #2dd4bf;
+  --accent: #14b8a6;
+  --accent-soft: #5eead4;
+  --accent-foreground: #042f2e;
+  --success: #2dd4bf;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --ink-deep: #020605;
+  --glow: rgb(45 212 191 / 0.22);
+  --elevation-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-md: 0 18px 48px rgb(0 0 0 / 0.45);
+  --elevation-lg: 0 32px 80px rgb(0 0 0 / 0.55);
+}
+
+html[data-theme="light"] {
+  --background: #eef3f1;
+  --foreground: #0a1210;
+  --surface: #f7faf8;
+  --surface-muted: #dde6e2;
+  --glass: rgb(255 255 255 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.45);
+  --muted: #52605b;
+  --subtle: #7d8a84;
+  --border: #c9d5cf;
+  --ring: #0d9488;
+  --accent: #0f766e;
+  --accent-soft: #14b8a6;
+  --accent-foreground: #ffffff;
+  --success: #0f766e;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --ink-deep: #06100e;
+  --glow: rgb(15 118 110 / 0.28);
+  --elevation-sm: 0 1px 2px rgb(10 18 16 / 0.05);
+  --elevation-md: 0 18px 48px rgb(10 18 16 / 0.1);
+  --elevation-lg: 0 32px 80px rgb(10 18 16 / 0.14);
 }
 
 @theme inline {
@@ -69,13 +116,15 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-syne);
   --font-mono: var(--font-geist-mono);
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
 
   --shadow-sm: var(--elevation-sm);
   --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
 }

@@ -1,5 +1,5 @@
 /**
- * User and workspace settings feature module.
+ * Settings feature surfaces.
  */
 
-export {};
+export { SettingsWorkspace } from "@/features/dashboard/settings-workspace";

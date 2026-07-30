@@ -1,10 +1,11 @@
 import type { ComponentType, ReactNode, SVGProps } from "react";
 
+import { ROUTES } from "@/constants";
+
 export type DashboardNavItem = {
   label: string;
   href: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
-  /** Marks the primary dashboard home item. */
   isHome?: boolean;
 };
 
@@ -26,10 +27,10 @@ function Icon(props: SVGProps<SVGSVGElement> & { children: ReactNode }) {
   );
 }
 
-function DashboardIcon(props: SVGProps<SVGSVGElement>) {
+function HomeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
-      <path d="M4 4h7v7H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 13h7v7H4z" />
+      <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" />
     </Icon>
   );
 }
@@ -42,34 +43,15 @@ function LibraryIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-function UploadIcon(props: SVGProps<SVGSVGElement>) {
+function AddIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
-      <path d="M12 16V6" />
-      <path d="M8 10l4-4 4 4" />
-      <path d="M5 18h14" />
+      <path d="M12 5v14M5 12h14" />
     </Icon>
   );
 }
 
-function SummaryIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M6 7h12M6 12h8M6 17h10" />
-    </Icon>
-  );
-}
-
-function ReaderIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M5 6h14v12H5z" />
-      <path d="M9 6v12" />
-    </Icon>
-  );
-}
-
-function SpeechIcon(props: SVGProps<SVGSVGElement>) {
+function ListenIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
       <path d="M11 5v14" />
@@ -78,20 +60,40 @@ function SpeechIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-function TranslationIcon(props: SVGProps<SVGSVGElement>) {
+function CollectionsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
-      <path d="M5 7h8M9 7c0 5-2 8-6 10" />
-      <path d="M12 17l3-8 3 8M13.5 14h3" />
+      <path d="M4 7h16v12H4z" />
+      <path d="M8 7V5h8v2" />
     </Icon>
   );
 }
 
-function OcrIcon(props: SVGProps<SVGSVGElement>) {
+function HistoryIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
-      <path d="M5 8V5h3M16 5h3v3M19 16v3h-3M8 19H5v-3" />
-      <path d="M9 12h6" />
+      <path d="M4 12a8 8 0 1 0 2.3-5.6" />
+      <path d="M4 4v4h4" />
+      <path d="M12 8v4l3 2" />
+    </Icon>
+  );
+}
+
+function ExportIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v10" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M5 18h14" />
+    </Icon>
+  );
+}
+
+function VoiceIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z" />
+      <path d="M6 11a6 6 0 0 0 12 0M12 17v3" />
     </Icon>
   );
 }
@@ -99,8 +101,8 @@ function OcrIcon(props: SVGProps<SVGSVGElement>) {
 function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
-      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
-      <path d="M19.4 13.1a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H5a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V5a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H19a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z" />
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 3.5v2M12 18.5v2M4.9 6.5l1.4 1.4M17.7 16.1l1.4 1.4M3.5 12h2M18.5 12h2M4.9 17.5l1.4-1.4M17.7 7.9l1.4-1.4" />
     </Icon>
   );
 }
@@ -124,17 +126,16 @@ export function ThemeIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 /**
- * Primary application navigation for the dashboard shell.
- * Non-home items are placeholders until those routes exist.
+ * Primary dashboard navigation — creative workspace IA.
  */
 export const DASHBOARD_NAV: DashboardNavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: DashboardIcon, isHome: true },
-  { label: "Library", href: "/dashboard/library", icon: LibraryIcon },
-  { label: "Upload", href: "#upload", icon: UploadIcon },
-  { label: "AI Summary", href: "#summary", icon: SummaryIcon },
-  { label: "Reader", href: "#reader", icon: ReaderIcon },
-  { label: "Text to Speech", href: "#tts", icon: SpeechIcon },
-  { label: "Translation", href: "#translation", icon: TranslationIcon },
-  { label: "OCR", href: "#ocr", icon: OcrIcon },
-  { label: "Settings", href: "#settings", icon: SettingsIcon },
+  { label: "Home", href: ROUTES.dashboard, icon: HomeIcon, isHome: true },
+  { label: "Library", href: ROUTES.library, icon: LibraryIcon },
+  { label: "Add Content", href: ROUTES.addContent, icon: AddIcon },
+  { label: "Listen", href: ROUTES.listen, icon: ListenIcon },
+  { label: "Collections", href: ROUTES.collections, icon: CollectionsIcon },
+  { label: "History", href: ROUTES.history, icon: HistoryIcon },
+  { label: "Exports", href: ROUTES.exports, icon: ExportIcon },
+  { label: "Voice Library", href: ROUTES.voices, icon: VoiceIcon },
+  { label: "Settings", href: ROUTES.settings, icon: SettingsIcon },
 ];

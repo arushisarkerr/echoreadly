@@ -1,66 +1,56 @@
 "use client";
 
-import { MenuIcon } from "@/components/icons";
-import { siteConfig } from "@/config";
-import { AccountMenu } from "@/features/auth";
+import Link from "next/link";
 
-import { SearchIcon, ThemeIcon } from "./nav";
+import { MenuIcon } from "@/components/icons";
+import { ROUTES } from "@/constants";
+
+import { SearchIcon } from "./nav";
 
 type DashboardHeaderProps = {
   onMenuClick: () => void;
+  title?: string;
 };
 
 /**
- * Dashboard top bar with search and authenticated account controls.
+ * Floating workspace header — editorial title + library search jump.
  */
-export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({
+  onMenuClick,
+  title = "Workspace",
+}: DashboardHeaderProps) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
-      <button
-        type="button"
-        className="inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-surface-muted lg:hidden"
-        aria-label="Open sidebar"
-        onClick={onMenuClick}
-      >
-        <MenuIcon className="size-5" />
-      </button>
-
-      <div className="hidden items-center gap-2.5 lg:flex">
-        <span
-          aria-hidden="true"
-          className="flex size-7 items-center justify-center rounded-md bg-foreground text-[0.7rem] font-semibold tracking-tight text-background"
-        >
-          Er
-        </span>
-        <span className="text-sm font-semibold tracking-tight text-foreground">
-          {siteConfig.name}
-        </span>
-      </div>
-
-      <div className="mx-auto w-full max-w-md flex-1 lg:mx-8">
-        <label className="relative block">
-          <span className="sr-only">Search</span>
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" />
-          <input
-            type="search"
-            placeholder="Search your library…"
-            disabled
-            className="h-10 w-full rounded-md border border-border bg-surface pr-3 pl-9 text-sm text-foreground placeholder:text-subtle disabled:cursor-not-allowed disabled:opacity-80"
-          />
-        </label>
-      </div>
-
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5">
+      <div className="er-glass mx-auto flex h-14 max-w-[96rem] items-center gap-3 rounded-2xl border border-[color:var(--glass-border)] px-3 shadow-[var(--elevation-sm)] sm:h-16 sm:px-4">
         <button
           type="button"
-          className="inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-surface-muted"
-          aria-label="Toggle theme (coming soon)"
-          disabled
+          className="inline-flex size-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-surface-muted lg:hidden"
+          aria-label="Open sidebar"
+          onClick={onMenuClick}
         >
-          <ThemeIcon className="size-4" />
+          <MenuIcon className="size-5" />
         </button>
 
-        <AccountMenu />
+        <div className="min-w-0 pl-1">
+          <p className="truncate font-display text-[0.95rem] font-semibold tracking-tight text-foreground sm:text-base">
+            {title}
+          </p>
+        </div>
+
+        <Link
+          href={ROUTES.library}
+          className="relative mx-auto hidden h-10 min-w-0 flex-1 items-center rounded-full border border-border/70 bg-background/50 pr-3 pl-9 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground md:flex md:max-w-md"
+        >
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" />
+          Search your shelf…
+        </Link>
+
+        <Link
+          href={ROUTES.addContent}
+          className="ml-auto inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-foreground px-3.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 sm:px-4"
+        >
+          Add
+        </Link>
       </div>
     </header>
   );

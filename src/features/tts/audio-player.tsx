@@ -32,7 +32,7 @@ function formatTime(seconds: number | null): string {
 }
 
 /**
- * Compact TTS playback controls for the PDF reader.
+ * Floating studio transport — same TTS hooks, refreshed chrome.
  */
 export function AudioPlayer({
   status,
@@ -67,43 +67,63 @@ export function AudioPlayer({
 
   return (
     <div
-      className="border-t border-border bg-surface-muted/40 px-4 py-3 sm:px-6"
+      className="sticky bottom-0 z-30 border-t border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,transparent)] px-4 py-3 backdrop-blur-xl sm:px-6"
       aria-label="Audio player"
     >
       <div className="mx-auto flex w-full max-w-none flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-foreground">
-              {isLoading
-                ? "Generating audio…"
-                : sourceLabel
-                  ? `Listening: ${sourceLabel}`
-                  : "Audio"}
-            </p>
-            {error ? (
-              <p className="mt-1 text-xs text-danger" role="alert">
-                {error}
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              aria-hidden="true"
+              className="flex h-10 w-14 items-end gap-0.5 rounded-xl bg-foreground px-2 py-1.5"
+            >
+              {[35, 60, 42, 75, 48].map((h, i) => (
+                <span
+                  key={i}
+                  className="er-wave-bar flex-1 rounded-full bg-background/85"
+                  style={{
+                    height: `${h}%`,
+                    animationPlayState: isPlaying ? "running" : "paused",
+                  }}
+                />
+              ))}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.6rem] font-semibold tracking-[0.16em] text-accent uppercase">
+                Transport
               </p>
-            ) : null}
+              <p className="truncate text-sm font-semibold text-foreground">
+                {isLoading
+                  ? "Generating audio…"
+                  : sourceLabel
+                    ? `Listening · ${sourceLabel}`
+                    : "Audio"}
+              </p>
+              {error ? (
+                <p className="mt-0.5 text-xs text-danger" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {isLoading ? (
-              <span className="inline-flex h-9 items-center rounded-md border border-border bg-surface px-3 text-xs text-muted">
+              <span className="inline-flex h-9 items-center rounded-full border border-border bg-background/50 px-3 text-xs text-muted">
                 Loading…
               </span>
             ) : null}
 
             {isPlaying ? (
-              <PlayerButton label="Pause" onClick={onPause} />
+              <PlayerButton label="Pause" onClick={onPause} primary />
             ) : null}
 
             {isPaused ? (
-              <PlayerButton label="Resume" onClick={onResume} />
+              <PlayerButton label="Resume" onClick={onResume} primary />
             ) : null}
 
             {status === "ready" ? (
-              <PlayerButton label="Play" onClick={onPlay} />
+              <PlayerButton label="Play" onClick={onPlay} primary />
             ) : null}
 
             {hasAudio || isLoading ? (
@@ -118,7 +138,7 @@ export function AudioPlayer({
                 onChange={(event) => {
                   onSpeedChange(Number(event.target.value) as TtsPlaybackSpeed);
                 }}
-                className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-foreground disabled:opacity-50"
+                className="h-9 rounded-full border border-border bg-background/50 px-3 text-xs font-semibold text-foreground disabled:opacity-50"
               >
                 {speeds.map((value) => (
                   <option key={value} value={value}>
@@ -144,7 +164,7 @@ export function AudioPlayer({
             onChange={(event) => {
               onSeek(Number(event.target.value));
             }}
-            className="h-1.5 w-full cursor-pointer accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-1.5 w-full cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Playback progress"
           />
           <span className="w-10 shrink-0 text-xs tabular-nums text-muted">
@@ -160,10 +180,12 @@ function PlayerButton({
   label,
   onClick,
   disabled,
+  primary,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  primary?: boolean;
 }) {
   return (
     <button
@@ -171,7 +193,10 @@ function PlayerButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-muted",
+        "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        primary
+          ? "border-foreground bg-foreground text-background"
+          : "border-border bg-background/50 text-foreground hover:bg-surface-muted",
         disabled && "cursor-not-allowed opacity-50",
       )}
     >

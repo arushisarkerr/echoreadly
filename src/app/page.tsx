@@ -2,28 +2,36 @@ import {
   Faq,
   FinalCta,
   HowItWorks,
-  MarketingFeatures,
+  MarketingAudioExport,
+  MarketingFeatureStories,
   MarketingFooter,
   MarketingHero,
+  MarketingIntegrations,
   MarketingNavbar,
+  MarketingSources,
+  MarketingTransform,
+  MarketingVoiceExperience,
   PricingPreview,
-  SocialProof,
 } from "@/components/marketing";
 
 /**
- * EchoReadly marketing landing page.
- * Product features (upload, summary, reader, TTS) are intentionally not implemented yet.
+ * EchoReadly landing — immersive universal content-to-audio experience.
+ * Design-only; auth routes and APIs are unchanged.
  */
 export default function HomePage() {
   return (
     <>
       <MarketingNavbar />
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col overflow-x-hidden">
         <MarketingHero />
-        <MarketingFeatures />
+        <MarketingTransform />
+        <MarketingSources />
         <HowItWorks />
+        <MarketingVoiceExperience />
+        <MarketingAudioExport />
+        <MarketingFeatureStories />
+        <MarketingIntegrations />
         <PricingPreview />
-        <SocialProof />
         <Faq />
         <FinalCta />
       </main>

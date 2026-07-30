@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Geist_Mono, Syne } from "next/font/google";
 
 import { RootShell } from "@/components/layout";
 import { siteConfig } from "@/config";
@@ -8,8 +8,14 @@ import { getUser } from "@/server/auth";
 
 import "@/styles/globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const syne = Syne({
+  variable: "--font-syne",
   subsets: ["latin"],
   display: "swap",
 });
@@ -23,17 +29,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: siteConfig.name,
+    default: `${siteConfig.name} · ${siteConfig.tagline}`,
     template: `%s · ${siteConfig.name}`,
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
   keywords: [
     "EchoReadly",
-    "AI reading",
-    "PDF summary",
+    "content to audio",
+    "AI audio",
     "text to speech",
-    "document reader",
+    "document to audio",
+    "YouTube to audio",
+    "PDF listen",
+    "AI summary",
   ],
   authors: [{ name: siteConfig.name }],
   creator: siteConfig.name,
@@ -42,12 +51,12 @@ export const metadata: Metadata = {
     locale: siteConfig.locale,
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: siteConfig.name,
+    title: `${siteConfig.name} · ${siteConfig.tagline}`,
     description: siteConfig.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: siteConfig.name,
+    title: `${siteConfig.name} · ${siteConfig.tagline}`,
     description: siteConfig.description,
   },
   robots: {
@@ -58,8 +67,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f7f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0c0b" },
+    { media: "(prefers-color-scheme: light)", color: "#eef3f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b0a" },
   ],
   colorScheme: "light dark",
 };
@@ -74,7 +83,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${syne.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background font-sans text-foreground">
         <AuthProvider initialUser={auth.ok ? auth.user : null}>

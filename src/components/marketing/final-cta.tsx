@@ -1,54 +1,46 @@
-import { Container } from "@/components/layout";
 import { siteConfig } from "@/config";
-
-const primaryCtaClassName =
-  "inline-flex h-11 w-full items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-90 sm:w-auto";
-
-const secondaryCtaClassName =
-  "inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted sm:w-auto";
+import { ROUTES } from "@/constants";
+import { Reveal } from "@/components/marketing/reveal";
 
 /**
- * Closing call-to-action for the marketing landing page.
- * Anchors are placeholders — App Router routes are not wired yet.
+ * Final CTA — cinematic close into existing auth routes.
  */
 export function FinalCta() {
   return (
     <section
       id="get-started"
       aria-labelledby="final-cta-heading"
-      className="scroll-mt-20 border-t border-border bg-surface-muted/40"
+      className="relative scroll-mt-24 overflow-hidden border-t border-border"
     >
-      <Container className="py-20 sm:py-24">
-        <div className="relative overflow-hidden rounded-lg border border-border bg-surface px-6 py-14 text-center sm:px-10 sm:py-16">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgb(29_78_216_/_0.08),_transparent_60%)]"
-          />
-
-          <div className="relative mx-auto max-w-2xl">
-            <h2
-              id="final-cta-heading"
-              className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,_var(--glow),_transparent_55%),linear-gradient(180deg,_var(--surface-muted),_var(--background))]"
+      />
+      <div className="relative mx-auto max-w-5xl px-5 py-28 text-center sm:px-8 sm:py-36">
+        <Reveal>
+          <h2 id="final-cta-heading" className="er-display-xl text-foreground">
+            Turn anything into natural audio.
+          </h2>
+          <p className="er-copy mx-auto mt-6 text-muted">
+            Join {siteConfig.name} and transform the content you already have
+            into listening you&apos;ll actually finish.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a
+              href={ROUTES.signup}
+              className="er-btn inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-background transition-transform hover:scale-[1.02]"
             >
-              Start reading smarter with AI.
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-              Try {siteConfig.name} for focused reading, clear summaries, and
-              natural speech — built for students, professionals, and lifelong
-              learners.
-            </p>
-
-            <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-              <a href="#get-started" className={primaryCtaClassName}>
-                Get Started
-              </a>
-              <a href="#watch-demo" className={secondaryCtaClassName}>
-                Watch Demo
-              </a>
-            </div>
+              Get Started Free
+            </a>
+            <a
+              href={ROUTES.login}
+              className="er-btn inline-flex h-12 items-center justify-center rounded-full border border-border bg-[color:var(--glass)] px-8 text-foreground backdrop-blur-md"
+            >
+              Sign In
+            </a>
           </div>
-        </div>
-      </Container>
+        </Reveal>
+      </div>
     </section>
   );
 }

@@ -9,6 +9,13 @@ export const ROUTES = {
   authCallback: "/auth/callback",
   dashboard: "/dashboard",
   library: "/dashboard/library",
+  addContent: "/dashboard/add",
+  listen: "/dashboard/listen",
+  collections: "/dashboard/collections",
+  history: "/dashboard/history",
+  exports: "/dashboard/exports",
+  voices: "/dashboard/voices",
+  settings: "/dashboard/settings",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
@@ -30,4 +37,12 @@ export function isProtectedPath(pathname: string): boolean {
 
 export function isAuthPagePath(pathname: string): boolean {
   return pathname === ROUTES.login || pathname === ROUTES.signup;
+}
+
+/** Build a reader URL for a storage path (preserves existing reader routing). */
+export function readerPathForStorage(storagePath: string): string {
+  return `/dashboard/reader/${storagePath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/")}`;
 }

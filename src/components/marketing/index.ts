@@ -1,14 +1,18 @@
 /**
- * Marketing surfaces (landing sections, promo blocks, waitlist forms).
- * Keep acquisition UI here — not inside authenticated product features.
+ * Marketing surfaces — immersive EchoReadly landing.
  */
 
+export { MarketingAudioExport } from "./audio-export";
 export { Faq } from "./faq";
-export { MarketingFeatures } from "./features";
+export { MarketingFeatureStories } from "./feature-stories";
 export { FinalCta } from "./final-cta";
 export { MarketingFooter } from "./footer";
 export { MarketingHero } from "./hero";
 export { HowItWorks } from "./how-it-works";
+export { MarketingIntegrations } from "./integrations";
 export { MarketingNavbar } from "./navbar";
 export { PricingPreview } from "./pricing-preview";
-export { SocialProof } from "./social-proof";
+export { Reveal } from "./reveal";
+export { MarketingSources } from "./sources";
+export { MarketingTransform } from "./transform";
+export { MarketingVoiceExperience } from "./voice-experience";

@@ -1,0 +1,242 @@
+"use client";
+
+import Link from "next/link";
+import type { ReactNode } from "react";
+
+import { ROUTES, readerPathForStorage } from "@/constants";
+import { useAuth } from "@/features/auth";
+import { useLibrary } from "@/features/library";
+import { UploadCard } from "@/features/upload";
+import { formatFileSize } from "@/utils";
+
+const VOICES = ["Female", "Male", "Bangla", "English", "Calm", "Podcast"] as const;
+
+/**
+ * Magazine-style home — content-first, asymmetric, wired to real library + upload.
+ */
+export function HomeWorkspace() {
+  const { user } = useAuth();
+  const { items, loading, error } = useLibrary();
+  const name =
+    (typeof user?.user_metadata?.full_name === "string" &&
+      user.user_metadata.full_name.trim()) ||
+    user?.email?.split("@")[0] ||
+    "Creator";
+
+  const lead = items[0] ?? null;
+  const recent = items.slice(0, 5);
+
+  return (
+    <div className="mx-auto w-full max-w-[96rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section className="grid items-end gap-8 lg:grid-cols-[1.35fr_0.65fr]">
+        <div>
+          <p className="text-[0.65rem] font-semibold tracking-[0.24em] text-accent uppercase">
+            Welcome back
+          </p>
+          <h1 className="font-display mt-3 max-w-[11ch] text-[clamp(2.6rem,4vw,4.6rem)] font-bold leading-[0.92] tracking-[-0.05em] text-foreground">
+            {name}, the studio is live.
+          </h1>
+          <p className="mt-5 max-w-md text-[0.975rem] leading-relaxed text-muted">
+            Continue a listen, import fresh source material, or open the shelf —
+            all wired to your real library.
+          </p>
+        </div>
+
+        <div className="er-glass relative overflow-hidden rounded-[2rem] p-5">
+          <div className="absolute -top-10 -right-8 size-36 rounded-full bg-[color:var(--glow)] blur-3xl" />
+          <p className="relative text-[0.65rem] font-semibold tracking-[0.18em] text-subtle uppercase">
+            Signal
+          </p>
+          <div className="relative mt-6 flex h-20 items-end gap-1">
+            {[22, 48, 34, 70, 40, 82, 36, 64, 28, 58, 44, 76, 32, 60].map(
+              (h, i) => (
+                <span
+                  key={i}
+                  className="er-wave-bar flex-1 rounded-full bg-[linear-gradient(to_top,var(--accent),color-mix(in_srgb,var(--accent-soft)_75%,transparent))]"
+                  style={{ height: `${h}%`, animationDelay: `${i * 0.06}s` }}
+                />
+              ),
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-12 grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-5">
+          <Eyebrow>Continue listening</Eyebrow>
+          {lead ? (
+            <Link
+              href={readerPathForStorage(lead.storagePath)}
+              className="group relative block overflow-hidden rounded-[2rem] bg-foreground p-7 text-background no-underline shadow-[var(--elevation-md)]"
+            >
+              <div
+                aria-hidden="true"
+                className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_80%_30%,color-mix(in_srgb,var(--accent-soft)_45%,transparent),transparent_60%)]"
+              />
+              <p className="relative text-[0.65rem] font-semibold tracking-[0.2em] text-background/55 uppercase">
+                Resume
+              </p>
+              <h2 className="relative mt-4 max-w-[16ch] font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                {lead.name}
+              </h2>
+              <p className="relative mt-3 text-sm text-background/65">
+                {formatFileSize(lead.size)} · Open Listening Studio
+              </p>
+            </Link>
+          ) : (
+            <QuietBox>
+              Nothing in progress yet. Import a PDF to begin.
+            </QuietBox>
+          )}
+
+          <Eyebrow>Recent imports</Eyebrow>
+          {loading ? <QuietBox>Loading your shelf…</QuietBox> : null}
+          {error ? <QuietBox danger>{error}</QuietBox> : null}
+          {!loading && !error && recent.length === 0 ? (
+            <QuietBox>Your shelf is empty — drop a PDF on the right.</QuietBox>
+          ) : null}
+          {!loading && recent.length > 0 ? (
+            <ul className="list-none space-y-2 p-0">
+              {recent.map((item, index) => (
+                <li key={item.path}>
+                  <Link
+                    href={readerPathForStorage(item.storagePath)}
+                    className="flex items-center gap-4 rounded-[1.25rem] border border-border/70 bg-surface/55 px-4 py-3.5 no-underline transition-colors hover:border-foreground/20"
+                  >
+                    <span className="font-mono text-xs text-subtle">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
+                      {item.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted">
+                      {formatFileSize(item.size)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
+        <div className="space-y-5">
+          <Eyebrow>Quick PDF upload</Eyebrow>
+          <div className="rounded-[2rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_80%,transparent)] p-5 shadow-[var(--elevation-sm)] sm:p-6">
+            <UploadCard />
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-14 grid gap-4 md:grid-cols-3">
+        <StoryTile
+          kicker="Audio"
+          title="Recent audio"
+          copy="Generated listens surface here as you use the studio."
+          href={ROUTES.listen}
+        />
+        <StoryTile
+          kicker="Organize"
+          title="Collections"
+          copy="Pinned folders and favorites for long-form libraries."
+          href={ROUTES.collections}
+        />
+        <StoryTile
+          kicker="Deliver"
+          title="Recent exports"
+          copy="MP3, M4A, and WAV queues in the export center."
+          href={ROUTES.exports}
+        />
+      </section>
+
+      <section className="mt-14 grid gap-10 border-t border-border/70 pt-10 lg:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <Eyebrow>Favorite voices</Eyebrow>
+          <ul className="mt-4 flex list-none flex-wrap gap-2 p-0">
+            {VOICES.map((voice) => (
+              <li key={voice}>
+                <Link
+                  href={ROUTES.voices}
+                  className="inline-flex rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-semibold text-foreground no-underline hover:border-foreground/30"
+                >
+                  {voice}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <Eyebrow>Recent activity</Eyebrow>
+          <ol className="mt-4 list-none divide-y divide-border border-y border-border p-0">
+            <li className="py-4 text-sm text-muted">
+              Library synced · {items.length}{" "}
+              {items.length === 1 ? "document" : "documents"}
+            </li>
+            <li className="py-4 text-sm text-muted">
+              Listening studio ready — summary, chat, and page audio intact
+            </li>
+            <li className="py-4 text-sm text-muted">
+              Theme toggle + command dock available across the workspace
+            </li>
+          </ol>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Eyebrow({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="font-display text-base font-semibold tracking-tight text-foreground">
+      {children}
+    </h2>
+  );
+}
+
+function QuietBox({
+  children,
+  danger,
+}: {
+  children: ReactNode;
+  danger?: boolean;
+}) {
+  return (
+    <div
+      role={danger ? "alert" : undefined}
+      className={`rounded-[1.25rem] border border-dashed px-4 py-6 text-sm ${
+        danger ? "border-danger/40 text-danger" : "border-border text-muted"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StoryTile({
+  kicker,
+  title,
+  copy,
+  href,
+}: {
+  kicker: string;
+  title: string;
+  copy: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex min-h-[11rem] flex-col rounded-[1.75rem] border border-border/70 bg-surface/40 p-5 no-underline transition-transform hover:-translate-y-0.5"
+    >
+      <p className="text-[0.65rem] font-semibold tracking-[0.18em] text-accent uppercase">
+        {kicker}
+      </p>
+      <h3 className="font-display mt-3 text-xl font-semibold tracking-tight text-foreground">
+        {title}
+      </h3>
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{copy}</p>
+      <span className="mt-4 text-xs font-semibold text-foreground group-hover:underline">
+        Open →
+      </span>
+    </Link>
+  );
+}

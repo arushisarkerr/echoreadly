@@ -7,10 +7,10 @@
 
 export const APP_NAME = "EchoReadly";
 
-export const APP_TAGLINE = "AI-powered reading platform";
+export const APP_TAGLINE = "Turn Anything Into Natural Audio.";
 
 export const APP_DESCRIPTION =
-  "EchoReadly helps you upload documents, generate AI summaries, read with clarity, and listen with text-to-speech.";
+  "EchoReadly is a universal content-to-audio platform. Import content from almost anywhere and transform it into natural, high-quality audio using AI. Listen online or export in multiple formats.";
 
 /** Default local development origin used when no public URL is configured. */
 export const APP_DEFAULT_URL = "http://localhost:3000";

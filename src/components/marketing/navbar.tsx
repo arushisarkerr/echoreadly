@@ -3,128 +3,123 @@
 import { useEffect, useId, useState } from "react";
 
 import { CloseIcon, MenuIcon } from "@/components/icons";
-import { Container } from "@/components/layout";
 import { siteConfig } from "@/config";
+import { ROUTES } from "@/constants";
 import { AccountMenu } from "@/features/auth";
 
 const NAV_LINKS = [
+  { label: "Sources", href: "#sources" },
+  { label: "Voices", href: "#voices" },
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ] as const;
 
-const linkClassName =
-  "rounded-md px-3 py-2 text-sm text-muted transition-colors hover:text-foreground";
-
 /**
- * Sticky marketing navigation with desktop links and a mobile disclosure menu.
+ * Floating glass navbar — auth untouched via AccountMenu.
  */
 export function MarketingNavbar() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 24);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!open) {
       return;
     }
-
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
       }
     }
-
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    document.body.style.overflow = "hidden";
     return () => {
+      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
     };
   }, [open]);
 
-  function closeMenu() {
-    setOpen(false);
-  }
-
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-md">
-      <Container>
-        <div className="flex h-16 items-center justify-between gap-4">
-          <a
-            href="#"
-            aria-label={`${siteConfig.name} home`}
-            className="flex items-center gap-2.5 text-foreground no-underline"
-            onClick={closeMenu}
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
+      <div
+        className={`pointer-events-auto mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-2xl px-4 py-3 transition-[background,box-shadow,border-color] duration-300 ${
+          scrolled || open
+            ? "er-glass border border-[color:var(--glass-border)]"
+            : "border border-transparent bg-transparent"
+        }`}
+      >
+        <a
+          href={ROUTES.home}
+          className="font-display inline-flex items-center gap-2.5 text-[0.95rem] font-semibold tracking-tight text-foreground no-underline"
+          onClick={() => setOpen(false)}
+        >
+          <span
+            aria-hidden="true"
+            className="flex size-8 items-center justify-center rounded-xl bg-foreground text-[0.7rem] font-bold text-background"
           >
-            <span
-              aria-hidden="true"
-              className="flex size-7 items-center justify-center rounded-md bg-foreground text-[0.7rem] font-semibold tracking-tight text-background"
+            Er
+          </span>
+          {siteConfig.name}
+        </a>
+
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
             >
-              Er
-            </span>
-            <span className="text-[0.95rem] font-semibold tracking-tight">
-              {siteConfig.name}
-            </span>
-          </a>
+              {link.label}
+            </a>
+          ))}
+        </nav>
 
-          <nav
-            aria-label="Primary"
-            className="hidden items-center gap-1 md:flex"
-          >
-            {NAV_LINKS.map((link) => (
-              <a key={link.href} href={link.href} className={linkClassName}>
-                {link.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-2 md:flex">
-            <AccountMenu />
-          </div>
-
-          <button
-            type="button"
-            className="inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-surface-muted md:hidden"
-            aria-expanded={open}
-            aria-controls={menuId}
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? (
-              <CloseIcon className="size-5" />
-            ) : (
-              <MenuIcon className="size-5" />
-            )}
-          </button>
+        <div className="hidden md:block">
+          <AccountMenu />
         </div>
-      </Container>
+
+        <button
+          type="button"
+          className="inline-flex size-10 items-center justify-center rounded-xl text-foreground md:hidden"
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? <CloseIcon className="size-5" /> : <MenuIcon className="size-5" />}
+        </button>
+      </div>
 
       <div
         id={menuId}
         hidden={!open}
-        className="border-t border-border bg-background md:hidden"
+        className="pointer-events-auto mx-auto mt-2 max-w-6xl overflow-hidden rounded-2xl er-glass border border-[color:var(--glass-border)] md:hidden"
       >
-        <Container>
-          <nav aria-label="Mobile" className="flex flex-col gap-1 py-4">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="rounded-md px-3 py-3 text-base text-foreground transition-colors hover:bg-surface-muted"
-                onClick={closeMenu}
-              >
-                {link.label}
-              </a>
-            ))}
-
-            <div className="mt-3 border-t border-border pt-4">
-              <AccountMenu />
-            </div>
-          </nav>
-        </Container>
+        <nav aria-label="Mobile" className="flex flex-col gap-1 p-3">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="rounded-xl px-3 py-3 text-base font-medium text-foreground"
+              onClick={() => setOpen(false)}
+            >
+              {link.label}
+            </a>
+          ))}
+          <div className="mt-2 border-t border-border pt-3">
+            <AccountMenu />
+          </div>
+        </nav>
       </div>
     </header>
   );

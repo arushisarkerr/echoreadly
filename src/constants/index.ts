@@ -18,6 +18,7 @@ export {
   isAuthPagePath,
   isProtectedPath,
   PROTECTED_PATH_PREFIXES,
+  readerPathForStorage,
   ROUTES,
   type AppRoute,
 } from "./routes";

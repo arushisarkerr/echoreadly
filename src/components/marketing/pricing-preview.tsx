@@ -1,157 +1,139 @@
-import { Container } from "@/components/layout";
+import { ROUTES } from "@/constants";
+import { Reveal } from "@/components/marketing/reveal";
 import { cn } from "@/utils";
 
-type Plan = {
-  name: string;
-  description: string;
-  features: string[];
-  cta: string;
-  href: string;
-  popular?: boolean;
-};
-
-const PLANS: Plan[] = [
+const PLANS = [
   {
     name: "Free",
-    description: "Start reading smarter with essential tools.",
+    price: "$0",
+    blurb: "Start converting content into natural audio.",
     features: [
-      "Read PDFs",
-      "Basic AI Summary",
-      "Limited Text-to-Speech",
-      "Community Support",
+      "Core imports",
+      "Online listening",
+      "Basic AI summary",
+      "Limited voices",
     ],
-    cta: "Get Started",
-    href: "#get-started",
+    cta: "Start Free",
+    href: ROUTES.signup,
+    featured: false,
   },
   {
     name: "Pro",
-    description: "Unlimited power for focused readers and creators.",
+    price: "Soon",
+    blurb: "Premium voices, styles, exports, and depth.",
     features: [
       "Everything in Free",
-      "Unlimited AI Summaries",
-      "Premium Voices",
-      "OCR",
-      "Translation",
-      "Priority Processing",
-      "Priority Support",
+      "Premium voices & styles",
+      "MP3 · M4A · WAV",
+      "AI chat & summaries",
+      "Translation + sync",
     ],
     cta: "Start Pro",
-    href: "#get-started",
-    popular: true,
+    href: ROUTES.signup,
+    featured: true,
   },
   {
     name: "Enterprise",
-    description: "Advanced controls for teams and organizations.",
+    price: "Custom",
+    blurb: "Controls and scale for organizations.",
     features: [
       "Everything in Pro",
-      "Team Workspace",
-      "API Access",
-      "Custom Integrations",
-      "Dedicated Support",
+      "Team workspaces",
+      "API access",
+      "Custom integrations",
     ],
-    cta: "Contact Sales",
-    href: "#get-started",
+    cta: "Contact sales",
+    href: "#contact",
+    featured: false,
   },
-];
-
-const primaryCtaClassName =
-  "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-90";
-
-const secondaryCtaClassName =
-  "mt-8 inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-surface px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted";
+] as const;
 
 /**
- * Pricing preview for the landing page.
- * Display-only plan cards — no billing or checkout logic.
+ * Pricing — interaction cards only where choice happens.
  */
 export function PricingPreview() {
   return (
     <section
       id="pricing"
       aria-labelledby="pricing-heading"
-      className="scroll-mt-20 border-t border-border bg-background"
+      className="scroll-mt-24 border-t border-border"
     >
-      <Container className="py-20 sm:py-24">
-        <header className="mx-auto max-w-2xl text-center">
-          <h2
-            id="pricing-heading"
-            className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-          >
-            Simple pricing for every reader
+      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 id="pricing-heading" className="er-display-lg text-foreground">
+            Simple plans for serious listening.
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-            Start free, upgrade when you need more depth, and scale with your
-            team when you are ready.
+          <p className="er-copy mx-auto mt-5 text-muted">
+            Start free. Upgrade when your library — and your ears — ask for more.
           </p>
-        </header>
+        </Reveal>
 
-        <ul className="mt-12 grid list-none grid-cols-1 items-stretch gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-          {PLANS.map((plan) => (
-            <li
-              key={plan.name}
-              className={cn(
-                "relative flex flex-col rounded-lg border bg-surface p-6 transition-colors hover:border-foreground/15 hover:bg-background",
-                plan.popular
-                  ? "border-foreground/25 shadow-sm"
-                  : "border-border",
-              )}
-            >
-              {plan.popular ? (
-                <span className="absolute -top-3 left-6 rounded-md border border-border bg-foreground px-2.5 py-1 text-xs font-medium tracking-wide text-background">
-                  Most Popular
-                </span>
-              ) : null}
-
-              <div className={cn(plan.popular && "pt-2")}>
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  {plan.name}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {plan.description}
-                </p>
-              </div>
-
-              <ul className="mt-6 flex flex-1 list-none flex-col gap-3 p-0">
-                {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2.5 text-sm text-foreground"
+        <ul className="mt-16 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
+          {PLANS.map((plan, i) => (
+            <li key={plan.name}>
+              <Reveal delayClassName={`er-reveal-delay-${Math.min(i + 1, 3)}`}>
+                <div
+                  className={cn(
+                    "relative flex h-full flex-col rounded-[1.5rem] border p-7",
+                    plan.featured
+                      ? "border-foreground/20 bg-foreground text-background shadow-[var(--elevation-lg)]"
+                      : "er-glass border-[color:var(--glass-border)]",
+                  )}
+                >
+                  {plan.featured ? (
+                    <span className="absolute -top-3 left-7 rounded-full bg-accent px-3 py-1 text-[0.65rem] font-bold tracking-[0.12em] text-accent-foreground uppercase">
+                      Most popular
+                    </span>
+                  ) : null}
+                  <h3 className="font-display text-xl font-bold tracking-tight">
+                    {plan.name}
+                  </h3>
+                  <p
+                    className={cn(
+                      "mt-4 font-display text-4xl font-bold tracking-tight",
+                      plan.featured ? "text-background" : "text-foreground",
+                    )}
                   >
-                    <CheckIcon />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href={plan.href}
-                className={
-                  plan.popular ? primaryCtaClassName : secondaryCtaClassName
-                }
-              >
-                {plan.cta}
-              </a>
+                    {plan.price}
+                  </p>
+                  <p
+                    className={cn(
+                      "er-copy-sm mt-3",
+                      plan.featured ? "text-background/70" : "text-muted",
+                    )}
+                  >
+                    {plan.blurb}
+                  </p>
+                  <ul className="mt-8 flex flex-1 list-none flex-col gap-3 p-0">
+                    {plan.features.map((f) => (
+                      <li
+                        key={f}
+                        className={cn(
+                          "text-sm",
+                          plan.featured ? "text-background/85" : "text-foreground",
+                        )}
+                      >
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={plan.href}
+                    className={cn(
+                      "er-btn mt-8 inline-flex h-11 items-center justify-center rounded-full px-5",
+                      plan.featured
+                        ? "bg-background text-foreground"
+                        : "bg-foreground text-background",
+                    )}
+                  >
+                    {plan.cta}
+                  </a>
+                </div>
+              </Reveal>
             </li>
           ))}
         </ul>
-      </Container>
+      </div>
     </section>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="mt-0.5 size-4 shrink-0 text-accent"
-      aria-hidden="true"
-    >
-      <path d="M3.5 8.5l3 3 6-7" />
-    </svg>
   );
 }

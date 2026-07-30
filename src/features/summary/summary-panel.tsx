@@ -61,10 +61,13 @@ export function SummaryPanel({
 
   const panelBody = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-start justify-between gap-3 px-4 py-4">
+      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-4">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            AI Summary
+          <p className="text-[0.6rem] font-semibold tracking-[0.18em] text-accent uppercase">
+            Studio AI
+          </p>
+          <h2 className="mt-1 font-display text-lg font-semibold tracking-tight text-foreground">
+            Summary & chat
           </h2>
           <p className="mt-1 text-xs text-muted">
             Generate on demand — nothing runs until you choose a type.
@@ -74,22 +77,22 @@ export function SummaryPanel({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-surface-muted"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Close summary panel"
         >
           <CloseIcon className="size-4" />
         </button>
       </div>
 
-      <div className="flex gap-2 border-b border-border px-4 pb-3">
+      <div className="flex gap-1.5 border-b border-border/60 px-4 py-3">
         <button
           type="button"
           onClick={() => setActiveTab("summary")}
           className={cn(
-            "inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors",
+            "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             activeTab === "summary"
-              ? "border-foreground/20 bg-surface-muted text-foreground"
-              : "border-border bg-surface text-foreground hover:bg-surface-muted",
+              ? "border-foreground bg-foreground text-background"
+              : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",
           )}
         >
           Summary
@@ -98,10 +101,10 @@ export function SummaryPanel({
           type="button"
           onClick={() => setActiveTab("chat")}
           className={cn(
-            "inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors",
+            "inline-flex h-9 items-center justify-center rounded-full border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             activeTab === "chat"
-              ? "border-foreground/20 bg-surface-muted text-foreground"
-              : "border-border bg-surface text-foreground hover:bg-surface-muted",
+              ? "border-foreground bg-foreground text-background"
+              : "border-border/80 bg-background/40 text-foreground hover:bg-surface-muted",
           )}
         >
           Chat
@@ -172,7 +175,7 @@ export function SummaryPanel({
 
       <aside
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[78vh] flex-col rounded-t-2xl border border-border bg-background shadow-md transition-transform duration-300 lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[78vh] flex-col rounded-t-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] shadow-[var(--elevation-md)] backdrop-blur-xl transition-transform duration-300 lg:hidden",
           open ? "translate-y-0" : "translate-y-full",
         )}
         aria-hidden={!open}
@@ -186,7 +189,7 @@ export function SummaryPanel({
 
       {open ? (
         <aside
-          className="hidden h-full w-80 shrink-0 border-l border-border bg-background lg:flex lg:flex-col"
+          className="hidden h-full w-[22rem] shrink-0 border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl lg:flex lg:flex-col"
           aria-label="AI Summary"
         >
           {panelBody}

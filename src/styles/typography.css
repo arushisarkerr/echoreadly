@@ -1,0 +1,81 @@
+/**
+ * Editorial typography for immersive landing.
+ */
+
+:root {
+  --er-measure: 38rem;
+}
+
+.font-display {
+  font-family: var(--font-syne), var(--font-dm-sans), ui-sans-serif, system-ui,
+    sans-serif;
+}
+
+.er-display-xl {
+  font-family: var(--font-syne), var(--font-dm-sans), ui-sans-serif, system-ui,
+    sans-serif;
+  font-size: clamp(2.85rem, 1.4rem + 6vw, 6.5rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+
+.er-display-lg {
+  font-family: var(--font-syne), var(--font-dm-sans), ui-sans-serif, system-ui,
+    sans-serif;
+  font-size: clamp(2.1rem, 1.3rem + 3.2vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.er-display-md {
+  font-family: var(--font-syne), var(--font-dm-sans), ui-sans-serif, system-ui,
+    sans-serif;
+  font-size: clamp(1.65rem, 1.2rem + 1.8vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.er-display-sm {
+  font-family: var(--font-syne), var(--font-dm-sans), ui-sans-serif, system-ui,
+    sans-serif;
+  font-size: clamp(1.15rem, 1rem + 0.7vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.er-copy {
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.02rem, 0.96rem + 0.28vw, 1.125rem);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  line-height: 1.65;
+  max-width: var(--er-measure);
+}
+
+.er-copy-sm {
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.6;
+}
+
+.er-btn {
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.er-glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--elevation-md);
+}
