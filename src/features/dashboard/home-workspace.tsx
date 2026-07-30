@@ -232,7 +232,7 @@ export function HomeWorkspace() {
               {items.length === 1 ? "document" : "documents"}
             </li>
             <li className="py-4 text-sm text-muted">
-              Listening studio ready — summary, chat, and page audio intact
+              Listening ready — Library synced and player available
             </li>
             <li className="py-4 text-sm text-muted">
               Theme toggle + command dock available across the workspace

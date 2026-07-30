@@ -25,7 +25,7 @@ export function getSecurityHeaders(): SecurityHeaderMap {
     "manifest-src 'self'",
   ].join("; ");
 
-  return {
+  const headers: SecurityHeaderMap = {
     "Content-Security-Policy": csp,
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
@@ -34,6 +34,14 @@ export function getSecurityHeaders(): SecurityHeaderMap {
       "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
     "X-DNS-Prefetch-Control": "off",
   };
+
+  // Production builds ship HSTS. Browsers only honor it over HTTPS origins.
+  if (process.env.NODE_ENV === "production") {
+    headers["Strict-Transport-Security"] =
+      "max-age=63072000; includeSubDomains; preload";
+  }
+
+  return headers;
 }
 
 /**

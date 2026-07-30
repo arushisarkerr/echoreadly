@@ -15,8 +15,7 @@ import {
 } from "@/components/marketing";
 
 /**
- * EchoReadly landing — PDF listening studio marketing.
- * Design-only; auth routes and APIs are unchanged.
+ * EchoReadly landing — Import → Listen marketing.
  */
 export default function HomePage() {
   return (

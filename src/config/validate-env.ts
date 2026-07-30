@@ -7,6 +7,9 @@ const REQUIRED_PUBLIC = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ] as const;
 
+/** Required for production metadata, OAuth redirects, and absolute links. */
+const REQUIRED_PUBLIC_PRODUCTION = ["NEXT_PUBLIC_APP_URL"] as const;
+
 const REQUIRED_SERVER = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENAI_API_KEY",
@@ -95,13 +98,35 @@ export function isAuthPublicEnvConfigured(): boolean {
  * without production credentials; runtime (dev/start) still fails hard.
  */
 export function assertRequiredEnv(): void {
+  const productionRuntime = isProductionRuntime();
   const missing = [
     ...missingVars(REQUIRED_PUBLIC),
     ...missingVars(REQUIRED_SERVER),
+    ...(productionRuntime ? missingVars(REQUIRED_PUBLIC_PRODUCTION) : []),
   ];
   const authStatus = getAuthPublicEnvStatus();
   const invalid =
-    authStatus.configured === false ? authStatus.invalid : [];
+    authStatus.configured === false ? [...authStatus.invalid] : [];
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (isPresent(appUrl) && !isValidHttpUrl(appUrl!)) {
+    invalid.push("NEXT_PUBLIC_APP_URL");
+  } else if (
+    productionRuntime &&
+    isPresent(appUrl) &&
+    !appUrl!.trim().toLowerCase().startsWith("https://")
+  ) {
+    invalid.push("NEXT_PUBLIC_APP_URL (must be https in production)");
+  }
+
+  if (
+    productionRuntime &&
+    isPresent(process.env.BILLING_FORCE_PLAN)
+  ) {
+    console.error(
+      "[env] BILLING_FORCE_PLAN is set in production and will be ignored.",
+    );
+  }
 
   if (missing.length === 0 && invalid.length === 0) {
     return;

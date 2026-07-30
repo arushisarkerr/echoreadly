@@ -1,5 +1,5 @@
 /**
- * Empty-state welcome copy for the dashboard home route.
+ * Empty-state welcome copy for dashboard surfaces.
  */
 export function DashboardWelcomeState() {
   return (
@@ -11,7 +11,7 @@ export function DashboardWelcomeState() {
         Welcome to EchoReadly
       </h1>
       <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-        Upload a PDF to start reading, listening and learning.
+        Import a file. EchoReadly prepares natural AI audio — then you listen.
       </p>
     </header>
   );

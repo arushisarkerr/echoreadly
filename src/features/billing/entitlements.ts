@@ -36,6 +36,10 @@ const PREMIUM_STATUSES = new Set<SubscriptionStatus>([
 ]);
 
 function forcePlanOverride(): PlanId | null {
+  // Never honor billing overrides in production deployments.
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
   const raw = process.env.BILLING_FORCE_PLAN?.trim().toLowerCase();
   if (raw === "free" || raw === "pro") {
     return raw;
