@@ -2,6 +2,7 @@
 
 import type { SummaryResult } from "@/features/ai";
 import { formatPageCitations } from "@/features/citations";
+import { ExportButton } from "@/features/export";
 import { cn } from "@/utils";
 
 import { SummaryError } from "./error";
@@ -18,6 +19,11 @@ type SummaryContentProps = {
   onCopy: () => void;
   onRetry: () => void;
   onListen?: () => void;
+  onExport?: () => void;
+  exportDisabled?: boolean;
+  exportStatus?: "idle" | "exporting" | "success" | "error";
+  exportError?: string | null;
+  exportFileName?: string | null;
 };
 
 /**
@@ -33,6 +39,11 @@ export function SummaryContent({
   onCopy,
   onRetry,
   onListen,
+  onExport,
+  exportDisabled = false,
+  exportStatus = "idle",
+  exportError = null,
+  exportFileName = null,
 }: SummaryContentProps) {
   if (status === "loading") {
     return <SummaryLoading />;
@@ -83,6 +94,17 @@ export function SummaryContent({
               label="Listen"
               disabled={listenDisabled}
               ariaLabel="Listen to summary"
+            />
+          ) : null}
+          {onExport ? (
+            <ExportButton
+              status={exportStatus}
+              error={exportError}
+              lastFileName={exportFileName}
+              disabled={exportDisabled}
+              onExport={onExport}
+              label="Export"
+              compact
             />
           ) : null}
         </div>

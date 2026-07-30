@@ -86,6 +86,23 @@ type CollectionDocumentsRow = {
   added_at: string;
 };
 
+type AudioExportsRow = {
+  id: string;
+  user_id: string;
+  document_storage_path: string;
+  source: "page" | "summary";
+  page_number: number | null;
+  summary_type: SummaryType | null;
+  voice: string;
+  model: string;
+  object_key: string;
+  mime_type: string;
+  byte_size: number;
+  original_file_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /**
  * Supabase database schema for EchoReadly persistence tables.
  */
@@ -173,6 +190,19 @@ export type Database = {
           preferred_tts_voice: string;
           updated_at: string;
         }>;
+        Relationships: [];
+      };
+      audio_exports: {
+        Row: AudioExportsRow;
+        Insert: Partial<AudioExportsRow> & {
+          user_id: string;
+          document_storage_path: string;
+          source: "page" | "summary";
+          voice: string;
+          model: string;
+          object_key: string;
+        };
+        Update: Partial<AudioExportsRow>;
         Relationships: [];
       };
     };

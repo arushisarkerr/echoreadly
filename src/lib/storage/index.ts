@@ -3,6 +3,16 @@
  */
 
 export {
+  buildAudioExportObjectKey,
+  createAudioExportSignedUrl,
+  isOwnedAudioExportObjectKey,
+  removeAudioExportObjects,
+  uploadAudioExportObject,
+  type AudioExportSignedUrlResult,
+  type RemoveAudioExportObjectsResult,
+  type UploadAudioExportResult,
+} from "./audio-export";
+export {
   createPdfSignedUrl,
   PDF_SIGNED_URL_EXPIRES_IN,
   toPdfObjectKey,

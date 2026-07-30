@@ -7,6 +7,7 @@ import {
   deleteListeningProgressByStoragePath,
 } from "@/features/persistence";
 import { deleteCollectionMembershipsByStoragePath } from "@/features/collections/delete-memberships";
+import { deleteOwnedAudioExportsForDocument } from "@/features/export/delete-exports";
 import { forgetDocumentByStoragePath } from "@/features/processing";
 import { createClient } from "@/lib/supabase/server";
 import { removePdfObject } from "@/lib/storage";
@@ -109,6 +110,20 @@ export async function deleteOwnedDocument(
         ok: false,
         code: "INTERNAL",
         error: membershipResult.error,
+      };
+    }
+
+    const exportsResult = await deleteOwnedAudioExportsForDocument(
+      trimmed,
+      user.id,
+      client,
+    );
+
+    if (!exportsResult.ok) {
+      return {
+        ok: false,
+        code: "INTERNAL",
+        error: exportsResult.error,
       };
     }
 

@@ -17,7 +17,8 @@ export type RateLimitBucket =
   | "summarize"
   | "chat"
   | "tts"
-  | "delete";
+  | "delete"
+  | "export";
 
 export type RateLimitConfig = {
   /** Max requests per window for an authenticated user. */
@@ -50,6 +51,11 @@ export const RATE_LIMITS: Record<RateLimitBucket, RateLimitConfig> = {
     windowMs: 60 * 60 * 1000,
   },
   delete: {
+    userLimit: 40,
+    ipLimit: 80,
+    windowMs: 60 * 60 * 1000,
+  },
+  export: {
     userLimit: 40,
     ipLimit: 80,
     windowMs: 60 * 60 * 1000,

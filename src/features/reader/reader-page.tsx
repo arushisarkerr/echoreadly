@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import { useProgressPersistence } from "@/features/progress";
+import { useAudioExport } from "@/features/export";
 import { SummaryPanel } from "@/features/summary";
 import { AudioPlayer, useTts } from "@/features/tts";
 
@@ -39,6 +40,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function ReaderPage({ storagePath }: ReaderPageProps) {
   const reader = useReader(storagePath);
   const tts = useTts();
+  const pageExport = useAudioExport();
+  const summaryExport = useAudioExport();
   const [summaryOpen, setSummaryOpen] = useState(false);
   const ttsBusy = tts.status === "loading";
   const controlsLocked = reader.documentLoading || reader.loadingUrl;
@@ -126,6 +129,20 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
       });
     },
     listenPageDisabled: ttsBusy || reader.documentLoading,
+    onExportPage: () => {
+      void pageExport.exportPage({
+        storagePath,
+        pageNumber: reader.pageNumber,
+        originalFileName: reader.fileName,
+      });
+    },
+    exportPageDisabled:
+      pageExport.isExporting ||
+      reader.documentLoading ||
+      summaryExport.isExporting,
+    exportPageStatus: pageExport.status,
+    exportPageError: pageExport.error,
+    exportPageFileName: pageExport.lastFileName,
     onPreviousPage: reader.goToPreviousPage,
     onNextPage: reader.goToNextPage,
     onZoomIn: reader.zoomIn,
@@ -269,6 +286,15 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
                 clearPlaybackResume();
               }
               void tts.listenSummary(input, { seekTo });
+            }}
+            exportDisabled={
+              summaryExport.isExporting || pageExport.isExporting
+            }
+            exportStatus={summaryExport.status}
+            exportError={summaryExport.error}
+            exportFileName={summaryExport.lastFileName}
+            onExportSummary={(input) => {
+              void summaryExport.exportSummary(input);
             }}
           />
         </div>

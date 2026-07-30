@@ -27,6 +27,14 @@ type SummaryPanelProps = {
     documentId: string;
     summaryType: SummaryType;
   }) => void;
+  exportDisabled?: boolean;
+  exportStatus?: "idle" | "exporting" | "success" | "error";
+  exportError?: string | null;
+  exportFileName?: string | null;
+  onExportSummary?: (input: {
+    documentId: string;
+    summaryType: SummaryType;
+  }) => void;
 };
 
 type StudioTab = "summary" | "chat";
@@ -43,6 +51,11 @@ export function SummaryPanel({
   onClose,
   listenDisabled = false,
   onListenSummary,
+  exportDisabled = false,
+  exportStatus = "idle",
+  exportError = null,
+  exportFileName = null,
+  onExportSummary,
 }: SummaryPanelProps) {
   const summary = useSummary({ storagePath, fileName });
   const isLoading = summary.status === "loading";
@@ -195,6 +208,24 @@ export function SummaryPanel({
                     }
                   : undefined
               }
+              onExport={
+                onExportSummary
+                  ? () => {
+                      const current = summary.summary;
+                      if (!current?.documentId || !current.summaryType) {
+                        return;
+                      }
+                      onExportSummary({
+                        documentId: current.documentId,
+                        summaryType: current.summaryType,
+                      });
+                    }
+                  : undefined
+              }
+              exportDisabled={exportDisabled}
+              exportStatus={exportStatus}
+              exportError={exportError}
+              exportFileName={exportFileName}
             />
           </div>
         </div>

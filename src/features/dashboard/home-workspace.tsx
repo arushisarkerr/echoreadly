@@ -197,11 +197,11 @@ export function HomeWorkspace() {
           cta="Open →"
         />
         <StoryTile
-          kicker="Coming soon"
+          kicker="Downloads"
           title="Exports"
-          copy="File export is not available yet. Preview planned MP3, M4A, and WAV downloads — listen online in the studio today."
+          copy="Download cached MP3 narration for pages and summaries — private to your account."
           href={ROUTES.exports}
-          cta="Preview →"
+          cta="Open →"
         />
       </section>
 

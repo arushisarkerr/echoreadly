@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { ROUTES } from "@/constants";
+import { ExportButton } from "@/features/export";
 import { cn } from "@/utils";
 
 import type { ReaderFitMode } from "./use-reader";
@@ -18,6 +19,11 @@ type ReaderToolbarProps = {
   onToggleSummary?: () => void;
   onListenPage?: () => void;
   listenPageDisabled?: boolean;
+  onExportPage?: () => void;
+  exportPageDisabled?: boolean;
+  exportPageStatus?: "idle" | "exporting" | "success" | "error";
+  exportPageError?: string | null;
+  exportPageFileName?: string | null;
   onPreviousPage: () => void;
   onNextPage: () => void;
   onZoomIn: () => void;
@@ -40,6 +46,11 @@ export function ReaderToolbar({
   onToggleSummary,
   onListenPage,
   listenPageDisabled = false,
+  onExportPage,
+  exportPageDisabled = false,
+  exportPageStatus = "idle",
+  exportPageError = null,
+  exportPageFileName = null,
   onPreviousPage,
   onNextPage,
   onZoomIn,
@@ -188,6 +199,18 @@ export function ReaderToolbar({
                 emphasis
               />
             </>
+          ) : null}
+
+          {onExportPage ? (
+            <ExportButton
+              status={exportPageStatus}
+              error={exportPageError}
+              lastFileName={exportPageFileName}
+              disabled={disabled || exportPageDisabled}
+              onExport={onExportPage}
+              label="Export"
+              compact
+            />
           ) : null}
         </div>
 

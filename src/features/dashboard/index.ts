@@ -5,7 +5,7 @@
 export { AddContentWorkspace } from "./add-content-workspace";
 export { CollectionsWorkspace } from "@/features/collections";
 export { CommandDock } from "./command-dock";
-export { ExportsWorkspace } from "./exports-workspace";
+export { ExportsWorkspace } from "@/features/export";
 export { DashboardHeader } from "./header";
 export { HistoryWorkspace } from "./history-workspace";
 export { HomeWorkspace } from "./home-workspace";
