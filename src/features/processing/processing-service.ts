@@ -88,9 +88,13 @@ function saveDocument(document: ProcessedDocument): ProcessedDocument {
   return document;
 }
 
-async function resolveOwnership(): Promise<
-  ProcessingResult<OwnershipContext>
-> {
+async function resolveOwnership(
+  override?: OwnershipContext,
+): Promise<ProcessingResult<OwnershipContext>> {
+  if (override) {
+    return { ok: true, data: override };
+  }
+
   const ownership = await requireOwnershipContext();
   if (!ownership.ok) {
     return { ok: false, error: ownership.error };
@@ -314,8 +318,9 @@ export function forgetDocumentByStoragePath(storagePath: string): void {
 export async function extractDocumentText(
   documentId: string,
   pdfBytes?: Uint8Array,
+  ownershipOverride?: OwnershipContext,
 ): Promise<ProcessingResult<ProcessedDocument>> {
-  const ownership = await resolveOwnership();
+  const ownership = await resolveOwnership(ownershipOverride);
   if (!ownership.ok) {
     return ownership;
   }
@@ -342,7 +347,9 @@ export async function extractDocumentText(
   let bytes = pdfBytes ?? null;
 
   if (!bytes) {
-    const download = await downloadPdfBytes(working.storagePath, client);
+    const download = await downloadPdfBytes(working.storagePath, client, {
+      userId,
+    });
     if (!download.data) {
       markDocumentFailed(documentId);
       return {
@@ -447,8 +454,9 @@ function resolveDocumentText(
  */
 export async function generateDocumentChunks(
   documentId: string,
+  ownershipOverride?: OwnershipContext,
 ): Promise<ProcessingResult<DocumentChunkResult>> {
-  const ownership = await resolveOwnership();
+  const ownership = await resolveOwnership(ownershipOverride);
   if (!ownership.ok) {
     return ownership;
   }
@@ -573,6 +581,8 @@ export type EnsureDocumentProcessedInput = {
   storagePath: string;
   originalFileName: string;
   fileSize?: number;
+  /** Optional ownership for background workers (service-role + explicit userId). */
+  ownership?: OwnershipContext;
 };
 
 export type EnsureDocumentProcessedResult = {
@@ -596,14 +606,16 @@ export async function ensureDocumentProcessed(
     return { ok: false, error: "originalFileName is required." };
   }
 
-  const ownership = await resolveOwnership();
+  const ownership = await resolveOwnership(input.ownership);
   if (!ownership.ok) {
     return ownership;
   }
 
   const { userId, client } = ownership.data;
 
-  const download = await downloadPdfBytes(input.storagePath, client);
+  const download = await downloadPdfBytes(input.storagePath, client, {
+    userId,
+  });
   if (!download.data) {
     return {
       ok: false,
@@ -697,12 +709,19 @@ export async function ensureDocumentProcessed(
   // Own a stable byte copy for the native PDFium load lifetime.
   const pdfBytes = new Uint8Array(download.data);
 
-  const extracted = await extractDocumentText(registered.id, pdfBytes);
+  const extracted = await extractDocumentText(
+    registered.id,
+    pdfBytes,
+    ownership.data,
+  );
   if (!extracted.ok) {
     return extracted;
   }
 
-  const chunked = await generateDocumentChunks(extracted.data.id);
+  const chunked = await generateDocumentChunks(
+    extracted.data.id,
+    ownership.data,
+  );
   if (!chunked.ok) {
     markDocumentFailed(extracted.data.id);
     return chunked;
@@ -738,9 +757,9 @@ export async function ensureDocumentProcessed(
 export async function summarizeDocument(
   documentId: string,
   summaryType: SummaryType = "short",
-  options?: { regenerate?: boolean },
+  options?: { regenerate?: boolean; ownership?: OwnershipContext },
 ): Promise<ProcessingResult<SummaryResult>> {
-  const ownership = await resolveOwnership();
+  const ownership = await resolveOwnership(options?.ownership);
   if (!ownership.ok) {
     return ownership;
   }

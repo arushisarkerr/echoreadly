@@ -167,6 +167,27 @@ export function UploadCard() {
       uploadedStoragePath: result.storagePath,
     }));
 
+    if (result.storagePath) {
+      void fetch("/api/jobs", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobType: "document_process",
+          storagePath: result.storagePath,
+          payload: {
+            storagePath: result.storagePath,
+            originalFileName: state.sourceFile.name,
+            fileSize: state.sourceFile.size,
+          },
+        }),
+      }).catch(() => {
+        // Best-effort background processing enqueue.
+      });
+    }
+
     notifyLibraryChanged();
   }
 

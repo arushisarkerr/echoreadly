@@ -23,6 +23,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith(ROUTES.collections)) return "Collections";
   if (pathname.startsWith(ROUTES.history)) return "History";
   if (pathname.startsWith(ROUTES.analytics)) return "Analytics";
+  if (pathname.startsWith(ROUTES.jobs)) return "Jobs";
   if (pathname.startsWith(ROUTES.exports)) return "Exports";
   if (pathname.startsWith(ROUTES.voices)) return "Voice Library";
   if (pathname.startsWith(ROUTES.settings)) return "Settings";

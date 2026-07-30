@@ -1,7 +1,8 @@
 /**
  * Download private document object bytes from Supabase Storage.
- * Callers must pass an authenticated Supabase client (SSR user client on the server).
- * Only downloads objects owned by the signed-in user (`{userId}/…`).
+ * Callers must pass an authenticated Supabase client (SSR user client on the server)
+ * or a service-role client with an explicit `userId` for background workers.
+ * Only downloads objects owned by the target user (`{userId}/…`).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -22,6 +23,7 @@ export type DownloadPdfResult = {
 export async function downloadPdfBytes(
   storagePath: string,
   client: SupabaseClient,
+  options?: { userId?: string },
 ): Promise<DownloadPdfResult> {
   const objectKey = toPdfObjectKey(storagePath);
 
@@ -33,19 +35,25 @@ export async function downloadPdfBytes(
   }
 
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await client.auth.getUser();
+    let userId = options?.userId?.trim() || "";
 
-    if (authError || !user) {
-      return {
-        data: null,
-        error: "Authentication required.",
-      };
+    if (!userId) {
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+
+      if (authError || !user) {
+        return {
+          data: null,
+          error: "Authentication required.",
+        };
+      }
+
+      userId = user.id;
     }
 
-    if (!isOwnedDocumentObjectKey(objectKey, user.id)) {
+    if (!isOwnedDocumentObjectKey(objectKey, userId)) {
       return {
         data: null,
         error: "You do not have access to this document.",

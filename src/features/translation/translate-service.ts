@@ -19,6 +19,7 @@ import { streamTextWithFallback } from "@/features/ai/stream-text";
 import { recordUsage } from "@/features/billing/gate";
 import type { BillingEntitlement } from "@/features/billing/types";
 import { trackAnalyticsEventAsync } from "@/features/analytics/track-event";
+import type { OwnershipContext } from "@/features/auth/ownership";
 import {
   getDocumentById,
   getDocumentSummaryByType,
@@ -83,6 +84,7 @@ function formatChunksForTranslation(
 async function resolveSource(
   input: TranslateRequestInput,
   userId: string,
+  ownership?: OwnershipContext,
 ): Promise<
   TranslateServiceResult<{
     documentId: string;
@@ -94,7 +96,11 @@ async function resolveSource(
   }>
 > {
   if (input.scope === "summary") {
-    const document = await getDocumentById(input.documentId, userId);
+    const document = await getDocumentById(
+      input.documentId,
+      userId,
+      ownership?.client,
+    );
     if (!document.ok) {
       return { ok: false, code: "INTERNAL", error: document.error };
     }
@@ -110,6 +116,7 @@ async function resolveSource(
       input.documentId,
       userId,
       input.summaryType,
+      ownership?.client,
     );
     if (!summary.ok) {
       return { ok: false, code: "INTERNAL", error: summary.error };
@@ -140,6 +147,7 @@ async function resolveSource(
     originalFileName:
       input.originalFileName ??
       getFileNameFromStoragePath(input.storagePath),
+    ownership,
   });
 
   if (!processed.ok) {
@@ -218,9 +226,10 @@ async function resolveSource(
 export async function translateDocumentContent(
   input: TranslateRequestInput,
   userId: string,
+  options?: { ownership?: OwnershipContext },
 ): Promise<TranslateServiceResult> {
   try {
-    const resolved = await resolveSource(input, userId);
+    const resolved = await resolveSource(input, userId, options?.ownership);
     if (!resolved.ok) {
       return resolved;
     }
@@ -235,7 +244,7 @@ export async function translateDocumentContent(
     } = resolved.data;
 
     const sourceContentHash = hashText(sourceText);
-    const client = await createClient();
+    const client = options?.ownership?.client ?? (await createClient());
 
     const existing = await findDocumentTranslation(
       {

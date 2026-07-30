@@ -14,6 +14,7 @@ export const ROUTES = {
   collections: "/dashboard/collections",
   history: "/dashboard/history",
   analytics: "/dashboard/analytics",
+  jobs: "/dashboard/jobs",
   exports: "/dashboard/exports",
   voices: "/dashboard/voices",
   settings: "/dashboard/settings",
@@ -28,6 +29,7 @@ export const PROTECTED_PATH_PREFIXES = [
   "/api/user",
   "/api/billing",
   "/api/analytics",
+  "/api/jobs",
   "/api/chat",
   "/api/tts",
   "/api/summarize",
@@ -36,7 +38,9 @@ export const PROTECTED_PATH_PREFIXES = [
 export function isProtectedPath(pathname: string): boolean {
   if (
     pathname === "/api/billing/webhook" ||
-    pathname.startsWith("/api/billing/webhook/")
+    pathname.startsWith("/api/billing/webhook/") ||
+    pathname === "/api/jobs/worker" ||
+    pathname.startsWith("/api/jobs/worker/")
   ) {
     return false;
   }

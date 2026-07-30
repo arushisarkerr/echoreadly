@@ -106,6 +106,15 @@ function AnalyticsIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function JobsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16M4 12h16M4 17h10" />
+      <path d="M18 15l2 2 2-2" />
+    </Icon>
+  );
+}
+
 function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
@@ -144,6 +153,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { label: "Collections", href: ROUTES.collections, icon: CollectionsIcon },
   { label: "History", href: ROUTES.history, icon: HistoryIcon },
   { label: "Analytics", href: ROUTES.analytics, icon: AnalyticsIcon },
+  { label: "Jobs", href: ROUTES.jobs, icon: JobsIcon },
   { label: "Exports", href: ROUTES.exports, icon: ExportIcon },
   { label: "Voice Library", href: ROUTES.voices, icon: VoiceIcon },
   { label: "Settings", href: ROUTES.settings, icon: SettingsIcon },

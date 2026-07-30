@@ -42,6 +42,7 @@ type TranslateBody = {
   targetLanguage?: unknown;
   regenerate?: unknown;
   stream?: unknown;
+  async?: unknown;
 };
 
 function parseRegenerate(value: unknown): boolean {
@@ -182,6 +183,35 @@ export async function POST(request: Request) {
       targetLanguage: targetLanguage.data,
       regenerate,
     };
+  }
+
+  if (body.async === true || body.async === "true") {
+    const { enqueueBackgroundJob } = await import("@/features/jobs/enqueue");
+    try {
+      const storagePathValue =
+        "storagePath" in payload ? payload.storagePath : null;
+      const documentIdValue =
+        "documentId" in payload ? payload.documentId : null;
+      const enqueued = await enqueueBackgroundJob({
+        userId: auth.user.id,
+        jobType: "translation",
+        storagePath: storagePathValue,
+        documentId: documentIdValue,
+        payload: { ...payload },
+      });
+      return apiSuccess({
+        async: true as const,
+        job: enqueued.job,
+        created: enqueued.created,
+      });
+    } catch (error) {
+      logger.error(
+        "Async translate enqueue failed",
+        { route, userId: auth.user.id },
+        error,
+      );
+      return apiError("INTERNAL", "Unable to enqueue translation job.", 500);
+    }
   }
 
   try {

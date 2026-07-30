@@ -29,6 +29,7 @@ type SummarizeRequestBody = {
   fileSize?: unknown;
   regenerate?: unknown;
   stream?: unknown;
+  async?: unknown;
 };
 
 function wantsStream(request: Request, body: SummarizeRequestBody): boolean {
@@ -97,6 +98,36 @@ export async function POST(request: Request) {
   const fileSize = validateFileSize(body.fileSize);
   if (!fileSize.ok) {
     return apiError(fileSize.code, fileSize.message, 400);
+  }
+
+  if (body.async === true || body.async === "true") {
+    const { enqueueBackgroundJob } = await import("@/features/jobs/enqueue");
+    try {
+      const enqueued = await enqueueBackgroundJob({
+        userId: auth.user.id,
+        jobType: "summary_generate",
+        storagePath: storagePath.data,
+        payload: {
+          storagePath: storagePath.data,
+          summaryType: summaryType.data,
+          originalFileName: originalFileName.data,
+          fileSize: fileSize.data,
+          regenerate: body.regenerate === true,
+        },
+      });
+      return apiSuccess({
+        async: true as const,
+        job: enqueued.job,
+        created: enqueued.created,
+      });
+    } catch (error) {
+      logger.error(
+        "Async summarize enqueue failed",
+        { route, userId: auth.user.id },
+        error,
+      );
+      return apiError("INTERNAL", "Unable to enqueue summary job.", 500);
+    }
   }
 
   const stream = wantsStream(request, body);

@@ -189,6 +189,30 @@ type AnalyticsActivityRow = {
   created_at: string;
 };
 
+type BackgroundJobsRow = {
+  id: string;
+  user_id: string;
+  document_id: string | null;
+  storage_path: string | null;
+  job_type: string;
+  status: string;
+  progress: number;
+  current_step: string | null;
+  payload: Json;
+  result: Json;
+  error_message: string | null;
+  attempts: number;
+  max_attempts: number;
+  idempotency_key: string;
+  locked_at: string | null;
+  locked_by: string | null;
+  run_after: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /**
  * Supabase database schema for EchoReadly persistence tables.
  */
@@ -384,6 +408,16 @@ export type Database = {
         Update: Partial<AnalyticsActivityRow>;
         Relationships: [];
       };
+      background_jobs: {
+        Row: BackgroundJobsRow;
+        Insert: Partial<BackgroundJobsRow> & {
+          user_id: string;
+          job_type: string;
+          idempotency_key: string;
+        };
+        Update: Partial<BackgroundJobsRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -403,6 +437,21 @@ export type Database = {
           p_event_name: string;
           p_amount?: number;
           p_value?: number;
+        };
+        Returns: number;
+      };
+      claim_background_jobs: {
+        Args: {
+          p_limit?: number;
+          p_worker_id?: string;
+          p_stale_seconds?: number;
+        };
+        Returns: BackgroundJobsRow[];
+      };
+      cleanup_background_jobs: {
+        Args: {
+          p_older_than_days?: number;
+          p_limit?: number;
         };
         Returns: number;
       };

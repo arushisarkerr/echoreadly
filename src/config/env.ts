@@ -99,6 +99,14 @@ export const serverEnv = {
   get stripePriceProYear(): string | undefined {
     return normalizeEnv(process.env.STRIPE_PRICE_PRO_YEAR);
   },
+
+  /**
+   * Shared secret for `/api/jobs/worker` cron / dedicated worker ticks.
+   * Optional in development — signed-in users can still kick the worker.
+   */
+  get jobWorkerSecret(): string | undefined {
+    return normalizeEnv(process.env.JOB_WORKER_SECRET);
+  },
 } as const;
 
 export type PublicEnv = typeof publicEnv;

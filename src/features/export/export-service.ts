@@ -12,6 +12,7 @@ import {
   normalizeStoragePath,
 } from "@/features/persistence";
 import { ensureDocumentProcessed } from "@/features/processing";
+import type { OwnershipContext } from "@/features/auth/ownership";
 import { translateDocumentContent } from "@/features/translation/translate-service";
 import {
   createOpenAiTtsProvider,
@@ -88,6 +89,7 @@ export function buildExportDownloadFileName(input: {
 async function resolveNarrationText(
   input: CreateAudioExportInput,
   userId: string,
+  ownership?: OwnershipContext,
 ): Promise<
   ExportServiceResult<{
     text: string;
@@ -101,7 +103,11 @@ async function resolveNarrationText(
   const targetLanguage = normalizeExportTargetLanguage(input.targetLanguage);
 
   if (input.source === "summary") {
-    const document = await getDocumentById(input.documentId, userId);
+    const document = await getDocumentById(
+      input.documentId,
+      userId,
+      ownership?.client,
+    );
 
     if (!document.ok) {
       return { ok: false, code: "INTERNAL", error: document.error };
@@ -126,6 +132,7 @@ async function resolveNarrationText(
           targetLanguage: input.targetLanguage,
         },
         userId,
+        { ownership },
       );
 
       if (!translated.ok) {
@@ -142,6 +149,7 @@ async function resolveNarrationText(
         input.documentId,
         userId,
         input.summaryType,
+        ownership?.client,
       );
 
       if (!summary.ok) {
@@ -211,6 +219,7 @@ async function resolveNarrationText(
         targetLanguage: input.targetLanguage,
       },
       userId,
+      { ownership },
     );
 
     if (!translated.ok) {
@@ -226,6 +235,7 @@ async function resolveNarrationText(
     const processed = await ensureDocumentProcessed({
       storagePath: input.storagePath,
       originalFileName,
+      ownership,
     });
 
     if (!processed.ok) {
@@ -274,12 +284,17 @@ async function resolveNarrationText(
 export async function createOrReuseAudioExport(
   input: CreateAudioExportInput,
   userId: string,
+  options?: { ownership?: OwnershipContext },
 ): Promise<ExportServiceResult<AudioExportDownload>> {
   try {
-    const client = await createClient();
+    const client = options?.ownership?.client ?? (await createClient());
     const voice = await resolvePreferredTtsVoiceForUser(userId, client);
 
-    const narration = await resolveNarrationText(input, userId);
+    const narration = await resolveNarrationText(
+      input,
+      userId,
+      options?.ownership,
+    );
     if (!narration.ok) {
       return narration;
     }

@@ -41,6 +41,7 @@ type ExportRequestBody = {
   regenerate?: unknown;
   text?: unknown;
   targetLanguage?: unknown;
+  async?: unknown;
 };
 
 function parseRegenerate(value: unknown): boolean {
@@ -204,6 +205,32 @@ export async function POST(request: Request) {
       regenerate,
       targetLanguage: targetLanguage.data,
     };
+  }
+
+  if (body.async === true || body.async === "true") {
+    const { enqueueBackgroundJob } = await import("@/features/jobs/enqueue");
+    try {
+      const enqueued = await enqueueBackgroundJob({
+        userId: auth.user.id,
+        jobType: "audio_export",
+        storagePath:
+          payload.source === "page" ? payload.storagePath : null,
+        documentId:
+          payload.source === "summary" ? payload.documentId : null,
+        payload: { ...payload },
+      });
+      return apiSuccess({
+        async: true as const,
+        job: enqueued.job,
+        created: enqueued.created,
+      });
+    } catch (error) {
+      logger.error("Async export enqueue failed", {
+        route,
+        userId: auth.user.id,
+      }, error);
+      return apiError("INTERNAL", "Unable to enqueue export job.", 500);
+    }
   }
 
   try {
