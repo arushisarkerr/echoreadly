@@ -15,6 +15,7 @@ import {
   joinPageChunkText,
   MAX_TTS_INPUT_CHARS,
 } from "@/features/tts";
+import { resolvePreferredTtsVoiceForUser } from "@/features/tts/resolve-preferred-voice";
 import { logger } from "@/lib/logger";
 import {
   apiBinary,
@@ -30,6 +31,7 @@ import {
   validateSummaryType,
   validateTtsSource,
 } from "@/lib/security";
+import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/auth";
 
 type TtsRequestBody = {
@@ -214,14 +216,21 @@ export async function POST(request: Request) {
       }
     }
 
+    const supabase = await createClient();
+    const voice = await resolvePreferredTtsVoiceForUser(
+      auth.user.id,
+      supabase,
+    );
+
     const provider = createOpenAiTtsProvider(serverEnv.openAiApiKey);
-    const synthesized = await provider.synthesize({ text });
+    const synthesized = await provider.synthesize({ text, voice });
 
     if (!synthesized.ok) {
       logger.ttsFailure("TTS synthesis failed", {
         route,
         userId: auth.user.id,
         source: source.data,
+        voice,
       }, synthesized.error.message);
       return mapDomainFailure(synthesized.error.message, "tts");
     }

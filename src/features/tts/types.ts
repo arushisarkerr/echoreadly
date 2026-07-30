@@ -54,7 +54,7 @@ export type TtsPlaybackStatus =
 export const DEFAULT_TTS_MODEL = "tts-1";
 
 /** Default OpenAI voice. */
-export const DEFAULT_TTS_VOICE = "alloy";
+export const DEFAULT_TTS_VOICE = "alloy" as const;
 
 /** OpenAI speech input limit. */
 export const MAX_TTS_INPUT_CHARS = 4096;

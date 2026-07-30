@@ -14,7 +14,7 @@ import { useLibrary } from "@/features/library";
 import { UploadCard } from "@/features/upload";
 import { formatFileSize } from "@/utils";
 
-const VOICES = ["Female", "Male", "Bangla", "English", "Calm", "Podcast"] as const;
+const VOICES = ["Alloy", "Nova", "Shimmer", "Echo", "Onyx", "Fable"] as const;
 
 /**
  * Magazine-style home — content-first, asymmetric, wired to real library + upload.
@@ -207,19 +207,19 @@ export function HomeWorkspace() {
 
       <section className="mt-14 grid gap-10 border-t border-border/70 pt-10 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <Eyebrow>Voices · Coming soon</Eyebrow>
+          <Eyebrow>Voices</Eyebrow>
           <p className="mt-2 text-sm text-muted">
-            Multi-voice personas are planned. Listening uses the default studio
-            TTS voice today.
+            Pick a studio narrator in Voice Library — page and summary listening
+            use your saved preference.
           </p>
           <ul className="mt-4 flex list-none flex-wrap gap-2 p-0">
             {VOICES.map((voice) => (
               <li key={voice}>
                 <Link
                   href={ROUTES.voices}
-                  className="inline-flex rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-semibold text-muted no-underline hover:border-foreground/30"
+                  className="inline-flex rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-semibold text-foreground no-underline hover:border-foreground/30"
                 >
-                  {voice} · Soon
+                  {voice}
                 </Link>
               </li>
             ))}

@@ -24,6 +24,7 @@ export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
 export const PROTECTED_PATH_PREFIXES = [
   "/dashboard",
   "/api/documents",
+  "/api/user",
   "/api/chat",
   "/api/tts",
   "/api/summarize",

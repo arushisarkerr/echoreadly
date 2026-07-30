@@ -14,6 +14,7 @@ import {
   type TtsSynthesizeInput,
   type TtsSynthesizeResult,
 } from "./types";
+import { isSupportedTtsVoiceId, resolveTtsVoiceId } from "./voices";
 
 function classifyOpenAiError(error: unknown): TtsError {
   if (error instanceof OpenAI.APIError) {
@@ -114,7 +115,10 @@ export class OpenAiTtsProvider implements TtsProvider {
         : text;
 
     const model = input.model ?? this.defaultModel;
-    const voice = input.voice ?? this.defaultVoice;
+    const requestedVoice = input.voice ?? this.defaultVoice;
+    const voice = isSupportedTtsVoiceId(requestedVoice)
+      ? requestedVoice
+      : resolveTtsVoiceId(this.defaultVoice);
 
     try {
       const response = await this.client.audio.speech.create({

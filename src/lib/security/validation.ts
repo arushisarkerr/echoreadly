@@ -394,3 +394,29 @@ export function validateTtsSource(
 
   return { ok: true, data: value };
 }
+
+export function validateTtsVoiceId(
+  value: unknown,
+): ValidationResult<string> {
+  if (typeof value !== "string" || !value.trim()) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "voice is required.",
+    };
+  }
+
+  const voice = value.trim().toLowerCase();
+
+  // Allowlist is enforced by the TTS feature catalog at call sites.
+  // Keep format checks here so arbitrary payloads are rejected early.
+  if (!/^[a-z][a-z0-9_-]{0,31}$/.test(voice)) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "voice is invalid.",
+    };
+  }
+
+  return { ok: true, data: voice };
+}

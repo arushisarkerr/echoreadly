@@ -44,6 +44,7 @@ export {
   validateSummaryType,
   validateTtsSource,
   validateTtsText,
+  validateTtsVoiceId,
   type ChatHistoryItemInput,
   type ValidationFailure,
   type ValidationResult,

@@ -15,6 +15,6 @@ export { SettingsWorkspace } from "./settings-workspace";
 export { DashboardShell } from "./shell";
 export { DashboardSidebar } from "./sidebar";
 export { ThemeToggle } from "./theme-toggle";
-export { VoicesWorkspace } from "./voices-workspace";
+export { VoicesWorkspace } from "@/features/tts";
 export { WorkspaceCanvas } from "./workspace-canvas";
 export { DashboardWelcomeState } from "./welcome-state";

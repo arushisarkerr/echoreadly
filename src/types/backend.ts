@@ -156,6 +156,25 @@ export type Database = {
         Update: Partial<CollectionDocumentsRow>;
         Relationships: [];
       };
+      user_preferences: {
+        Row: {
+          user_id: string;
+          preferred_tts_voice: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          preferred_tts_voice?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          preferred_tts_voice: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
