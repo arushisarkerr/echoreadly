@@ -2,67 +2,11 @@
  * Parse structured citation payloads returned by the AI model.
  */
 
-import { logger } from "@/lib/logger";
-
 import {
   flattenSectionPages,
   normalizePages,
 } from "./citation-utils";
 import type { CitedAnswer, CitedSection, CitedSummary } from "./types";
-
-/** TEMPORARY — Gemini response metadata for success-path parse diagnostics. */
-export type GeminiResponseDiagnostics = {
-  finishReason: string | null;
-  outputTokenCount: number | null;
-  thoughtsTokenCount: number | null;
-  totalTokenCount: number | null;
-  candidateCount: number;
-  responseTextLength: number;
-};
-
-let pendingGeminiResponseDiagnostics: GeminiResponseDiagnostics | null = null;
-
-/**
- * TEMPORARY — stash Gemini metadata so parseCitedSummary can log it on success.
- * Does not affect parsing behavior.
- */
-export function setPendingGeminiResponseDiagnostics(
-  diagnostics: GeminiResponseDiagnostics,
-): void {
-  pendingGeminiResponseDiagnostics = diagnostics;
-}
-
-/**
- * TEMPORARY — emit combined Gemini + parse diagnostics once, then clear.
- * Never logs document or summary text.
- */
-function flushGeminiParseDiagnostics(
-  parsed: unknown,
-  jsonParseSucceeded: boolean,
-): void {
-  const pending = pendingGeminiResponseDiagnostics;
-  if (!pending) {
-    return;
-  }
-
-  pendingGeminiResponseDiagnostics = null;
-
-  const hasSections = isRecord(parsed) && Array.isArray(parsed.sections);
-
-  logger.warn("Gemini success-path parse diagnostics", {
-    finishReason: pending.finishReason,
-    outputTokenCount: pending.outputTokenCount,
-    thoughtsTokenCount: pending.thoughtsTokenCount,
-    totalTokenCount: pending.totalTokenCount,
-    candidateCount: pending.candidateCount,
-    responseTextLength: pending.responseTextLength,
-    jsonParseSucceeded,
-    hasSections,
-    ...(hasSections
-      ? { sectionsLength: (parsed as { sections: unknown[] }).sections.length }
-      : {}),
-  });
-}
 
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
@@ -118,47 +62,28 @@ function normalizeParsedJson(value: unknown): unknown {
   return current;
 }
 
-type ExtractJsonResult = {
-  cleaned: string;
-  value: unknown | null;
-  parseError: string | null;
-};
-
-function extractJsonObject(raw: string): ExtractJsonResult {
+function extractJsonObject(raw: string): unknown | null {
   const cleaned = stripCodeFences(raw.replace(/^\uFEFF/, ""));
-  let parseError: string | null = null;
 
   try {
-    return {
-      cleaned,
-      value: normalizeParsedJson(JSON.parse(cleaned) as unknown),
-      parseError: null,
-    };
-  } catch (error) {
-    parseError = error instanceof Error ? error.message : String(error);
+    return normalizeParsedJson(JSON.parse(cleaned) as unknown);
+  } catch {
+    // Fall through — try to locate the outermost object.
   }
 
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
 
   if (start === -1 || end === -1 || end <= start) {
-    return { cleaned, value: null, parseError };
+    return null;
   }
 
   try {
-    return {
-      cleaned,
-      value: normalizeParsedJson(
-        JSON.parse(cleaned.slice(start, end + 1)) as unknown,
-      ),
-      parseError,
-    };
-  } catch (error) {
-    return {
-      cleaned,
-      value: null,
-      parseError: error instanceof Error ? error.message : String(error),
-    };
+    return normalizeParsedJson(
+      JSON.parse(cleaned.slice(start, end + 1)) as unknown,
+    );
+  } catch {
+    return null;
   }
 }
 
@@ -199,8 +124,7 @@ export function parseCitedSummary(
   raw: string,
   allowedPages?: ReadonlySet<number>,
 ): CitedSummary {
-  const { value: parsed } = extractJsonObject(raw);
-  const parseOk = parsed !== null;
+  const parsed = extractJsonObject(raw);
 
   if (isRecord(parsed) && Array.isArray(parsed.sections)) {
     const sections = parsed.sections
@@ -208,7 +132,6 @@ export function parseCitedSummary(
       .filter((section): section is CitedSection => section !== null);
 
     if (sections.length > 0) {
-      flushGeminiParseDiagnostics(parsed, parseOk);
       return {
         sections,
         pages: flattenSectionPages(sections),
@@ -233,7 +156,6 @@ export function parseCitedSummary(
         allowedPages,
       );
 
-      flushGeminiParseDiagnostics(parsed, parseOk);
       return {
         sections: [{ text, pages }],
         pages,
@@ -242,8 +164,6 @@ export function parseCitedSummary(
   }
 
   const fallback = raw.trim();
-
-  flushGeminiParseDiagnostics(parsed, parseOk);
 
   return {
     sections: fallback ? [{ text: fallback, pages: [] }] : [],
@@ -259,7 +179,7 @@ export function parseCitedAnswer(
   raw: string,
   allowedPages?: ReadonlySet<number>,
 ): CitedAnswer {
-  const parsed = extractJsonObject(raw).value;
+  const parsed = extractJsonObject(raw);
 
   if (isRecord(parsed)) {
     const answer =

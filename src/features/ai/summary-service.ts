@@ -145,13 +145,7 @@ export function getDefaultAiProvider(apiKey?: string): AiProvider {
 
 function getGeminiFallbackProvider(): AiProvider {
   if (!geminiFallbackProvider) {
-    const geminiApiKeyPresent = Boolean(serverEnv.geminiApiKey);
     geminiFallbackProvider = createGeminiProvider(serverEnv.geminiApiKey);
-    // TEMPORARY diagnostics — key presence only; never log the key value.
-    logger.warn("Gemini fallback provider created", {
-      geminiApiKeyPresent,
-      geminiProviderConfigured: geminiFallbackProvider.isConfigured(),
-    });
   }
 
   return geminiFallbackProvider;
