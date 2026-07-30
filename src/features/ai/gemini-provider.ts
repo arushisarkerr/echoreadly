@@ -93,6 +93,8 @@ export class GeminiProvider implements AiProvider {
         config: {
           systemInstruction: input.instructions,
           maxOutputTokens: input.maxOutputTokens,
+          // Force JSON mode so summaries parse as structured citation payloads.
+          responseMimeType: "application/json",
         },
       });
 
