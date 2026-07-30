@@ -6,8 +6,6 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-import { setPendingGeminiResponseDiagnostics } from "@/features/citations";
-
 import type { AiGenerateInput, AiGenerateResult, AiProvider } from "./ai-provider";
 import type { AiError } from "./types";
 
@@ -97,11 +95,14 @@ export class GeminiProvider implements AiProvider {
           maxOutputTokens: input.maxOutputTokens,
           // Force JSON mode so summaries parse as structured citation payloads.
           responseMimeType: "application/json",
+          // Disable thinking so thought tokens do not consume maxOutputTokens.
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
         },
       });
 
-      const text = response.text?.trim() ?? "";
-      const candidates = response.candidates ?? [];
+      const text = response.text?.trim();
 
       if (!text) {
         return {
@@ -112,17 +113,6 @@ export class GeminiProvider implements AiProvider {
           },
         };
       }
-
-      // TEMPORARY — stash metadata for success-path diagnostics in parseCitedSummary.
-      // Never includes document or summary text.
-      setPendingGeminiResponseDiagnostics({
-        finishReason: candidates[0]?.finishReason ?? null,
-        outputTokenCount: response.usageMetadata?.candidatesTokenCount ?? null,
-        thoughtsTokenCount: response.usageMetadata?.thoughtsTokenCount ?? null,
-        totalTokenCount: response.usageMetadata?.totalTokenCount ?? null,
-        candidateCount: candidates.length,
-        responseTextLength: text.length,
-      });
 
       return {
         ok: true,
