@@ -89,7 +89,7 @@ export function ListenWorkspace() {
                         ]
                           .filter(Boolean)
                           .join(" · ")
-                      : `${formatFileSize(item.size)} · Open studio`}
+                      : `${formatFileSize(item.size)} · Open to listen`}
                   </p>
                 </div>
               </Link>

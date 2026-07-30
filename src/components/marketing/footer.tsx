@@ -54,7 +54,10 @@ export function MarketingFooter() {
         </nav>
       </div>
       <div className="border-t border-border">
-        <p className="mx-auto max-w-7xl px-5 py-6 text-xs text-subtle sm:px-8">
+        <p
+          className="mx-auto max-w-7xl px-5 py-6 text-xs text-subtle sm:px-8"
+          suppressHydrationWarning
+        >
           © {year} {siteConfig.name}
         </p>
       </div>

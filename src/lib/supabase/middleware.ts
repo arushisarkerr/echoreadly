@@ -101,7 +101,13 @@ export async function updateSession(request: NextRequest) {
 
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = ROUTES.login;
-    loginUrl.searchParams.set("next", pathname);
+    const nextPath =
+      pathname === ROUTES.dashboard ||
+      pathname === ROUTES.listen ||
+      pathname === ROUTES.history
+        ? ROUTES.library
+        : pathname;
+    loginUrl.searchParams.set("next", nextPath);
     const redirect = NextResponse.redirect(loginUrl);
     applySecurityHeaders(redirect.headers);
     return redirect;

@@ -11,6 +11,14 @@ function getSafeNextPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return ROUTES.library;
   }
+  // Align with middleware: dashboard / listen / history land on Library.
+  if (
+    value === ROUTES.dashboard ||
+    value === ROUTES.listen ||
+    value === ROUTES.history
+  ) {
+    return ROUTES.library;
+  }
   return value;
 }
 

@@ -12,7 +12,7 @@ const STORIES = [
     id: "prepare",
     eyebrow: "Import → Preparing → Listen",
     title: "Status you can trust.",
-    copy: "Drop a file or paste a link, then follow preparing status until audio is ready. No guessing — just a clear path to listen.",
+    copy: "Import a file, then follow preparing status until audio is ready. No guessing — just a clear path to listen.",
     visual: "chat",
   },
   {

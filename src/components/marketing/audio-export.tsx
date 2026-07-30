@@ -3,8 +3,8 @@ import { Reveal } from "@/components/marketing/reveal";
 const FORMATS = [
   {
     name: "MP3",
-    line: "Coming soon",
-    detail: "Take audio with you — phones, cars, and everyday playlists.",
+    line: "Available now",
+    detail: "Download prepared audio from Downloads after you listen.",
   },
   {
     name: "M4A",
@@ -32,14 +32,14 @@ export function MarketingAudioExport() {
         <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <Reveal>
             <p className="er-copy-sm font-medium tracking-[0.18em] text-accent uppercase">
-              Take audio with you · Coming soon
+              Take audio with you
             </p>
             <h2 id="export-heading" className="er-display-lg mt-4 max-w-[14ch] text-foreground">
-              Listen now. Download later.
+              Listen now. Download when ready.
             </h2>
             <p className="er-copy mt-5 text-muted">
-              Stream natural AI audio in the browser today. Downloads in MP3,
-              M4A, and WAV are planned so you can take audio with you.
+              Stream natural AI audio in the browser today. MP3 downloads are
+              available from Downloads. M4A and WAV are planned.
             </p>
 
             <ul className="mt-10 list-none space-y-0 divide-y divide-border border-y border-border p-0">
@@ -64,13 +64,18 @@ export function MarketingAudioExport() {
                   <span className="text-xs font-semibold tracking-[0.14em] text-accent uppercase">
                     Downloads
                   </span>
-                  <span className="text-xs text-subtle">Coming soon</span>
+                  <span className="text-xs text-subtle">MP3 live</span>
                 </div>
                 <div className="mt-8 space-y-4">
-                  {["briefing.mp3", "chapter-03.m4a", "master.wav"].map(
-                    (file, i) => (
+                  {(
+                    [
+                      { file: "briefing.mp3", status: "Available" },
+                      { file: "chapter-03.m4a", status: "Planned" },
+                      { file: "master.wav", status: "Planned" },
+                    ] as const
+                  ).map((item, i) => (
                       <div
-                        key={file}
+                        key={item.file}
                         className="flex items-center gap-3 rounded-2xl border border-border bg-surface/70 px-4 py-3"
                       >
                         <span
@@ -78,12 +83,11 @@ export function MarketingAudioExport() {
                           style={{ opacity: 1 - i * 0.2 }}
                         />
                         <span className="flex-1 font-mono text-sm text-foreground">
-                          {file}
+                          {item.file}
                         </span>
-                        <span className="text-xs text-subtle">Planned</span>
+                        <span className="text-xs text-subtle">{item.status}</span>
                       </div>
-                    ),
-                  )}
+                    ))}
                 </div>
                 <div className="mt-8 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                   <div className="h-full w-[28%] rounded-full bg-accent" />

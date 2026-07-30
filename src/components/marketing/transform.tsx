@@ -70,8 +70,8 @@ export function MarketingTransform() {
                 Output
               </p>
               <p className="er-display-sm mt-3 text-foreground">
-                Natural AI audio ready to listen — বাংলা first. Downloads and
-                more voices are coming soon.
+                Natural AI audio ready to listen — বাংলা first. MP3 downloads
+                are available; more voices are planned.
               </p>
               <div className="mt-8 flex h-20 items-end gap-1.5">
                 {[30, 55, 40, 75, 48, 82, 36, 68, 44, 70, 32, 60].map((h, i) => (

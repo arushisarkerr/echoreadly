@@ -35,7 +35,9 @@ export function AuthProvider({
   initialUser = null,
 }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(initialUser);
-  const [loading, setLoading] = useState(!initialUser);
+  // Root layout always resolves the session before render — avoid a loading
+  // skeleton flash (and possible auth-chrome mismatch) on first paint.
+  const [loading, setLoading] = useState(false);
 
   const refreshUser = useCallback(async () => {
     const supabase = createClient();

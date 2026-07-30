@@ -24,7 +24,7 @@ const FAQS = [
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Start free to import, prepare, and listen. Premium voices and higher limits are available on paid tiers.",
+    a: "Yes. Start free to import, prepare, and listen. Paid tiers with premium voices and higher limits are planned — not billed yet.",
   },
 ] as const;
 

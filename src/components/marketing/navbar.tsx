@@ -27,9 +27,12 @@ export function MarketingNavbar() {
     function onScroll() {
       setScrolled(window.scrollY > 24);
     }
-    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const boot = window.setTimeout(onScroll, 0);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(boot);
+    };
   }, []);
 
   useEffect(() => {
