@@ -4,6 +4,7 @@
  */
 
 import { serverEnv } from "@/config";
+import { requireVoiceAccess } from "@/features/billing/gate";
 import {
   createOpenAiTtsProvider,
 } from "@/features/tts";
@@ -64,6 +65,11 @@ export async function POST(request: Request) {
 
   if (!isSupportedTtsVoiceId(voiceField.data)) {
     return apiError("VALIDATION", "Unsupported voice.", 400);
+  }
+
+  const voiceGate = await requireVoiceAccess(auth.user.id, voiceField.data);
+  if (!voiceGate.ok) {
+    return voiceGate.response;
   }
 
   try {

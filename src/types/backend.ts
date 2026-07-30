@@ -99,7 +99,73 @@ type AudioExportsRow = {
   mime_type: string;
   byte_size: number;
   original_file_name: string | null;
+  target_language: string;
   created_at: string;
+  updated_at: string;
+};
+
+type DocumentTranslationsRow = {
+  id: string;
+  user_id: string;
+  document_id: string;
+  scope: "document" | "page" | "selection" | "summary";
+  page_number: number | null;
+  summary_type: SummaryType | null;
+  selection_hash: string | null;
+  target_language: string;
+  source_content_hash: string;
+  source_text: string;
+  translated_text: string;
+  model: string;
+  generated_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type BillingCustomersRow = {
+  user_id: string;
+  stripe_customer_id: string;
+  email: string | null;
+  trial_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SubscriptionsRow = {
+  user_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  plan_id: "free" | "pro";
+  status: string;
+  billing_interval: "month" | "year" | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  canceled_at: string | null;
+  trial_start: string | null;
+  trial_end: string | null;
+  usage_reset_at: string | null;
+  latest_invoice_id: string | null;
+  checkout_session_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type BillingWebhookEventsRow = {
+  id: string;
+  type: string;
+  processed_at: string;
+  livemode: boolean;
+  payload_summary: string | null;
+  created_at: string;
+};
+
+type UsageCountersRow = {
+  user_id: string;
+  metric: string;
+  period_start: string;
+  count: number;
   updated_at: string;
 };
 
@@ -226,9 +292,71 @@ export type Database = {
         Update: Partial<AudioExportsRow>;
         Relationships: [];
       };
+      document_translations: {
+        Row: DocumentTranslationsRow;
+        Insert: Partial<DocumentTranslationsRow> & {
+          user_id: string;
+          document_id: string;
+          scope: "document" | "page" | "selection" | "summary";
+          target_language: string;
+          source_content_hash: string;
+          source_text: string;
+          translated_text: string;
+          model: string;
+        };
+        Update: Partial<DocumentTranslationsRow>;
+        Relationships: [];
+      };
+      billing_customers: {
+        Row: BillingCustomersRow;
+        Insert: Partial<BillingCustomersRow> & {
+          user_id: string;
+          stripe_customer_id: string;
+        };
+        Update: Partial<BillingCustomersRow>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: SubscriptionsRow;
+        Insert: Partial<SubscriptionsRow> & {
+          user_id: string;
+          stripe_customer_id: string;
+        };
+        Update: Partial<SubscriptionsRow>;
+        Relationships: [];
+      };
+      billing_webhook_events: {
+        Row: BillingWebhookEventsRow;
+        Insert: Partial<BillingWebhookEventsRow> & {
+          id: string;
+          type: string;
+        };
+        Update: Partial<BillingWebhookEventsRow>;
+        Relationships: [];
+      };
+      usage_counters: {
+        Row: UsageCountersRow;
+        Insert: Partial<UsageCountersRow> & {
+          user_id: string;
+          metric: string;
+          period_start: string;
+        };
+        Update: Partial<UsageCountersRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      increment_usage_counter: {
+        Args: {
+          p_user_id: string;
+          p_metric: string;
+          p_period_start: string;
+          p_amount?: number;
+        };
+        Returns: number;
+      };
+    };
     Enums: {
       processing_status: ProcessingStatus;
     };

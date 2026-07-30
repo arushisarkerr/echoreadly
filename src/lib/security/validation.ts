@@ -5,9 +5,12 @@
 import {
   ACCEPTED_PDF_MIME,
   MAX_PDF_UPLOAD_BYTES,
+  MAX_TRANSLATION_SELECTION_CHARS,
   canonicalMimeForFormat,
+  isSupportedTargetLanguage,
   resolveDocumentFormat,
   type DocumentFormat,
+  type TargetLanguageCode,
 } from "@/constants";
 import { MAX_TTS_INPUT_CHARS } from "@/features/tts/types";
 import type { SummaryType } from "@/features/ai";
@@ -459,4 +462,66 @@ export function validateTtsVoiceId(
   }
 
   return { ok: true, data: voice };
+}
+
+export type TranslationScope =
+  | "document"
+  | "page"
+  | "selection"
+  | "summary";
+
+export function validateTargetLanguage(
+  value: unknown,
+): ValidationResult<TargetLanguageCode> {
+  if (!isSupportedTargetLanguage(value)) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "Unsupported target language.",
+    };
+  }
+
+  return { ok: true, data: value };
+}
+
+export function validateTranslationScope(
+  value: unknown,
+): ValidationResult<TranslationScope> {
+  if (
+    value !== "document" &&
+    value !== "page" &&
+    value !== "selection" &&
+    value !== "summary"
+  ) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "scope must be document, page, selection, or summary.",
+    };
+  }
+
+  return { ok: true, data: value };
+}
+
+export function validateTranslationSelectionText(
+  value: unknown,
+): ValidationResult<string> {
+  if (typeof value !== "string" || !value.trim()) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: "selection text is required for selection scope.",
+    };
+  }
+
+  const text = value.trim();
+  if (text.length > MAX_TRANSLATION_SELECTION_CHARS) {
+    return {
+      ok: false,
+      code: "VALIDATION",
+      message: `selection text must be at most ${MAX_TRANSLATION_SELECTION_CHARS} characters.`,
+    };
+  }
+
+  return { ok: true, data: text };
 }

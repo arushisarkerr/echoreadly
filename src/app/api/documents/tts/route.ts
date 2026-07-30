@@ -13,6 +13,11 @@ import {
 import { ensureDocumentProcessed } from "@/features/processing";
 import { translateDocumentContent } from "@/features/translation/translate-service";
 import {
+  recordUsage,
+  requireFeatureAndQuota,
+  requireVoiceAccess,
+} from "@/features/billing/gate";
+import {
   createOpenAiTtsProvider,
   joinPageChunkText,
   MAX_TTS_INPUT_CHARS,
@@ -76,6 +81,11 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
+  }
+
+  const gate = await requireFeatureAndQuota(auth.user.id, "tts", "tts");
+  if (!gate.ok) {
+    return gate.response;
   }
 
   const rate = await enforceRateLimit({
@@ -317,6 +327,11 @@ export async function POST(request: Request) {
       supabase,
     );
 
+    const voiceGate = await requireVoiceAccess(auth.user.id, voice);
+    if (!voiceGate.ok) {
+      return voiceGate.response;
+    }
+
     const provider = createOpenAiTtsProvider(serverEnv.openAiApiKey);
     const synthesized = await provider.synthesize({ text, voice });
 
@@ -328,6 +343,15 @@ export async function POST(request: Request) {
         voice,
       }, synthesized.error.message);
       return mapDomainFailure(synthesized.error.message, "tts");
+    }
+
+    try {
+      await recordUsage(auth.user.id, "tts", gate.entitlement);
+    } catch (error) {
+      logger.warn("TTS usage record failed", {
+        route,
+        userId: auth.user.id,
+      }, error);
     }
 
     return apiBinary(Buffer.from(synthesized.data.audio), {

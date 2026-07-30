@@ -5,6 +5,10 @@
 
 import { logger } from "@/lib/logger";
 import {
+  recordUsage,
+  requireFeatureAndQuota,
+} from "@/features/billing/gate";
+import {
   apiError,
   apiSuccess,
   enforceRateLimit,
@@ -33,6 +37,15 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
+  }
+
+  const gate = await requireFeatureAndQuota(
+    auth.user.id,
+    "summarize",
+    "summaries",
+  );
+  if (!gate.ok) {
+    return gate.response;
   }
 
   const rate = await enforceRateLimit({
@@ -95,6 +108,15 @@ export async function POST(request: Request) {
         summaryType: summaryType.data,
       }, result.error);
       return mapDomainFailure(result.error, "ai");
+    }
+
+    try {
+      await recordUsage(auth.user.id, "summaries", gate.entitlement);
+    } catch (error) {
+      logger.warn("Summary usage record failed", {
+        route,
+        userId: auth.user.id,
+      }, error);
     }
 
     return apiSuccess(result.data);

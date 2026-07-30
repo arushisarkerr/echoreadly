@@ -10,6 +10,9 @@ import {
   isSupportedTtsVoiceId,
   TTS_VOICE_CATALOG,
 } from "@/features/tts/voices";
+import { requireVoiceAccess } from "@/features/billing/gate";
+import { getEntitlement } from "@/features/billing/entitlements";
+import { FREE_TTS_VOICE_IDS } from "@/constants";
 import { logger } from "@/lib/logger";
 import {
   apiError,
@@ -40,9 +43,17 @@ export async function GET() {
     );
   }
 
+  const entitlement = await getEntitlement(auth.user.id);
+  const voices = entitlement.isPremium
+    ? TTS_VOICE_CATALOG
+    : TTS_VOICE_CATALOG.filter((voice) =>
+        (FREE_TTS_VOICE_IDS as readonly string[]).includes(voice.id),
+      );
+
   return apiSuccess({
     voice: preferred.data,
-    voices: TTS_VOICE_CATALOG,
+    voices,
+    planId: entitlement.planId,
   });
 }
 
@@ -70,6 +81,11 @@ export async function PUT(request: Request) {
 
   if (!isSupportedTtsVoiceId(voiceField.data)) {
     return apiError("VALIDATION", "Unsupported voice.", 400);
+  }
+
+  const voiceGate = await requireVoiceAccess(auth.user.id, voiceField.data);
+  if (!voiceGate.ok) {
+    return voiceGate.response;
   }
 
   const client = await createClient();

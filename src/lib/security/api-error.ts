@@ -15,6 +15,7 @@ export type ApiErrorCode =
   | "VALIDATION"
   | "NOT_FOUND"
   | "RATE_LIMITED"
+  | "LIMIT_EXCEEDED"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA"
   | "AI_ERROR"

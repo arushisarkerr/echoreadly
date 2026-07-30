@@ -5,6 +5,10 @@
 
 import { logger } from "@/lib/logger";
 import {
+  recordUsage,
+  requireFeatureAndQuota,
+} from "@/features/billing/gate";
+import {
   apiError,
   apiSuccess,
   enforceRateLimit,
@@ -26,6 +30,15 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
+  }
+
+  const gate = await requireFeatureAndQuota(
+    auth.user.id,
+    "upload",
+    "documents",
+  );
+  if (!gate.ok) {
+    return gate.response;
   }
 
   const rate = await enforceRateLimit({
@@ -59,6 +72,15 @@ export async function POST(request: Request) {
       code: meta.code,
     }, meta.message);
     return apiError(meta.code, meta.message, 400);
+  }
+
+  try {
+    await recordUsage(auth.user.id, "documents", gate.entitlement);
+  } catch (error) {
+    logger.warn("Upload usage record failed", {
+      route,
+      userId: auth.user.id,
+    }, error);
   }
 
   return apiSuccess({

@@ -79,6 +79,26 @@ export const serverEnv = {
   get geminiApiKey(): string | undefined {
     return normalizeEnv(process.env.GEMINI_API_KEY);
   },
+
+  /** Stripe secret key — server only. */
+  get stripeSecretKey(): string | undefined {
+    return normalizeEnv(process.env.STRIPE_SECRET_KEY);
+  },
+
+  /** Stripe webhook signing secret. */
+  get stripeWebhookSecret(): string | undefined {
+    return normalizeEnv(process.env.STRIPE_WEBHOOK_SECRET);
+  },
+
+  /** Stripe Price ID for Pro monthly. */
+  get stripePriceProMonth(): string | undefined {
+    return normalizeEnv(process.env.STRIPE_PRICE_PRO_MONTH);
+  },
+
+  /** Stripe Price ID for Pro yearly. */
+  get stripePriceProYear(): string | undefined {
+    return normalizeEnv(process.env.STRIPE_PRICE_PRO_YEAR);
+  },
 } as const;
 
 export type PublicEnv = typeof publicEnv;

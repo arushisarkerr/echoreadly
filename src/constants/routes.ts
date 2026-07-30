@@ -25,12 +25,20 @@ export const PROTECTED_PATH_PREFIXES = [
   "/dashboard",
   "/api/documents",
   "/api/user",
+  "/api/billing",
   "/api/chat",
   "/api/tts",
   "/api/summarize",
 ] as const;
 
 export function isProtectedPath(pathname: string): boolean {
+  if (
+    pathname === "/api/billing/webhook" ||
+    pathname.startsWith("/api/billing/webhook/")
+  ) {
+    return false;
+  }
+
   return PROTECTED_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

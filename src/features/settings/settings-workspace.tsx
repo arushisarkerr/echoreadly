@@ -1,9 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 
 import { ROUTES } from "@/constants";
 import { AccountMenu } from "@/features/auth";
+import { BillingSettingsCard } from "@/features/billing";
 import { WorkspaceCanvas } from "@/features/dashboard/workspace-canvas";
 import { TTS_PLAYBACK_SPEEDS } from "@/features/tts";
 import { cn } from "@/utils";
@@ -146,6 +148,19 @@ export function SettingsWorkspace() {
               <AccountMenu />
             </div>
           </section>
+
+          <Suspense
+            fallback={
+              <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                  Plan & billing
+                </h2>
+                <p className="mt-2 text-sm text-muted">Loading plan…</p>
+              </section>
+            }
+          >
+            <BillingSettingsCard />
+          </Suspense>
 
           <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
             <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">

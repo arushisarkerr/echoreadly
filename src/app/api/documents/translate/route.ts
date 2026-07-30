@@ -4,6 +4,10 @@
 
 import { translateDocumentContent } from "@/features/translation/translate-service";
 import type { TranslateRequestInput } from "@/features/translation/types";
+import {
+  recordUsage,
+  requireFeatureAndQuota,
+} from "@/features/billing/gate";
 import { logger } from "@/lib/logger";
 import {
   apiError,
@@ -45,6 +49,15 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
+  }
+
+  const gate = await requireFeatureAndQuota(
+    auth.user.id,
+    "translate",
+    "translation",
+  );
+  if (!gate.ok) {
+    return gate.response;
   }
 
   const rate = await enforceRateLimit({
@@ -180,6 +193,17 @@ export async function POST(request: Request) {
         translated.error,
       );
       return mapDomainFailure(translated.error, "ai");
+    }
+
+    if (!translated.data.cached) {
+      try {
+        await recordUsage(auth.user.id, "translation", gate.entitlement);
+      } catch (error) {
+        logger.warn("Translation usage record failed", {
+          route,
+          userId: auth.user.id,
+        }, error);
+      }
     }
 
     return apiSuccess(translated.data);

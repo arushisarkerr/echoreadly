@@ -23,6 +23,10 @@ import {
   formatChatContext,
 } from "@/features/chat/prompts";
 import { ensureDocumentProcessed } from "@/features/processing";
+import {
+  recordUsage,
+  requireFeatureAndQuota,
+} from "@/features/billing/gate";
 import { logger } from "@/lib/logger";
 import {
   apiError,
@@ -56,6 +60,11 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) {
     return apiError("UNAUTHORIZED", auth.error, auth.status);
+  }
+
+  const gate = await requireFeatureAndQuota(auth.user.id, "chat", "chat");
+  if (!gate.ok) {
+    return gate.response;
   }
 
   const rate = await enforceRateLimit({
@@ -203,6 +212,15 @@ export async function POST(request: Request) {
     const isNotFound =
       cited.answer.trim() === NOT_FOUND_IN_DOCUMENT ||
       cited.answer.toLowerCase().includes("couldn't find that information");
+
+    try {
+      await recordUsage(auth.user.id, "chat", gate.entitlement);
+    } catch (error) {
+      logger.warn("Chat usage record failed", {
+        route,
+        userId: auth.user.id,
+      }, error);
+    }
 
     return apiSuccess({
       content: cited.answer,
