@@ -1,5 +1,8 @@
 /**
  * Parse structured citation payloads returned by the AI model.
+ *
+ * Supports the canonical EchoReadly schema plus common Gemini JSON-mode
+ * variants (string sections, nested wrappers, alternate field names).
  */
 
 import {
@@ -7,6 +10,37 @@ import {
   normalizePages,
 } from "./citation-utils";
 import type { CitedAnswer, CitedSection, CitedSummary } from "./types";
+
+const SECTION_TEXT_KEYS = [
+  "text",
+  "content",
+  "summary",
+  "body",
+  "paragraph",
+  "bullet",
+  "item",
+  "section",
+] as const;
+
+const SECTION_LIST_KEYS = [
+  "sections",
+  "summary_sections",
+  "items",
+  "paragraphs",
+  "bullets",
+  "points",
+] as const;
+
+const WRAPPER_KEYS = [
+  "data",
+  "result",
+  "response",
+  "output",
+  "payload",
+  "summary",
+] as const;
+
+const PAGE_LIST_KEYS = ["pages", "pageNumbers", "page_numbers", "citations"] as const;
 
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
@@ -68,52 +102,244 @@ function extractJsonObject(raw: string): unknown | null {
   try {
     return normalizeParsedJson(JSON.parse(cleaned) as unknown);
   } catch {
-    // Fall through — try to locate the outermost object.
+    // Fall through — try to locate the outermost object or array.
   }
 
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
+  const objectStart = cleaned.indexOf("{");
+  const objectEnd = cleaned.lastIndexOf("}");
+  const arrayStart = cleaned.indexOf("[");
+  const arrayEnd = cleaned.lastIndexOf("]");
 
-  if (start === -1 || end === -1 || end <= start) {
-    return null;
+  const candidates: string[] = [];
+
+  if (objectStart !== -1 && objectEnd > objectStart) {
+    candidates.push(cleaned.slice(objectStart, objectEnd + 1));
   }
 
-  try {
-    return normalizeParsedJson(
-      JSON.parse(cleaned.slice(start, end + 1)) as unknown,
-    );
-  } catch {
-    return null;
+  if (arrayStart !== -1 && arrayEnd > arrayStart) {
+    // Prefer an outer array only when it appears before any object,
+    // or when no object candidate exists.
+    if (objectStart === -1 || arrayStart < objectStart) {
+      candidates.unshift(cleaned.slice(arrayStart, arrayEnd + 1));
+    } else {
+      candidates.push(cleaned.slice(arrayStart, arrayEnd + 1));
+    }
   }
+
+  for (const candidate of candidates) {
+    try {
+      return normalizeParsedJson(JSON.parse(candidate) as unknown);
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function getFieldIgnoreCase(
+  record: Record<string, unknown>,
+  names: readonly string[],
+): unknown {
+  for (const name of names) {
+    if (name in record) {
+      return record[name];
+    }
+  }
+
+  const lowerToKey = new Map(
+    Object.keys(record).map((key) => [key.toLowerCase(), key] as const),
+  );
+
+  for (const name of names) {
+    const key = lowerToKey.get(name.toLowerCase());
+    if (key !== undefined) {
+      return record[key];
+    }
+  }
+
+  return undefined;
+}
+
+function readSectionText(value: Record<string, unknown>): string {
+  for (const name of SECTION_TEXT_KEYS) {
+    const field = getFieldIgnoreCase(value, [name]);
+    if (typeof field === "string" && field.trim()) {
+      return field.trim();
+    }
+  }
+
+  // Gemini sometimes nests the body: { text: { content: "..." } }
+  const nestedText = getFieldIgnoreCase(value, ["text", "content", "summary"]);
+  if (isRecord(nestedText)) {
+    for (const name of SECTION_TEXT_KEYS) {
+      const field = getFieldIgnoreCase(nestedText, [name]);
+      if (typeof field === "string" && field.trim()) {
+        return field.trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function readSectionPages(
+  value: Record<string, unknown>,
+  allowedPages?: ReadonlySet<number>,
+): number[] {
+  for (const name of PAGE_LIST_KEYS) {
+    const field = getFieldIgnoreCase(value, [name]);
+    if (field === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(field)) {
+      return normalizePages(field, allowedPages);
+    }
+
+    // Singular page number / numeric string.
+    if (typeof field === "number" || typeof field === "string") {
+      return normalizePages([field], allowedPages);
+    }
+  }
+
+  const singular = getFieldIgnoreCase(value, ["page", "pageNumber", "page_number"]);
+  if (typeof singular === "number" || typeof singular === "string") {
+    return normalizePages([singular], allowedPages);
+  }
+
+  return [];
+}
+
 function parseSection(
   value: unknown,
   allowedPages?: ReadonlySet<number>,
 ): CitedSection | null {
+  // Gemini JSON mode often simplifies sections to plain strings.
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text ? { text, pages: [] } : null;
+  }
+
   if (!isRecord(value)) {
     return null;
   }
 
-  const text =
-    typeof value.text === "string"
-      ? value.text.trim()
-      : typeof value.content === "string"
-        ? value.content.trim()
-        : "";
-
+  const text = readSectionText(value);
   if (!text) {
     return null;
   }
 
   return {
     text,
-    pages: normalizePages(value.pages ?? value.pageNumbers, allowedPages),
+    pages: readSectionPages(value, allowedPages),
   };
+}
+
+/**
+ * Coerce model `sections` values into a flat list.
+ * Accepts arrays, a single section object, or an object-map of sections.
+ */
+function coerceSectionsList(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return [value];
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  // Single section object: { text, pages }
+  if (readSectionText(value)) {
+    return [value];
+  }
+
+  const entries = Object.values(value);
+  if (
+    entries.length > 0 &&
+    entries.every(
+      (entry) =>
+        typeof entry === "string" || isRecord(entry) || Array.isArray(entry),
+    )
+  ) {
+    return entries;
+  }
+
+  return null;
+}
+
+function readSectionsFromRecord(
+  record: Record<string, unknown>,
+): unknown[] | null {
+  for (const key of SECTION_LIST_KEYS) {
+    const field = getFieldIgnoreCase(record, [key]);
+    if (field === undefined) {
+      continue;
+    }
+
+    const list = coerceSectionsList(field);
+    if (list && list.length > 0) {
+      return list;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Locate a sections list in canonical or Gemini-wrapped payloads.
+ * Prefers explicit `sections` (and aliases) over wrapper/summary fallbacks.
+ */
+function findSectionsList(parsed: unknown): unknown[] | null {
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+
+  if (!isRecord(parsed)) {
+    return null;
+  }
+
+  // 1. Canonical / aliased sections on the root object.
+  const rootSections = readSectionsFromRecord(parsed);
+  if (rootSections) {
+    return rootSections;
+  }
+
+  // 2. Nested under common Gemini wrappers ({ data|result|summary: { sections } }).
+  for (const key of WRAPPER_KEYS) {
+    const inner = getFieldIgnoreCase(parsed, [key]);
+    if (isRecord(inner)) {
+      const nested = readSectionsFromRecord(inner);
+      if (nested) {
+        return nested;
+      }
+
+      // Wrapper object is itself a single section.
+      if (readSectionText(inner)) {
+        return [inner];
+      }
+    } else if (Array.isArray(inner)) {
+      const list = coerceSectionsList(inner);
+      if (list && list.length > 0) {
+        return list;
+      }
+    }
+  }
+
+  // 3. Entire object is itself one section ({ text, pages }).
+  if (readSectionText(parsed)) {
+    return [parsed];
+  }
+
+  return null;
 }
 
 /**
@@ -125,9 +351,10 @@ export function parseCitedSummary(
   allowedPages?: ReadonlySet<number>,
 ): CitedSummary {
   const parsed = extractJsonObject(raw);
+  const sectionValues = findSectionsList(parsed);
 
-  if (isRecord(parsed) && Array.isArray(parsed.sections)) {
-    const sections = parsed.sections
+  if (sectionValues) {
+    const sections = sectionValues
       .map((section) => parseSection(section, allowedPages))
       .filter((section): section is CitedSection => section !== null);
 
@@ -148,13 +375,12 @@ export function parseCitedSummary(
           ? parsed.summary.trim()
           : typeof parsed.answer === "string"
             ? parsed.answer.trim()
-            : "";
+            : typeof parsed.text === "string"
+              ? parsed.text.trim()
+              : "";
 
     if (text) {
-      const pages = normalizePages(
-        parsed.pages ?? parsed.pageNumbers,
-        allowedPages,
-      );
+      const pages = readSectionPages(parsed, allowedPages);
 
       return {
         sections: [{ text, pages }],
@@ -194,7 +420,7 @@ export function parseCitedAnswer(
     if (answer) {
       return {
         answer,
-        pages: normalizePages(parsed.pages ?? parsed.pageNumbers, allowedPages),
+        pages: readSectionPages(parsed, allowedPages),
       };
     }
   }

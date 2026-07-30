@@ -258,10 +258,6 @@ export async function generateDocumentSummary(
   const allowedPages = collectAllowedPages(
     input.chunks.chunks.map((chunk) => chunk.pageNumber),
   );
-  // TEMPORARY — capture exact model output before parse; remove after one failure.
-  logger.warn("TEMPORARY generation.data.text", {
-    text: generation.data.text,
-  });
   const cited = parseCitedSummary(generation.data.text, allowedPages);
   const content = sectionsToPlainText(input.summaryType, cited.sections);
 
