@@ -4,7 +4,13 @@
  */
 
 import { serverEnv } from "@/config";
-import { createOpenAiProvider } from "@/features/ai";
+import {
+  createOpenAiProvider,
+  getSharedGeminiFallbackProvider,
+  shouldFallbackToGemini,
+  summarizeErrorType,
+  type AiProvider,
+} from "@/features/ai";
 import {
   collectAllowedPages,
   parseCitedAnswer,
@@ -140,16 +146,54 @@ export async function POST(request: Request) {
       return history.data;
     })();
 
-    const provider = createOpenAiProvider(serverEnv.openAiApiKey);
-    const generation = await provider.generateText({
-      instructions: buildChatInstructions(),
-      input: buildChatInput({
-        context,
-        history: promptHistory,
-        question: question.data,
-      }),
+    const provider: AiProvider = createOpenAiProvider(serverEnv.openAiApiKey);
+    const instructions = buildChatInstructions();
+    const promptInput = buildChatInput({
+      context,
+      history: promptHistory,
+      question: question.data,
+    });
+
+    let generation = await provider.generateText({
+      instructions,
+      input: promptInput,
       maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
     });
+
+    if (
+      !generation.ok &&
+      shouldFallbackToGemini(generation.error) &&
+      provider.name !== "gemini"
+    ) {
+      const fallback = getSharedGeminiFallbackProvider();
+      if (fallback.isConfigured()) {
+        logger.warn("Chat falling back to Gemini", {
+          primaryProvider: provider.name,
+          fallbackProvider: "gemini",
+          errorType: summarizeErrorType(generation.error),
+        });
+
+        generation = await fallback.generateText({
+          instructions,
+          input: promptInput,
+          // Use Gemini's own default model — never reuse the OpenAI model id.
+          maxOutputTokens: DEFAULT_CHAT_MAX_OUTPUT_TOKENS,
+        });
+
+        if (generation.ok) {
+          logger.info("Chat Gemini fallback succeeded", {
+            provider: "gemini",
+            reason: "fallback_from_openai",
+          });
+        } else {
+          logger.error("Chat Gemini fallback failed", {
+            provider: "gemini",
+            originalProvider: "openai",
+            errorType: summarizeErrorType(generation.error),
+          });
+        }
+      }
+    }
 
     if (!generation.ok) {
       logger.aiFailure("Chat generation failed", {

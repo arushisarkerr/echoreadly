@@ -703,6 +703,7 @@ export async function ensureDocumentProcessed(
 export async function summarizeDocument(
   documentId: string,
   summaryType: SummaryType = "short",
+  options?: { regenerate?: boolean },
 ): Promise<ProcessingResult<SummaryResult>> {
   const ownership = await resolveOwnership();
   if (!ownership.ok) {
@@ -718,20 +719,24 @@ export async function summarizeDocument(
     return current;
   }
 
-  const existingSummary = await getDocumentSummaryByType(
-    documentId,
-    userId,
-    summaryType,
-    client,
-  );
+  const regenerate = options?.regenerate === true;
 
-  if (existingSummary.ok && existingSummary.data) {
-    const result = summaryRowToResult(existingSummary.data);
-    saveDocument({
-      ...current.data,
-      summary: result.content,
-    });
-    return { ok: true, data: result };
+  if (!regenerate) {
+    const existingSummary = await getDocumentSummaryByType(
+      documentId,
+      userId,
+      summaryType,
+      client,
+    );
+
+    if (existingSummary.ok && existingSummary.data) {
+      const result = summaryRowToResult(existingSummary.data);
+      saveDocument({
+        ...current.data,
+        summary: result.content,
+      });
+      return { ok: true, data: result };
+    }
   }
 
   const chunks = await getDocumentChunks(documentId);

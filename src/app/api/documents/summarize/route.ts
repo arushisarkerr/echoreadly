@@ -24,6 +24,7 @@ type SummarizeRequestBody = {
   summaryType?: unknown;
   originalFileName?: unknown;
   fileSize?: unknown;
+  regenerate?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       summaryType: summaryType.data,
       originalFileName: originalFileName.data,
       fileSize: fileSize.data,
+      regenerate: body.regenerate === true,
     });
 
     if (!result.ok) {

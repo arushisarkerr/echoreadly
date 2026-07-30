@@ -84,7 +84,7 @@ function sectionsToPlainText(
 /**
  * OpenAI failures that should trigger an automatic Gemini retry.
  */
-function shouldFallbackToGemini(error: AiError): boolean {
+export function shouldFallbackToGemini(error: AiError): boolean {
   if (error.code === "rate_limit") {
     return true;
   }
@@ -100,7 +100,7 @@ function shouldFallbackToGemini(error: AiError): boolean {
 }
 
 /** Compact error label for server logs (no message body / PII). */
-function summarizeErrorType(error: AiError): string {
+export function summarizeErrorType(error: AiError): string {
   const normalized = error.message.toLowerCase();
 
   if (normalized.includes("quota")) {
@@ -149,6 +149,11 @@ function getGeminiFallbackProvider(): AiProvider {
   }
 
   return geminiFallbackProvider;
+}
+
+/** Shared Gemini fallback provider for summarization and chat (single retry). */
+export function getSharedGeminiFallbackProvider(): AiProvider {
+  return getGeminiFallbackProvider();
 }
 
 /** Replace the default provider (useful for tests or alternate vendors). */

@@ -20,8 +20,11 @@ export {
   generateDocumentSummary,
   getDefaultAiProvider,
   getDocumentSummary,
+  getSharedGeminiFallbackProvider,
   resetSummaryCache,
   setDefaultAiProvider,
+  shouldFallbackToGemini,
+  summarizeErrorType,
   type GenerateSummaryInput,
 } from "./summary-service";
 export {

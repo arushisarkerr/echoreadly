@@ -38,7 +38,7 @@ export function useSummary({
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
 
   const generate = useCallback(
-    async (summaryType: SummaryType) => {
+    async (summaryType: SummaryType, options?: { regenerate?: boolean }) => {
       setActiveType(summaryType);
       setStatus("loading");
       setError(null);
@@ -53,6 +53,7 @@ export function useSummary({
             storagePath,
             summaryType,
             originalFileName: fileName,
+            ...(options?.regenerate ? { regenerate: true } : {}),
           }),
         });
 
@@ -85,7 +86,7 @@ export function useSummary({
       return;
     }
 
-    await generate(activeType);
+    await generate(activeType, { regenerate: true });
   }, [activeType, generate]);
 
   const copySummary = useCallback(async () => {

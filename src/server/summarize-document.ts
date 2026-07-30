@@ -15,6 +15,7 @@ export type SummarizeByStoragePathInput = {
   summaryType: SummaryType;
   originalFileName?: string;
   fileSize?: number;
+  regenerate?: boolean;
 };
 
 function getFileNameFromStoragePath(storagePath: string): string {
@@ -44,5 +45,7 @@ export async function summarizeDocumentByStoragePath(
     return processed;
   }
 
-  return summarizeDocument(processed.data.document.id, input.summaryType);
+  return summarizeDocument(processed.data.document.id, input.summaryType, {
+    regenerate: input.regenerate,
+  });
 }
