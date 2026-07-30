@@ -32,8 +32,10 @@ export {
   documentTextHasContent,
   documentTextStore,
   InMemoryDocumentTextStore,
+  needsOcr,
   type DocumentTextResult,
   type DocumentTextStore,
+  type TextSource,
 } from "./document-text";
 export {
   extractTextFromPdfBytes,

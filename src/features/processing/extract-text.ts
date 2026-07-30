@@ -1,8 +1,9 @@
 /**
- * PDF text extraction via the dedicated PDFium adapter.
- * No OCR and no AI — embedded text only.
+ * PDF text extraction: PDFium primary, Mistral OCR fallback when empty.
+ * Does not change PDFium assembly / spacing behaviour.
  */
 
+import { createMistralOcrProvider } from "@/features/ocr";
 import {
   extractPagesWithPdfium,
   type PdfiumExtractErrorCode,
@@ -11,6 +12,8 @@ import {
 import {
   createDocumentTextResult,
   documentTextHasContent,
+  needsOcr,
+  type DocumentTextResult,
 } from "./document-text";
 
 export type TextExtractionErrorCode =
@@ -24,7 +27,7 @@ export type TextExtractionError = {
 };
 
 export type TextExtractionResult =
-  | { ok: true; data: import("./document-text").DocumentTextResult }
+  | { ok: true; data: DocumentTextResult }
   | { ok: false; error: TextExtractionError };
 
 function mapPdfiumErrorCode(
@@ -40,8 +43,26 @@ function mapPdfiumErrorCode(
   return "corrupted_pdf";
 }
 
+async function tryMistralOcrFallback(
+  data: Uint8Array,
+): Promise<DocumentTextResult | null> {
+  try {
+    const provider = createMistralOcrProvider();
+    const ocr = await provider.extractPdf(Buffer.from(data));
+    return createDocumentTextResult(
+      ocr.pageTexts,
+      ocr.pageTexts.length,
+      "ocr:mistral",
+    );
+  } catch {
+    // OCR must not fail the request — caller keeps the PDFium result.
+    return null;
+  }
+}
+
 /**
  * Extract full text, per-page text, and page count from PDF bytes.
+ * PDFium first; Mistral OCR only when PDFium text is effectively empty.
  */
 export async function extractTextFromPdfBytes(
   data: Uint8Array,
@@ -59,7 +80,16 @@ export async function extractTextFromPdfBytes(
   }
 
   const { pageTexts, pageCount } = extraction;
-  const result = createDocumentTextResult(pageTexts, pageCount);
+  const pdfiumResult = createDocumentTextResult(pageTexts, pageCount, "pdfium");
+
+  let result = pdfiumResult;
+
+  if (needsOcr(pdfiumResult)) {
+    const ocrResult = await tryMistralOcrFallback(data);
+    if (ocrResult) {
+      result = ocrResult;
+    }
+  }
 
   if (!documentTextHasContent(result)) {
     return {
@@ -67,7 +97,7 @@ export async function extractTextFromPdfBytes(
       error: {
         code: "empty_pdf",
         message:
-          "No readable text was found. Scanned PDFs need OCR (not available yet).",
+          "No readable text was found. Scanned PDFs need OCR, but no usable text could be extracted.",
       },
     };
   }
@@ -77,3 +107,5 @@ export async function extractTextFromPdfBytes(
     data: result,
   };
 }
+
+export { needsOcr };

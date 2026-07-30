@@ -415,6 +415,7 @@ function resolveDocumentText(
     fullText: document.extractedText ?? "",
     pageCount: document.pageCount ?? document.pageTexts.length,
     extractedAt: document.extractedAt ?? new Date().toISOString(),
+    textSource: "pdfium",
   };
 }
 
