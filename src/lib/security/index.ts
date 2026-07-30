@@ -38,6 +38,7 @@ export {
   validateDocumentId,
   validateFileName,
   validateFileSize,
+  validateDocumentUploadMeta,
   validatePageNumber,
   validatePdfUploadMeta,
   validateStoragePath,

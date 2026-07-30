@@ -1,15 +1,15 @@
 /**
- * Create short-lived signed URLs for private PDF objects.
+ * Create short-lived signed URLs for private document objects.
  * Never generates a permanent public URL for the `pdfs` bucket.
  * Only signs objects owned by the signed-in user (`{userId}/…`).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { PDFS_BUCKET } from "@/constants";
+import { PDFS_BUCKET, isSupportedDocumentExtension } from "@/constants";
 import { createClient } from "@/lib/supabase/client";
 
-import { isOwnedPdfObjectKey } from "./ownership";
+import { isOwnedDocumentObjectKey } from "./ownership";
 
 /** Default signed URL lifetime: 1 hour. */
 export const PDF_SIGNED_URL_EXPIRES_IN = 60 * 60;
@@ -21,7 +21,7 @@ export type PdfSignedUrlResult = {
 
 /**
  * Normalize a storage path or object key into a bucket object key.
- * Accepts `pdfs/{userId}/file.pdf` or `{userId}/file.pdf`.
+ * Accepts `pdfs/{userId}/file.ext` or `{userId}/file.ext`.
  */
 export function toPdfObjectKey(storagePath: string): string {
   const trimmed = storagePath.replace(/^\/+/, "").trim();
@@ -34,7 +34,7 @@ export function toPdfObjectKey(storagePath: string): string {
 }
 
 /**
- * Create a temporary signed URL for a private PDF object owned by the caller.
+ * Create a temporary signed URL for a private document owned by the caller.
  */
 export async function createPdfSignedUrl(
   storagePath: string,
@@ -45,10 +45,10 @@ export async function createPdfSignedUrl(
 ): Promise<PdfSignedUrlResult> {
   const objectKey = toPdfObjectKey(storagePath);
 
-  if (!objectKey || !objectKey.toLowerCase().endsWith(".pdf")) {
+  if (!objectKey || !isSupportedDocumentExtension(objectKey)) {
     return {
       signedUrl: null,
-      error: "Invalid PDF storage path.",
+      error: "Invalid document storage path.",
     };
   }
 
@@ -68,10 +68,10 @@ export async function createPdfSignedUrl(
       };
     }
 
-    if (!isOwnedPdfObjectKey(objectKey, user.id)) {
+    if (!isOwnedDocumentObjectKey(objectKey, user.id)) {
       return {
         signedUrl: null,
-        error: "You do not have access to this PDF.",
+        error: "You do not have access to this document.",
       };
     }
 
@@ -82,7 +82,8 @@ export async function createPdfSignedUrl(
     if (error || !data?.signedUrl) {
       return {
         signedUrl: null,
-        error: error?.message || "Unable to create a signed URL for this PDF.",
+        error:
+          error?.message || "Unable to create a signed URL for this document.",
       };
     }
 
@@ -96,7 +97,7 @@ export async function createPdfSignedUrl(
       error:
         error instanceof Error
           ? error.message
-          : "Unable to create a signed URL for this PDF.",
+          : "Unable to create a signed URL for this document.",
     };
   }
 }

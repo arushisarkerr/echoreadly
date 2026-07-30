@@ -56,8 +56,18 @@ export type ListPdfsResult = {
   error: string | null;
 };
 
-function isPdfObject(name: string, id: string | null): boolean {
-  return Boolean(id) && name.toLowerCase().endsWith(".pdf");
+function isDocumentObject(name: string, id: string | null): boolean {
+  if (!id) {
+    return false;
+  }
+  const lower = name.toLowerCase();
+  return (
+    lower.endsWith(".pdf") ||
+    lower.endsWith(".docx") ||
+    lower.endsWith(".txt") ||
+    lower.endsWith(".md") ||
+    lower.endsWith(".markdown")
+  );
 }
 
 function clampPageSize(value: number | undefined): number {
@@ -90,7 +100,7 @@ function mapEntry(
     updated_at?: string | null;
   },
 ): StoredPdfObject | null {
-  if (!isPdfObject(entry.name, entry.id)) {
+  if (!isDocumentObject(entry.name, entry.id)) {
     return null;
   }
 

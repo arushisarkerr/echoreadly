@@ -101,6 +101,36 @@ html[data-theme="light"] {
   --elevation-lg: 0 32px 80px rgb(10 18 16 / 0.14);
 }
 
+/* Reading preferences (Settings) — applied via data attributes on <html>. */
+:root {
+  --reader-font-scale: 1;
+  --reader-content-max: 42rem;
+}
+
+html[data-font-size="sm"] {
+  --reader-font-scale: 0.92;
+}
+
+html[data-font-size="md"] {
+  --reader-font-scale: 1;
+}
+
+html[data-font-size="lg"] {
+  --reader-font-scale: 1.12;
+}
+
+html[data-reading-width="narrow"] {
+  --reader-content-max: 34rem;
+}
+
+html[data-reading-width="default"] {
+  --reader-content-max: 42rem;
+}
+
+html[data-reading-width="wide"] {
+  --reader-content-max: 52rem;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

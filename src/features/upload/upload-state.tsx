@@ -5,7 +5,10 @@
  */
 
 import type { PdfUploadError } from "@/lib/storage";
-import type { PdfValidationError, ValidatedPdfFile } from "@/lib/validators";
+import type {
+  DocumentValidationError,
+  ValidatedDocumentFile,
+} from "@/lib/validators";
 
 export type UploadStatus =
   | "idle"
@@ -16,9 +19,9 @@ export type UploadStatus =
   | "success"
   | "failed";
 
-export type UploadValidationError = PdfValidationError;
+export type UploadValidationError = DocumentValidationError;
 
-export type SelectedUploadFile = ValidatedPdfFile;
+export type SelectedUploadFile = ValidatedDocumentFile;
 
 export type UploadUiState = {
   status: UploadStatus;

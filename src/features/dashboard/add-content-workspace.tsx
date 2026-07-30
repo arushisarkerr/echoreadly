@@ -9,9 +9,9 @@ import { UploadCard } from "@/features/upload";
 
 const SOURCES = [
   { label: "PDF", live: true },
-  { label: "DOC / DOCX", live: false },
-  { label: "TXT", live: false },
-  { label: "Markdown", live: false },
+  { label: "DOCX", live: true },
+  { label: "TXT", live: true },
+  { label: "Markdown", live: true },
   { label: "EPUB", live: false },
   { label: "Website URL", live: false },
   { label: "Blog", live: false },
@@ -23,7 +23,7 @@ const SOURCES = [
 ] as const;
 
 /**
- * Import bay — source constellation + existing PDF UploadCard.
+ * Import bay — source constellation + multi-format UploadCard.
  */
 export function AddContentWorkspace() {
   const { items } = useLibrary();

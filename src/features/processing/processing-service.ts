@@ -47,7 +47,7 @@ import {
   documentTextStore,
   type DocumentTextResult,
 } from "./document-text";
-import { extractTextFromPdfBytes } from "./extract-text";
+import { extractTextFromDocumentBytes, resolveFormatFromPath } from "./extract-text";
 import type {
   CreateDocumentInput,
   DocumentMetadata,
@@ -353,7 +353,10 @@ export async function extractDocumentText(
   }
 
   const documentHash = hashDocumentBytes(bytes);
-  const extraction = await extractTextFromPdfBytes(bytes);
+  const format = resolveFormatFromPath(
+    working.originalFileName || working.storagePath,
+  );
+  const extraction = await extractTextFromDocumentBytes(bytes, format);
 
   if (!extraction.ok) {
     markDocumentFailed(documentId);

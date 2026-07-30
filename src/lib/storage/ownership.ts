@@ -1,13 +1,18 @@
 /**
- * User ownership helpers for private `pdfs` Storage objects.
- * Object keys must be `{userId}/{fileId}.pdf`.
+ * User ownership helpers for private document Storage objects.
+ * Object keys must be `{userId}/{fileId}.{ext}` for supported formats.
  */
 
+import { isSupportedDocumentExtension } from "@/constants";
+
 /**
- * True when the object key is owned by `userId` (first path segment).
- * Rejects path traversal and nested keys beyond the user folder.
+ * True when the object key is owned by `userId` (first path segment)
+ * and uses a supported document extension.
  */
-export function isOwnedPdfObjectKey(objectKey: string, userId: string): boolean {
+export function isOwnedDocumentObjectKey(
+  objectKey: string,
+  userId: string,
+): boolean {
   if (!userId || !objectKey) {
     return false;
   }
@@ -30,10 +35,21 @@ export function isOwnedPdfObjectKey(objectKey: string, userId: string): boolean 
     return false;
   }
 
-  return fileId.toLowerCase().endsWith(".pdf");
+  return isSupportedDocumentExtension(fileId);
 }
 
-/** Storage folder prefix for a user's PDFs (equals `userId`). */
+/**
+ * @deprecated Prefer {@link isOwnedDocumentObjectKey}.
+ * Kept for existing call sites; now allows all supported document extensions.
+ */
+export function isOwnedPdfObjectKey(
+  objectKey: string,
+  userId: string,
+): boolean {
+  return isOwnedDocumentObjectKey(objectKey, userId);
+}
+
+/** Storage folder prefix for a user's documents (equals `userId`). */
 export function userPdfFolderPrefix(userId: string): string {
   return userId;
 }

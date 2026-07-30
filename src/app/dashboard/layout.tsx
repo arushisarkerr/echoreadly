@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AuthGuard } from "@/features/auth";
 import { DashboardShell } from "@/features/dashboard";
+import { PreferencesBootstrap } from "@/features/settings";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -23,6 +24,7 @@ export default function DashboardLayout({
 }>) {
   return (
     <AuthGuard>
+      <PreferencesBootstrap />
       <DashboardShell>{children}</DashboardShell>
     </AuthGuard>
   );

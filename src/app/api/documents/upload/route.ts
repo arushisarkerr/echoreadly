@@ -10,7 +10,7 @@ import {
   enforceRateLimit,
   getRequestIp,
   rateLimitedResponse,
-  validatePdfUploadMeta,
+  validateDocumentUploadMeta,
 } from "@/lib/security";
 import { requireUser } from "@/server/auth";
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return apiError("VALIDATION", "Invalid request body.", 400);
   }
 
-  const meta = validatePdfUploadMeta(body);
+  const meta = validateDocumentUploadMeta(body);
   if (!meta.ok) {
     logger.uploadFailure("Upload preflight validation failed", {
       route,
@@ -66,5 +66,6 @@ export async function POST(request: Request) {
     fileName: meta.data.fileName,
     fileSize: meta.data.fileSize,
     mimeType: meta.data.mimeType,
+    format: meta.data.format,
   });
 }

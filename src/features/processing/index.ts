@@ -40,11 +40,14 @@ export {
 export {
   EMPTY_PDF_NO_OCR_MESSAGE,
   EMPTY_PDF_OCR_UNSUCCESSFUL_MESSAGE,
+  extractTextFromDocumentBytes,
   extractTextFromPdfBytes,
+  resolveFormatFromPath,
   type TextExtractionError,
   type TextExtractionErrorCode,
   type TextExtractionResult,
 } from "./extract-text";
+export { splitTextIntoVirtualPages } from "./split-virtual-pages";
 export {
   createPageTexts,
   isEmptyPageTextSet,

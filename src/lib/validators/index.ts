@@ -4,6 +4,13 @@
  */
 
 export {
+  getDocumentValidationMessage,
+  validateDocumentFile,
+  type DocumentValidationError,
+  type DocumentValidationResult,
+  type ValidatedDocumentFile,
+} from "./document";
+export {
   getPdfValidationMessage,
   isPdfFile,
   validatePdfFile,

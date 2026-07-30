@@ -8,7 +8,11 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { ACCEPTED_PDF_MIME, MAX_PDF_UPLOAD_LABEL } from "@/constants";
+import {
+  ACCEPTED_DOCUMENT_ACCEPT,
+  MAX_DOCUMENT_UPLOAD_LABEL,
+  SUPPORTED_DOCUMENT_FORMATS_LABEL,
+} from "@/constants";
 import { cn } from "@/utils";
 
 export type DropzoneHandle = {
@@ -24,7 +28,7 @@ type DropzoneProps = {
 };
 
 /**
- * Large PDF drop zone with click-to-browse support.
+ * Document drop zone with click-to-browse support.
  * Emits selected files only — does not upload.
  */
 export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
@@ -113,7 +117,7 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         aria-describedby={
           errorMessage ? `${hintId} ${errorId}` : hintId
         }
-        aria-label="Upload your PDF. Drag and drop a PDF here, or press Enter to browse."
+        aria-label={`Upload a document. Drag and drop a ${SUPPORTED_DOCUMENT_FORMATS_LABEL} file here, or press Enter to browse.`}
         onClick={openFilePicker}
         onKeyDown={handleKeyDown}
         onDragEnter={handleDragEnter}
@@ -133,11 +137,11 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPTED_PDF_MIME}
+          accept={ACCEPTED_DOCUMENT_ACCEPT}
           className="sr-only"
           tabIndex={-1}
           disabled={disabled}
-          aria-label="Choose a PDF file"
+          aria-label="Choose a document file"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
@@ -154,22 +158,23 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
             dragging ? "border-accent/45 bg-background" : "border-border",
           )}
         >
-          <PdfIcon className="size-6" />
+          <DocIcon className="size-6" />
         </div>
 
         <h2 className="mt-5 font-display text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-          {dragging ? "Drop PDF to import" : "Upload your PDF"}
+          {dragging ? "Drop file to import" : "Upload your document"}
         </h2>
         <p
           id={hintId}
           className="mt-2 max-w-sm text-sm leading-relaxed text-muted"
         >
-          Drag & drop a PDF here, tap to browse, or use the Select PDF button.
-          Text-based PDFs with selectable text work best — scanned or image-only
-          PDFs are not supported in this launch (OCR unavailable).
+          Drag & drop here, tap to browse, or use Select file. Supported:{" "}
+          {SUPPORTED_DOCUMENT_FORMATS_LABEL}. Text-based PDFs work best —
+          scanned PDFs still need selectable text.
         </p>
         <p className="mt-4 text-xs text-subtle">
-          PDF only · Max {MAX_PDF_UPLOAD_LABEL} · One file at a time
+          {SUPPORTED_DOCUMENT_FORMATS_LABEL} · Max {MAX_DOCUMENT_UPLOAD_LABEL} ·
+          One file at a time
         </p>
 
         {errorMessage ? (
@@ -186,7 +191,7 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
   },
 );
 
-function PdfIcon({ className }: { className?: string }) {
+function DocIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

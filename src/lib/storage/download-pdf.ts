@@ -1,15 +1,15 @@
 /**
- * Download private PDF object bytes from Supabase Storage.
+ * Download private document object bytes from Supabase Storage.
  * Callers must pass an authenticated Supabase client (SSR user client on the server).
  * Only downloads objects owned by the signed-in user (`{userId}/…`).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { PDFS_BUCKET } from "@/constants";
+import { PDFS_BUCKET, isSupportedDocumentExtension } from "@/constants";
 
 import { toPdfObjectKey } from "./create-signed-url";
-import { isOwnedPdfObjectKey } from "./ownership";
+import { isOwnedDocumentObjectKey } from "./ownership";
 
 export type DownloadPdfResult = {
   data: Uint8Array | null;
@@ -17,7 +17,7 @@ export type DownloadPdfResult = {
 };
 
 /**
- * Download a PDF object as bytes for processing (text extraction, etc.).
+ * Download a document object as bytes for processing (text extraction, etc.).
  */
 export async function downloadPdfBytes(
   storagePath: string,
@@ -25,10 +25,10 @@ export async function downloadPdfBytes(
 ): Promise<DownloadPdfResult> {
   const objectKey = toPdfObjectKey(storagePath);
 
-  if (!objectKey) {
+  if (!objectKey || !isSupportedDocumentExtension(objectKey)) {
     return {
       data: null,
-      error: "Invalid PDF storage path.",
+      error: "Invalid document storage path.",
     };
   }
 
@@ -45,10 +45,10 @@ export async function downloadPdfBytes(
       };
     }
 
-    if (!isOwnedPdfObjectKey(objectKey, user.id)) {
+    if (!isOwnedDocumentObjectKey(objectKey, user.id)) {
       return {
         data: null,
-        error: "You do not have access to this PDF.",
+        error: "You do not have access to this document.",
       };
     }
 
@@ -59,7 +59,7 @@ export async function downloadPdfBytes(
     if (error || !data) {
       return {
         data: null,
-        error: error?.message || "Unable to download PDF from storage.",
+        error: error?.message || "Unable to download document from storage.",
       };
     }
 
@@ -75,7 +75,7 @@ export async function downloadPdfBytes(
       error:
         error instanceof Error
           ? error.message
-          : "Unable to download PDF from storage.",
+          : "Unable to download document from storage.",
     };
   }
 }

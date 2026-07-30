@@ -5,6 +5,9 @@
 import {
   ACCEPTED_PDF_MIME,
   MAX_PDF_UPLOAD_BYTES,
+  canonicalMimeForFormat,
+  resolveDocumentFormat,
+  type DocumentFormat,
 } from "@/constants";
 import { MAX_TTS_INPUT_CHARS } from "@/features/tts/types";
 import type { SummaryType } from "@/features/ai";
@@ -144,7 +147,12 @@ export function validatePdfUploadMeta(input: {
   fileSize: number;
   mimeType: string;
 }> {
-  if (typeof input.mimeType !== "string" || input.mimeType !== ACCEPTED_PDF_MIME) {
+  const result = validateDocumentUploadMeta(input);
+  if (!result.ok) {
+    return result;
+  }
+
+  if (result.data.format !== "pdf") {
     return {
       ok: false,
       code: "VALIDATION",
@@ -152,22 +160,53 @@ export function validatePdfUploadMeta(input: {
     };
   }
 
+  return {
+    ok: true,
+    data: {
+      fileName: result.data.fileName,
+      fileSize: result.data.fileSize,
+      mimeType: ACCEPTED_PDF_MIME,
+    },
+  };
+}
+
+/**
+ * Validate upload preflight metadata for PDF, DOCX, TXT, or Markdown.
+ * Extension is authoritative; MIME must agree when present.
+ */
+export function validateDocumentUploadMeta(input: {
+  fileName?: unknown;
+  fileSize?: unknown;
+  mimeType?: unknown;
+}): ValidationResult<{
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  format: DocumentFormat;
+}> {
   const fileName = validateFileName(input.fileName);
   if (!fileName.ok || !fileName.data) {
     return {
       ok: false,
       code: "VALIDATION",
-      message: fileName.ok
-        ? "fileName is required."
-        : fileName.message,
+      message: fileName.ok ? "fileName is required." : fileName.message,
     };
   }
 
-  if (!fileName.data.toLowerCase().endsWith(".pdf")) {
+  const mimeType =
+    typeof input.mimeType === "string" ? input.mimeType.trim() : "";
+
+  const format = resolveDocumentFormat({
+    fileName: fileName.data,
+    mimeType: mimeType || null,
+  });
+
+  if (!format) {
     return {
       ok: false,
       code: "VALIDATION",
-      message: "fileName must end with .pdf.",
+      message:
+        "Unsupported file type. Accepted formats: PDF, DOCX, TXT, Markdown.",
     };
   }
 
@@ -193,7 +232,8 @@ export function validatePdfUploadMeta(input: {
     data: {
       fileName: fileName.data,
       fileSize: fileSize.data,
-      mimeType: ACCEPTED_PDF_MIME,
+      mimeType: mimeType || canonicalMimeForFormat(format),
+      format,
     },
   };
 }

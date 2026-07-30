@@ -6,9 +6,9 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { ACCEPTED_PDF_MIME, PDFS_BUCKET } from "@/constants";
+import { PDFS_BUCKET } from "@/constants";
 import { createClient } from "@/lib/supabase/client";
-import { validatePdfFile } from "@/lib/validators";
+import { validateDocumentFile, validatePdfFile } from "@/lib/validators";
 
 export type PdfUploadStatus = "success" | "error";
 
@@ -48,9 +48,9 @@ export type UploadPdfOptions = {
 };
 
 /**
- * Build a unique object key: `{userId}/{fileId}.pdf`.
+ * Build a unique object key: `{userId}/{fileId}.{ext}`.
  */
-export function createPdfObjectKey(
+export function createDocumentObjectKey(
   userId: string,
   originalFileName: string,
 ): string {
@@ -58,6 +58,9 @@ export function createPdfObjectKey(
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  const extensionMatch = originalFileName.toLowerCase().match(/(\.[a-z0-9]+)$/);
+  const extension = extensionMatch?.[1] ?? ".bin";
 
   const baseName = originalFileName.replace(/\.[^/.]+$/, "").trim();
   const safeBase = baseName
@@ -67,7 +70,22 @@ export function createPdfObjectKey(
     .slice(0, 40);
 
   const fileId = safeBase.length > 0 ? `${safeBase}-${uniqueId}` : uniqueId;
-  return `${userId}/${fileId}.pdf`;
+  return `${userId}/${fileId}${extension}`;
+}
+
+/**
+ * Build a unique object key: `{userId}/{fileId}.pdf`.
+ */
+export function createPdfObjectKey(
+  userId: string,
+  originalFileName: string,
+): string {
+  const key = createDocumentObjectKey(userId, originalFileName);
+  if (key.toLowerCase().endsWith(".pdf")) {
+    return key;
+  }
+  // Force .pdf for legacy PDF-only callers that passed non-pdf names.
+  return `${key.replace(/\.[^/.]+$/, "")}.pdf`;
 }
 
 function toStoragePath(objectKey: string): string {
@@ -118,14 +136,13 @@ function classifyStorageError(error: unknown): PdfUploadError {
 }
 
 /**
- * Upload a PDF file to Supabase Storage under the signed-in user's folder.
- * Re-validates the file, then writes to the private `pdfs` bucket.
+ * Upload a supported document to Supabase Storage under the signed-in user's folder.
  */
-export async function uploadPdf(
+export async function uploadDocument(
   file: File,
   options: UploadPdfOptions = {},
 ): Promise<PdfUploadResult> {
-  const validation = validatePdfFile(file);
+  const validation = validateDocumentFile(file);
 
   if (!validation.ok) {
     return {
@@ -139,7 +156,7 @@ export async function uploadPdf(
             ? "File too large for upload."
             : validation.error === "empty"
               ? "Empty files cannot be uploaded."
-              : "Only application/pdf files can be uploaded.",
+              : "Unsupported file type. Accepted formats: PDF, DOCX, TXT, Markdown.",
       },
     };
   }
@@ -163,14 +180,15 @@ export async function uploadPdf(
     };
   }
 
-  const path = createPdfObjectKey(user.id, file.name);
+  const path = createDocumentObjectKey(user.id, file.name);
+  const contentType = validation.file.type;
 
   options.onProgress?.({ percent: null });
 
   try {
     const { data, error } = await client.storage.from(PDFS_BUCKET).upload(path, file, {
       cacheControl: "3600",
-      contentType: ACCEPTED_PDF_MIME,
+      contentType,
       upsert: false,
     });
 
@@ -201,4 +219,34 @@ export async function uploadPdf(
       error: classifyStorageError(error),
     };
   }
+}
+
+/**
+ * Upload a PDF file to Supabase Storage under the signed-in user's folder.
+ * Re-validates the file, then writes to the private `pdfs` bucket.
+ */
+export async function uploadPdf(
+  file: File,
+  options: UploadPdfOptions = {},
+): Promise<PdfUploadResult> {
+  const validation = validatePdfFile(file);
+
+  if (!validation.ok) {
+    return {
+      status: "error",
+      path: null,
+      storagePath: null,
+      error: {
+        code: "validation_failed",
+        message:
+          validation.error === "too_large"
+            ? "File too large for upload."
+            : validation.error === "empty"
+              ? "Empty files cannot be uploaded."
+              : "Only application/pdf files can be uploaded.",
+      },
+    };
+  }
+
+  return uploadDocument(file, options);
 }

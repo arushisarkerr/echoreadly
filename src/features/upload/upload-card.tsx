@@ -2,10 +2,18 @@
 
 import { useRef, useState } from "react";
 
-import { ACCEPTED_PDF_MIME } from "@/constants";
+import {
+  ACCEPTED_DOCUMENT_ACCEPT,
+  canonicalMimeForFormat,
+  formatLabel,
+  SUPPORTED_DOCUMENT_FORMATS_LABEL,
+} from "@/constants";
 import { notifyLibraryChanged } from "@/features/library";
-import { uploadPdf } from "@/lib/storage";
-import { getPdfValidationMessage, validatePdfFile } from "@/lib/validators";
+import { uploadDocument } from "@/lib/storage";
+import {
+  getDocumentValidationMessage,
+  validateDocumentFile,
+} from "@/lib/validators";
 import { formatFileSize, getApiErrorMessage } from "@/utils";
 
 import { Dropzone, type DropzoneHandle } from "./dropzone";
@@ -14,7 +22,7 @@ import { INITIAL_UPLOAD_STATE, type UploadUiState } from "./upload-state";
 
 /**
  * Dashboard upload card: validate locally, then upload to Supabase Storage.
- * Pipeline unchanged — presentation and client UX polish only.
+ * Supports PDF, DOCX, TXT, and Markdown — same private shelf pipeline.
  */
 export function UploadCard() {
   const dropzoneRef = useRef<DropzoneHandle>(null);
@@ -29,7 +37,7 @@ export function UploadCard() {
   }
 
   function handleFile(file: File) {
-    const result = validatePdfFile(file);
+    const result = validateDocumentFile(file);
 
     if (!result.ok) {
       setState({
@@ -81,7 +89,9 @@ export function UploadCard() {
         body: JSON.stringify({
           fileName: state.sourceFile.name,
           fileSize: state.sourceFile.size,
-          mimeType: state.sourceFile.type || ACCEPTED_PDF_MIME,
+          mimeType:
+            state.sourceFile.type ||
+            canonicalMimeForFormat(state.file.format),
         }),
       });
 
@@ -123,7 +133,7 @@ export function UploadCard() {
       return;
     }
 
-    const result = await uploadPdf(state.sourceFile, {
+    const result = await uploadDocument(state.sourceFile, {
       onProgress: (progress) => {
         setState((current) => ({
           ...current,
@@ -167,7 +177,7 @@ export function UploadCard() {
 
   const validationMessage =
     state.status === "invalid" && state.validationError
-      ? getPdfValidationMessage(state.validationError)
+      ? getDocumentValidationMessage(state.validationError)
       : null;
 
   const previewStatus =
@@ -181,17 +191,21 @@ export function UploadCard() {
 
   const previewMessage =
     state.status === "success"
-      ? "Saved privately to your EchoReadly shelf."
+      ? "Saved privately to your EchoReadly shelf — ready for reading, summaries, and listening."
       : state.status === "failed" && state.uploadError
         ? state.uploadError.message
-        : null;
+        : state.status === "uploading"
+          ? "Uploading and preparing your document…"
+          : null;
 
   const softNotice =
     state.status === "selected" &&
     lastUploadedName &&
     state.file?.name === lastUploadedName
       ? "Same name as your last upload in this session. A new copy will still be stored."
-      : null;
+      : state.status === "selected" && state.file
+        ? `${formatLabel(state.file.format)} ready to upload`
+        : null;
 
   const canUpload =
     (state.status === "selected" || state.status === "failed") &&
@@ -210,10 +224,10 @@ export function UploadCard() {
             id="upload-card-heading"
             className="font-display text-base font-semibold tracking-tight text-foreground"
           >
-            PDF upload
+            Document upload
           </h2>
           <p className="mt-1 text-xs text-muted">
-            Secure private storage · existing pipeline
+            {SUPPORTED_DOCUMENT_FORMATS_LABEL} · private storage
           </p>
         </div>
         <p className="sr-only" aria-live="polite">
@@ -232,7 +246,7 @@ export function UploadCard() {
       <input
         ref={replaceInputRef}
         type="file"
-        accept={ACCEPTED_PDF_MIME}
+        accept={ACCEPTED_DOCUMENT_ACCEPT}
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
@@ -284,7 +298,7 @@ export function UploadCard() {
               className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => dropzoneRef.current?.open()}
             >
-              Select PDF
+              Select file
             </button>
             <button
               type="button"
@@ -311,7 +325,7 @@ export function UploadCard() {
                   ? "Retry upload"
                   : state.status === "success"
                     ? "Uploaded"
-                    : "Upload PDF"}
+                    : "Upload file"}
             </button>
             {state.status !== "success" ? (
               <button

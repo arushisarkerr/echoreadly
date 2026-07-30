@@ -1,8 +1,13 @@
 /**
  * PDF text extraction: PDFium primary, optional Mistral OCR fallback when empty.
  * Does not change PDFium assembly / spacing behaviour.
+ * Non-PDF formats dispatch through {@link extractTextFromDocumentBytes}.
  */
 
+import {
+  formatFromExtension,
+  type DocumentFormat,
+} from "@/constants";
 import {
   createMistralOcrProvider,
   MistralOcrProvider,
@@ -18,6 +23,8 @@ import {
   needsOcr,
   type DocumentTextResult,
 } from "./document-text";
+import { extractTextFromDocxBytes } from "./extract-docx";
+import { extractTextFromPlainBytes } from "./extract-plain";
 
 export type TextExtractionErrorCode =
   | "corrupted_pdf"
@@ -133,6 +140,32 @@ export async function extractTextFromPdfBytes(
     ok: true,
     data: result,
   };
+}
+
+/**
+ * Dispatch text extraction by document format. PDF path is unchanged.
+ */
+export async function extractTextFromDocumentBytes(
+  data: Uint8Array,
+  format: DocumentFormat,
+): Promise<TextExtractionResult> {
+  switch (format) {
+    case "pdf":
+      return extractTextFromPdfBytes(data);
+    case "docx":
+      return extractTextFromDocxBytes(data);
+    case "txt":
+      return extractTextFromPlainBytes(data, "plain");
+    case "markdown":
+      return extractTextFromPlainBytes(data, "markdown");
+  }
+}
+
+/**
+ * Resolve format from a storage path or file name, defaulting to PDF when unknown.
+ */
+export function resolveFormatFromPath(pathOrName: string): DocumentFormat {
+  return formatFromExtension(pathOrName) ?? "pdf";
 }
 
 export { needsOcr };

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
+import { formatFromExtension } from "@/constants";
 import { useProgressPersistence } from "@/features/progress";
 import { useAudioExport } from "@/features/export";
 import { useStudioPreferences } from "@/features/settings";
@@ -12,6 +13,7 @@ import { AudioPlayer, useTts } from "@/features/tts";
 import { ReaderError } from "./error";
 import { ReaderLoading } from "./loading";
 import { ReaderToolbar } from "./reader-toolbar";
+import { TextDocumentViewer } from "./text-document-viewer";
 import { useReader } from "./use-reader";
 
 const PdfViewer = dynamic(
@@ -40,6 +42,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
  */
 export function ReaderPage({ storagePath }: ReaderPageProps) {
   const reader = useReader(storagePath);
+  const documentFormat = formatFromExtension(reader.fileName) ?? "pdf";
+  const isPdf = documentFormat === "pdf";
   const { preferences } = useStudioPreferences();
   const tts = useTts({ preferredSpeed: preferences.playbackSpeed });
   const pageExport = useAudioExport();
@@ -258,7 +262,13 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} pageNumber={1} numPages={null} disabled />
-        <ReaderLoading message="Fetching secure PDF link…" />
+        <ReaderLoading
+          message={
+            isPdf
+              ? "Fetching secure PDF link…"
+              : "Fetching secure document link…"
+          }
+        />
       </div>
     );
   }
@@ -283,7 +293,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
       <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} disabled />
         <ReaderError
-          title="Couldn’t render this PDF"
+          title={isPdf ? "Couldn’t render this PDF" : "Couldn’t open this document"}
           message={reader.documentError}
           onRetry={() => {
             void reader.retrySignedUrl();
@@ -306,23 +316,38 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
           <div className="relative flex min-h-0 flex-1 flex-col">
             {reader.documentLoading ? (
               <div className="absolute inset-0 z-10 bg-background/65 backdrop-blur-[1px]">
-                <ReaderLoading message="Rendering PDF…" />
+                <ReaderLoading
+                  message={isPdf ? "Rendering PDF…" : "Preparing document…"}
+                />
               </div>
             ) : null}
 
-            <PdfViewer
-              fileUrl={reader.signedUrl}
-              pageNumber={reader.pageNumber}
-              scale={reader.scale}
-              fitMode={reader.fitMode}
-              scrollRatio={reader.scrollRatio}
-              onScrollRatioChange={reader.setScrollRatio}
-              onLoadSuccess={reader.setNumPages}
-              onLoadError={reader.setDocumentError}
-              onDocumentLoadingChange={reader.setDocumentLoading}
-              onPreviousPage={reader.goToPreviousPage}
-              onNextPage={reader.goToNextPage}
-            />
+            {isPdf ? (
+              <PdfViewer
+                fileUrl={reader.signedUrl}
+                pageNumber={reader.pageNumber}
+                scale={reader.scale}
+                fitMode={reader.fitMode}
+                scrollRatio={reader.scrollRatio}
+                onScrollRatioChange={reader.setScrollRatio}
+                onLoadSuccess={reader.setNumPages}
+                onLoadError={reader.setDocumentError}
+                onDocumentLoadingChange={reader.setDocumentLoading}
+                onPreviousPage={reader.goToPreviousPage}
+                onNextPage={reader.goToNextPage}
+              />
+            ) : (
+              <TextDocumentViewer
+                fileUrl={reader.signedUrl}
+                fileName={reader.fileName}
+                pageNumber={reader.pageNumber}
+                scrollRatio={reader.scrollRatio}
+                onScrollRatioChange={reader.setScrollRatio}
+                onLoadSuccess={reader.setNumPages}
+                onLoadError={reader.setDocumentError}
+                onDocumentLoadingChange={reader.setDocumentLoading}
+              />
+            )}
           </div>
 
           <SummaryPanel

@@ -38,11 +38,14 @@ export {
   type StoredPdfObject,
 } from "./list-pdfs";
 export {
+  isOwnedDocumentObjectKey,
   isOwnedPdfObjectKey,
   userPdfFolderPrefix,
 } from "./ownership";
 export {
+  createDocumentObjectKey,
   createPdfObjectKey,
+  uploadDocument,
   uploadPdf,
   type PdfUploadError,
   type PdfUploadErrorCode,

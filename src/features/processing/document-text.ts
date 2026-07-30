@@ -11,7 +11,12 @@ import {
 } from "./page-text";
 
 /** Where extracted text came from. */
-export type TextSource = "pdfium" | "ocr:mistral";
+export type TextSource =
+  | "pdfium"
+  | "ocr:mistral"
+  | "docx"
+  | "plain"
+  | "markdown";
 
 /**
  * Extracted text payload for a PDF document.

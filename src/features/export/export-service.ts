@@ -47,7 +47,7 @@ function getFileNameFromStoragePath(storagePath: string): string {
 }
 
 function sanitizeBaseName(fileName: string): string {
-  const withoutExt = fileName.replace(/\.pdf$/i, "").trim() || "document";
+  const withoutExt = fileName.replace(/\.[^/.]+$/i, "").trim() || "document";
   return withoutExt
     .replace(/[^\w\-]+/g, "-")
     .replace(/-+/g, "-")
