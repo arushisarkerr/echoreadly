@@ -155,7 +155,7 @@ export function SummaryContent({
 
         <article
           aria-label="Listening mode text"
-          className="mx-auto w-full rounded-[1.25rem] border border-border/70 bg-background/50 p-4 sm:p-5"
+          className="mx-auto w-full rounded-[1.35rem] border border-border/70 bg-background/55 p-4 sm:p-6"
           style={{
             maxWidth: "var(--reader-content-max)",
             fontSize: "calc(0.9375rem * var(--reader-font-scale))",
@@ -212,21 +212,23 @@ export function SummaryContent({
         </article>
 
         <p className="text-[0.7rem] text-subtle">
-          Generated with {summary.model}
-          {summary.summaryType ? ` · ${summary.summaryType}` : ""}
+          Ready to listen
+          {summary.summaryType
+            ? ` · ${listenModeFootnote(summary.summaryType)}`
+            : ""}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-[1.25rem] border border-dashed border-border/80 bg-surface/40 px-4 py-10 text-center">
+    <div className="rounded-[1.25rem] border border-dashed border-border/80 bg-surface/40 px-4 py-10 text-center sm:px-6">
       <p className="font-display text-base font-semibold text-foreground">
         Choose a listening mode
       </p>
-      <p className="mx-auto mt-2 max-w-[16rem] text-sm leading-relaxed text-muted">
-        Choose Short, Detailed, or Bullet above to generate an on-demand AI
-        listening mode for this document.
+      <p className="mx-auto mt-2 max-w-[18rem] text-sm leading-relaxed text-muted">
+        Pick Listen to Everything, Quick Listen, or Key Moments above — then
+        play natural AI audio.
       </p>
     </div>
   );
@@ -241,6 +243,19 @@ function splitParagraphs(text: string): string[] {
     return parts;
   }
   return text.trim() ? [text.trim()] : [];
+}
+
+function listenModeFootnote(summaryType: string): string {
+  switch (summaryType) {
+    case "detailed":
+      return "Listen to Everything";
+    case "short":
+      return "Quick Listen";
+    case "bullet":
+      return "Key Moments";
+    default:
+      return summaryType;
+  }
 }
 
 function CitationChip({ label }: { label: string }) {

@@ -84,7 +84,7 @@ export function useVoicePreference(): UseVoicePreferenceState {
         );
         setSelectedVoice(DEFAULT_TTS_VOICE);
         setFallbackNotice(
-          "Using the default studio voice until preferences load.",
+          "Using the default listening voice until preferences load.",
         );
         setLoading(false);
         return;
@@ -106,7 +106,7 @@ export function useVoicePreference(): UseVoicePreferenceState {
       setError("Network error while loading voices.");
       setSelectedVoice(DEFAULT_TTS_VOICE);
       setFallbackNotice(
-        "Using the default studio voice until preferences load.",
+        "Using the default listening voice until preferences load.",
       );
       setLoading(false);
     }
@@ -137,7 +137,7 @@ export function useVoicePreference(): UseVoicePreferenceState {
           );
           setSelectedVoice(DEFAULT_TTS_VOICE);
           setFallbackNotice(
-            "Using the default studio voice until preferences load.",
+            "Using the default listening voice until preferences load.",
           );
           setLoading(false);
           return;
@@ -162,7 +162,7 @@ export function useVoicePreference(): UseVoicePreferenceState {
         setError("Network error while loading voices.");
         setSelectedVoice(DEFAULT_TTS_VOICE);
         setFallbackNotice(
-          "Using the default studio voice until preferences load.",
+          "Using the default listening voice until preferences load.",
         );
         setLoading(false);
       }

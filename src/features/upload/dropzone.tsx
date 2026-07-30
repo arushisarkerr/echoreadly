@@ -117,7 +117,7 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         aria-describedby={
           errorMessage ? `${hintId} ${errorId}` : hintId
         }
-        aria-label={`Upload a document. Drag and drop a ${SUPPORTED_DOCUMENT_FORMATS_LABEL} file here, or press Enter to browse.`}
+        aria-label={`Import a document. Drag and drop a ${SUPPORTED_DOCUMENT_FORMATS_LABEL} file here, or press Enter to browse.`}
         onClick={openFilePicker}
         onKeyDown={handleKeyDown}
         onDragEnter={handleDragEnter}
@@ -125,10 +125,10 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed px-5 py-12 text-center transition-[border-color,background-color,box-shadow,transform] duration-200 sm:px-6 sm:py-14",
+          "flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed px-5 py-14 text-center transition-[border-color,background-color,box-shadow,transform] duration-200 sm:px-8 sm:py-16",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           dragging
-            ? "scale-[1.01] border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] shadow-[var(--elevation-sm)]"
+            ? "scale-[1.015] border-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] shadow-[var(--elevation-sm)]"
             : "border-border/80 bg-surface/60 hover:border-foreground/25 hover:bg-background/70",
           disabled && "pointer-events-none cursor-not-allowed opacity-60",
           errorMessage && !dragging && "border-danger/55 bg-[color-mix(in_srgb,var(--danger)_6%,transparent)]",
@@ -154,27 +154,28 @@ export const Dropzone = forwardRef<DropzoneHandle, DropzoneProps>(
         <div
           aria-hidden="true"
           className={cn(
-            "flex size-14 items-center justify-center rounded-2xl border bg-surface-muted text-foreground transition-colors",
-            dragging ? "border-accent/45 bg-background" : "border-border",
+            "flex size-14 items-center justify-center rounded-2xl border text-foreground transition-[colors,transform] duration-200",
+            dragging
+              ? "scale-105 border-accent/45 bg-background"
+              : "border-border bg-surface-muted",
           )}
         >
           <DocIcon className="size-6" />
         </div>
 
         <h2 className="mt-5 font-display text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-          {dragging ? "Drop file to import" : "Upload your document"}
+          {dragging ? "Drop to import" : "Drop a file to import"}
         </h2>
         <p
           id={hintId}
           className="mt-2 max-w-sm text-sm leading-relaxed text-muted"
         >
-          Drag & drop here, tap to browse, or use Select file. Supported:{" "}
-          {SUPPORTED_DOCUMENT_FORMATS_LABEL}. Text-based PDFs work best —
-          scanned PDFs still need selectable text.
+          Drag & drop here, or press Enter / tap to browse. Supported:{" "}
+          {SUPPORTED_DOCUMENT_FORMATS_LABEL}.
         </p>
         <p className="mt-4 text-xs text-subtle">
-          {SUPPORTED_DOCUMENT_FORMATS_LABEL} · Max {MAX_DOCUMENT_UPLOAD_LABEL} ·
-          One file at a time
+          Max {MAX_DOCUMENT_UPLOAD_LABEL} · One file at a time · Text-based PDFs
+          work best
         </p>
 
         {errorMessage ? (

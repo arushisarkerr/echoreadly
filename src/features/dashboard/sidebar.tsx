@@ -42,7 +42,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             {siteConfig.name}
           </span>
           <span className="mt-1 block text-[0.65rem] font-semibold tracking-[0.22em] text-accent uppercase">
-            Listen
+            Library
           </span>
         </Link>
       </div>

@@ -39,7 +39,7 @@ export function SignupForm() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}${ROUTES.authCallback}?next=${encodeURIComponent(ROUTES.dashboard)}`,
+          emailRedirectTo: `${window.location.origin}${ROUTES.authCallback}?next=${encodeURIComponent(ROUTES.library)}`,
         },
       });
 
@@ -49,7 +49,7 @@ export function SignupForm() {
       }
 
       if (data.session) {
-        router.replace(ROUTES.dashboard);
+        router.replace(ROUTES.library);
         router.refresh();
         return;
       }
@@ -73,7 +73,7 @@ export function SignupForm() {
 
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}${ROUTES.authCallback}?next=${encodeURIComponent(ROUTES.dashboard)}`;
+      const redirectTo = `${window.location.origin}${ROUTES.authCallback}?next=${encodeURIComponent(ROUTES.library)}`;
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",

@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 
 function getSafeNextPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return ROUTES.dashboard;
+    return ROUTES.library;
   }
   return value;
 }

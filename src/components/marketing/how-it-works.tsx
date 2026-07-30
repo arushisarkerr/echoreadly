@@ -4,7 +4,7 @@ const STEPS = [
   {
     n: "01",
     title: "Import",
-    copy: "Drop a file or paste a link. EchoReadly takes what you bring and starts turning it into audio.",
+    copy: "Drop a file to import (PDF, DOCX, TXT, or Markdown). Link import is coming soon.",
   },
   {
     n: "02",

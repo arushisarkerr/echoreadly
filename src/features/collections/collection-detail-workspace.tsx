@@ -188,7 +188,7 @@ export function CollectionDetailWorkspace({
           href={ROUTES.library}
           className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background no-underline"
         >
-          Browse shelf
+          Open Library
         </Link>
       </div>
 
@@ -206,7 +206,7 @@ export function CollectionDetailWorkspace({
           Add from library
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Choose a shelf PDF that is not already in this collection.
+          Choose a Library document that is not already in this collection.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <select

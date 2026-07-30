@@ -41,7 +41,7 @@ type TranslationPanelProps = {
 const SCOPES: Array<{ id: TranslationScope; label: string }> = [
   { id: "page", label: "This page" },
   { id: "document", label: "Whole document" },
-  { id: "summary", label: "Quick Listen text" },
+  { id: "summary", label: "Listen mode text" },
   { id: "selection", label: "Selection" },
 ];
 
@@ -85,7 +85,7 @@ export function TranslationPanel({
       <div className="shrink-0 space-y-4 border-b border-border/50 px-4 py-4">
         <div>
           <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
-            Target language
+            Listening language
           </p>
           <select
             value={translate.targetLanguage}
@@ -96,7 +96,7 @@ export function TranslationPanel({
               );
             }}
             className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Target language"
+            aria-label="Listening language"
           >
             {TARGET_LANGUAGE_CATALOG.map((entry) => (
               <option key={entry.code} value={entry.code}>
@@ -105,7 +105,7 @@ export function TranslationPanel({
             ))}
           </select>
           <p className="mt-2 text-xs text-muted">
-            Current: {language.name}
+            Default is বাংলা. Current: {language.name}
           </p>
         </div>
 
@@ -114,11 +114,19 @@ export function TranslationPanel({
             Apply to
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {SCOPES.map((entry) => (
+            {SCOPES.map((entry) => {
+              const summaryBlocked =
+                entry.id === "summary" && !summaryDocumentId;
+              return (
               <button
                 key={entry.id}
                 type="button"
-                disabled={busy}
+                disabled={busy || summaryBlocked}
+                title={
+                  summaryBlocked
+                    ? "Generate a listening mode first"
+                    : undefined
+                }
                 aria-pressed={translate.scope === entry.id}
                 onClick={() => {
                   translate.setScope(entry.id);
@@ -128,13 +136,19 @@ export function TranslationPanel({
                   translate.scope === entry.id
                     ? "border-foreground bg-foreground text-background"
                     : "border-border/80 bg-background/50 text-foreground hover:bg-surface-muted",
-                  busy && "cursor-not-allowed opacity-50",
+                  (busy || summaryBlocked) && "cursor-not-allowed opacity-50",
                 )}
               >
                 {entry.label}
               </button>
-            ))}
+              );
+            })}
           </div>
+          {translate.scope === "summary" && !summaryDocumentId ? (
+            <p className="mt-2 text-xs text-muted">
+              Generate a listening mode first, then apply language to its text.
+            </p>
+          ) : null}
         </div>
 
         {translate.scope === "selection" ? (
@@ -158,7 +172,7 @@ export function TranslationPanel({
         {translate.scope === "summary" ? (
           <label className="block">
             <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-subtle uppercase">
-              Mode text
+              Listening mode
             </span>
             <select
               value={translate.summaryType}
@@ -170,9 +184,9 @@ export function TranslationPanel({
               }}
               className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="short">Short</option>
-              <option value="detailed">Detailed</option>
-              <option value="bullet">Bullet</option>
+              <option value="short">Quick Listen</option>
+              <option value="detailed">Listen to Everything</option>
+              <option value="bullet">Key Moments</option>
             </select>
           </label>
         ) : null}
@@ -208,7 +222,7 @@ export function TranslationPanel({
               }}
               className="inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Retranslate
+              Apply again
             </button>
           ) : null}
         </div>
@@ -217,7 +231,7 @@ export function TranslationPanel({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
         {busy && !translate.streamingText ? (
           <p role="status" className="text-sm text-muted">
-            Translating to {language.name}…
+            Preparing {language.name}…
           </p>
         ) : null}
 
@@ -236,7 +250,7 @@ export function TranslationPanel({
               ) : null}
             </article>
             {translate.status === "streaming" ? (
-              <p className="text-[0.7rem] text-subtle">Streaming translation…</p>
+              <p className="text-[0.7rem] text-subtle">Streaming language…</p>
             ) : null}
           </div>
         ) : null}
@@ -247,7 +261,7 @@ export function TranslationPanel({
             className="rounded-[1.25rem] border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-4"
           >
             <p className="text-sm font-semibold text-danger">
-              Translation failed
+              Language apply failed
             </p>
             <p className="mt-1 text-sm text-muted">{translate.error}</p>
             <button
@@ -311,11 +325,17 @@ export function TranslationPanel({
             </article>
 
             <p className="text-[0.7rem] text-subtle">
-              {language.name} · {translate.result.scope}
+              {language.name}
               {translate.result.pageNumber
                 ? ` · page ${translate.result.pageNumber}`
-                : ""}{" "}
-              · {translate.result.model}
+                : ""}
+              {translate.result.scope === "summary"
+                ? " · listen mode text"
+                : translate.result.scope === "document"
+                  ? " · whole document"
+                  : translate.result.scope === "selection"
+                    ? " · selection"
+                    : " · this page"}
             </p>
 
             <div className="flex flex-wrap gap-2">
@@ -409,14 +429,13 @@ export function TranslationPanel({
         {translate.status === "idle" && !translate.result ? (
           <div className="rounded-[1.25rem] border border-dashed border-border/80 bg-surface/40 px-4 py-10 text-center">
             <p className="font-display text-base font-semibold text-foreground">
-              No translation yet
+              No listening language applied
             </p>
             <p className="mx-auto mt-2 max-w-[16rem] text-sm leading-relaxed text-muted">
-              Choose a language and scope, then translate. Cached results reuse
-              unchanged source text.
+              Choose a language and what to apply it to, then Apply language.
             </p>
             <p className="mt-3 text-xs text-subtle">
-              Default language:{" "}
+              Default:{" "}
               {getTargetLanguageDefinition(DEFAULT_TARGET_LANGUAGE).name}
             </p>
           </div>

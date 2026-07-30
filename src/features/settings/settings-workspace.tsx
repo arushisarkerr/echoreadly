@@ -23,7 +23,7 @@ import {
 import { useSettings } from "./use-settings";
 
 /**
- * Production Settings — profile, voice, playback, reading, export, theme.
+ * Account — playback, language, voice, billing, profile, downloads, display.
  */
 export function SettingsWorkspace() {
   const settings = useSettings();
@@ -115,98 +115,13 @@ export function SettingsWorkspace() {
             </div>
           </div>
 
-          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              Profile
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Display name shown in your workspace greeting and account menu.
-            </p>
-            <label className="mt-4 block">
-              <span className="text-xs font-semibold tracking-wide text-subtle uppercase">
-                Display name
-              </span>
-              <input
-                type="text"
-                value={settings.draft.displayName}
-                maxLength={MAX_DISPLAY_NAME_LENGTH}
-                disabled={saving}
-                onChange={(event) => {
-                  settings.setField("displayName", event.target.value);
-                }}
-                className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Your name"
-                autoComplete="nickname"
-              />
-            </label>
-            {settings.fieldErrors.displayName ? (
-              <p className="mt-2 text-xs text-danger" role="alert">
-                {settings.fieldErrors.displayName}
-              </p>
-            ) : null}
-            <div className="mt-4 max-w-xs">
-              <AccountMenu />
-            </div>
-          </section>
-
-          <Suspense
-            fallback={
-              <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-                  Plan & billing
-                </h2>
-                <p className="mt-2 text-sm text-muted">Loading plan…</p>
-              </section>
-            }
-          >
-            <BillingSettingsCard />
-          </Suspense>
-
-          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              Preferred voice
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Used for listening. Preview voices in the Voice
-              Library.
-            </p>
-            <label className="mt-4 block">
-              <span className="text-xs font-semibold tracking-wide text-subtle uppercase">
-                Narrator
-              </span>
-              <select
-                value={settings.draft.preferredTtsVoice}
-                disabled={saving || settings.voices.length === 0}
-                onChange={(event) => {
-                  settings.setField(
-                    "preferredTtsVoice",
-                    event.target.value as typeof settings.draft.preferredTtsVoice,
-                  );
-                }}
-                className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {settings.voices.map((voice) => (
-                  <option key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Link
-              href={ROUTES.voices}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground no-underline hover:bg-surface-muted"
-            >
-              Choose voice
-            </Link>
-          </section>
-
-          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
             <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
               Playback
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Default speed for the player. Auto-play advances to the
-              next page after page narration ends.
+              Default speed for the player. Auto-play continues to the next page
+              after page audio ends.
             </p>
             <fieldset className="mt-4">
               <legend className="text-xs font-semibold tracking-wide text-subtle uppercase">
@@ -248,13 +163,148 @@ export function SettingsWorkspace() {
             </label>
           </section>
 
-          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
             <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              Reading
+              Language
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Adjust text size and reading width. Theme preference
-              applies across the workspace.
+              বাংলা is the primary listening language. Change language per listen
+              from Listen options → Listening Language.
+            </p>
+            <p className="mt-4 inline-flex rounded-full border border-border/70 bg-background/60 px-3 py-1.5 text-xs font-semibold text-foreground">
+              Default · বাংলা (bn)
+            </p>
+          </section>
+
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+              Voice
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Used when you listen. Preview and pick a narrator in Voice.
+            </p>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold tracking-wide text-subtle uppercase">
+                Narrator
+              </span>
+              <select
+                value={settings.draft.preferredTtsVoice}
+                disabled={saving || settings.voices.length === 0}
+                onChange={(event) => {
+                  settings.setField(
+                    "preferredTtsVoice",
+                    event.target.value as typeof settings.draft.preferredTtsVoice,
+                  );
+                }}
+                className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {settings.voices.map((voice) => (
+                  <option key={voice.id} value={voice.id}>
+                    {voice.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link
+              href={ROUTES.voices}
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground no-underline transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Browse voices
+            </Link>
+          </section>
+
+          <Suspense
+            fallback={
+              <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                  Billing
+                </h2>
+                <p className="mt-2 text-sm text-muted">Loading plan…</p>
+              </section>
+            }
+          >
+            <BillingSettingsCard />
+          </Suspense>
+
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+              Profile
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Display name shown in your greeting and account menu.
+            </p>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold tracking-wide text-subtle uppercase">
+                Display name
+              </span>
+              <input
+                type="text"
+                value={settings.draft.displayName}
+                maxLength={MAX_DISPLAY_NAME_LENGTH}
+                disabled={saving}
+                onChange={(event) => {
+                  settings.setField("displayName", event.target.value);
+                }}
+                className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="Your name"
+                autoComplete="nickname"
+              />
+            </label>
+            {settings.fieldErrors.displayName ? (
+              <p className="mt-2 text-xs text-danger" role="alert">
+                {settings.fieldErrors.displayName}
+              </p>
+            ) : null}
+            <div className="mt-4 max-w-xs">
+              <AccountMenu />
+            </div>
+          </section>
+
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+              Downloads
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Preferred format for audio you take with you.
+            </p>
+            <fieldset className="mt-4">
+              <legend className="text-xs font-semibold tracking-wide text-subtle uppercase">
+                Preferred format
+              </legend>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {EXPORT_FORMAT_PREFERENCES.map((format) => (
+                  <ChoiceChip
+                    key={format}
+                    label={format.toUpperCase()}
+                    selected={
+                      settings.draft.preferredExportFormat === format
+                    }
+                    disabled={saving}
+                    onSelect={() => {
+                      settings.setField("preferredExportFormat", format);
+                    }}
+                  />
+                ))}
+              </div>
+            </fieldset>
+            <p className="mt-3 text-xs text-subtle">
+              MP3 is the only download format currently supported.
+            </p>
+            <Link
+              href={ROUTES.exports}
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground no-underline transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Open Downloads
+            </Link>
+          </section>
+
+          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+              Display
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Text size, content width, and theme for comfortable listening
+              alongside the document.
             </p>
             <fieldset className="mt-4">
               <legend className="text-xs font-semibold tracking-wide text-subtle uppercase">
@@ -276,7 +326,7 @@ export function SettingsWorkspace() {
             </fieldset>
             <fieldset className="mt-5">
               <legend className="text-xs font-semibold tracking-wide text-subtle uppercase">
-                Reading width
+                Content width
               </legend>
               <div className="mt-3 flex flex-wrap gap-2">
                 {READING_WIDTH_PREFERENCES.map((width) => (
@@ -310,45 +360,6 @@ export function SettingsWorkspace() {
                 ))}
               </div>
             </fieldset>
-          </section>
-
-          <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              Export
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Downloads use the provider-supported format from Audio Export.
-            </p>
-            <fieldset className="mt-4">
-              <legend className="text-xs font-semibold tracking-wide text-subtle uppercase">
-                Preferred format
-              </legend>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {EXPORT_FORMAT_PREFERENCES.map((format) => (
-                  <ChoiceChip
-                    key={format}
-                    label={format.toUpperCase()}
-                    selected={
-                      settings.draft.preferredExportFormat === format
-                    }
-                    disabled={saving}
-                    onSelect={() => {
-                      settings.setField("preferredExportFormat", format);
-                    }}
-                  />
-                ))}
-              </div>
-            </fieldset>
-            <p className="mt-3 text-xs text-subtle">
-              MP3 is the only download format currently supported
-              TTS provider.
-            </p>
-            <Link
-              href={ROUTES.exports}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-border/80 px-4 text-xs font-semibold text-foreground no-underline hover:bg-surface-muted"
-            >
-              Open Exports
-            </Link>
           </section>
         </form>
       ) : null}

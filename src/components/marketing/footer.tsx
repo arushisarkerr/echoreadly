@@ -44,8 +44,7 @@ export function MarketingFooter() {
             ))}
             <li>
               <a
-                id="contact"
-                href="#contact"
+                href="#faq"
                 className="text-sm text-muted transition-colors hover:text-foreground"
               >
                 Contact

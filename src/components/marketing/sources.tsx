@@ -1,11 +1,8 @@
 import { Reveal } from "@/components/marketing/reveal";
 
-const AVAILABLE = ["PDF file"] as const;
+const AVAILABLE = ["PDF", "DOCX", "TXT", "Markdown"] as const;
 
 const COMING_SOON = [
-  "DOC / DOCX",
-  "TXT",
-  "Markdown",
   "EPUB",
   "Website URL",
   "Blog",
@@ -35,8 +32,8 @@ export function MarketingSources() {
             Files are live. Links are coming.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            Import files today (starting with PDF). Website URLs and other link
-            sources are coming soon.
+            Import PDF, DOCX, TXT, or Markdown today. Website URLs and other
+            link sources are coming soon.
           </p>
         </Reveal>
       </div>

@@ -22,9 +22,9 @@ export function HistoryWorkspace() {
     <WorkspaceCanvas
       kicker="History"
       title="Pick up the thread."
-      description="A vertical spine of imports. Open any moment to continue in the Listening Studio."
-      actionHref={ROUTES.listen}
-      actionLabel="Continue listening"
+      description="A vertical spine of imports. Open any moment to continue listening."
+      actionHref={ROUTES.library}
+      actionLabel="Open Library"
     >
       {loading ? <p className="text-sm text-muted">Loading timeline…</p> : null}
       {error ? (
@@ -90,7 +90,7 @@ export function HistoryWorkspace() {
                         ]
                           .filter(Boolean)
                           .join(" · ")
-                      : "Start Reading →"}
+                      : "Listen →"}
                   </p>
                 </div>
               </li>

@@ -212,11 +212,11 @@ export function UploadCard() {
 
   const previewMessage =
     state.status === "success"
-      ? "Saved privately to your EchoReadly shelf — ready for reading, summaries, and listening."
+      ? "Saved privately. Preparing starts automatically — open Library when you’re ready to listen."
       : state.status === "failed" && state.uploadError
         ? state.uploadError.message
         : state.status === "uploading"
-          ? "Uploading and preparing your document…"
+          ? "Uploading securely…"
           : null;
 
   const softNotice =
@@ -237,7 +237,7 @@ export function UploadCard() {
   return (
     <section
       aria-labelledby="upload-card-heading"
-      className="w-full rounded-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--background)_70%,transparent)] p-4 sm:p-5"
+      className="w-full"
     >
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
@@ -245,7 +245,7 @@ export function UploadCard() {
             id="upload-card-heading"
             className="font-display text-base font-semibold tracking-tight text-foreground"
           >
-            Document upload
+            File import
           </h2>
           <p className="mt-1 text-xs text-muted">
             {SUPPORTED_DOCUMENT_FORMATS_LABEL} · private storage
@@ -321,45 +321,26 @@ export function UploadCard() {
             >
               Select file
             </button>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="inline-flex h-11 min-h-11 cursor-not-allowed items-center justify-center rounded-full border border-border bg-surface px-5 text-sm font-medium text-muted opacity-60"
-            >
-              Recent Files
-            </button>
+            <p className="text-xs text-muted sm:ml-1">
+              Or drag a file onto the drop zone above.
+            </p>
           </>
-        ) : (
-          <>
-            <button
-              type="button"
-              disabled={!canUpload || busy || state.status === "success"}
-              onClick={() => {
-                void handleUpload();
-              }}
-              className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              {busy
-                ? "Uploading…"
-                : state.status === "failed"
-                  ? "Retry upload"
-                  : state.status === "success"
-                    ? "Uploaded"
-                    : "Upload file"}
-            </button>
-            {state.status !== "success" ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => replaceInputRef.current?.click()}
-                className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                Replace file
-              </button>
-            ) : null}
-          </>
-        )}
+        ) : state.status !== "success" ? (
+          <button
+            type="button"
+            disabled={!canUpload || busy}
+            onClick={() => {
+              void handleUpload();
+            }}
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {busy
+              ? "Uploading…"
+              : state.status === "failed"
+                ? "Retry upload"
+                : "Import file"}
+          </button>
+        ) : null}
       </div>
     </section>
   );

@@ -36,7 +36,7 @@ function formatTime(seconds: number | null): string {
 function friendlyError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("generate a summary")) {
-    return "Generate a summary first, then tap Listen.";
+    return "Choose a listening mode first, then tap Listen.";
   }
   if (normalized.includes("rate") || normalized.includes("429")) {
     return "Too many requests. Wait a moment, then try Listen again.";
@@ -51,7 +51,7 @@ function friendlyError(message: string): string {
 }
 
 /**
- * Sticky studio transport — same TTS callbacks; presentation/a11y polish only.
+ * Sticky listen transport — same TTS callbacks; presentation/a11y polish only.
  */
 export function AudioPlayer({
   status,
@@ -84,9 +84,9 @@ export function AudioPlayer({
   const atStart = hasAudio && progressMax > 0 && currentTime <= 0.15;
   const sourceLabel =
     source === "summary"
-      ? "Summary"
+      ? "Listen mode"
       : source === "page"
-        ? "Current page"
+        ? "This page"
         : null;
 
   const statusAnnouncement = isLoading
@@ -156,7 +156,7 @@ export function AudioPlayer({
   return (
     <div
       ref={rootRef}
-      className="sticky bottom-0 z-30 border-t border-border/60 bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-3 py-3 backdrop-blur-xl sm:px-5"
+      className="sticky bottom-0 z-30 border-t border-border/60 bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] px-3 py-3.5 backdrop-blur-xl sm:px-5 sm:py-4"
       role="region"
       aria-labelledby={regionId}
       tabIndex={-1}
@@ -168,7 +168,7 @@ export function AudioPlayer({
         {statusAnnouncement}
       </p>
 
-      <div className="mx-auto flex w-full max-w-none flex-col gap-3">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-3.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
@@ -195,11 +195,11 @@ export function AudioPlayer({
 
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold tracking-[0.16em] text-accent uppercase">
-                Transport
+                Now playing
               </p>
               <p className="truncate text-sm font-semibold text-foreground">
                 {isLoading
-                  ? "Generating audio…"
+                  ? "Preparing audio…"
                   : isGenerationError
                     ? "Speech unavailable"
                     : sourceLabel
@@ -316,9 +316,9 @@ export function AudioPlayer({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <span
-            className="w-11 shrink-0 text-right text-xs tabular-nums text-muted"
+            className="w-10 shrink-0 text-right text-[0.7rem] tabular-nums text-muted sm:w-11 sm:text-xs"
             aria-hidden="true"
           >
             {formatTime(currentTime)}
@@ -334,7 +334,7 @@ export function AudioPlayer({
             onChange={(event) => {
               onSeek(Number(event.target.value));
             }}
-            className="h-2 w-full cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-45"
+            className="h-2.5 w-full cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-45"
             aria-label="Playback progress"
             aria-valuemin={0}
             aria-valuemax={progressMax || 0}
@@ -342,7 +342,7 @@ export function AudioPlayer({
             aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
           />
           <span
-            className="w-11 shrink-0 text-xs tabular-nums text-muted"
+            className="w-10 shrink-0 text-[0.7rem] tabular-nums text-muted sm:w-11 sm:text-xs"
             aria-hidden="true"
           >
             {formatTime(duration)}

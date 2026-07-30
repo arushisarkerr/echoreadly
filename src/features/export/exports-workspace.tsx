@@ -57,7 +57,7 @@ export function ExportsWorkspace() {
           className="mt-6 rounded-[1.5rem] border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-4"
         >
           <p className="text-sm font-semibold text-danger">
-            Couldn’t load exports
+            Couldn’t load downloads
           </p>
           <p className="mt-1 text-sm text-muted">{error}</p>
           <button
@@ -74,28 +74,29 @@ export function ExportsWorkspace() {
 
       {loading && !error ? (
         <p className="mt-8 text-sm text-muted" role="status">
-          Loading your exports…
+          Loading your downloads…
         </p>
       ) : null}
 
       {!loading && !error && items.length === 0 ? (
         <div className="mt-8 rounded-[1.5rem] border border-dashed border-border/80 bg-surface/40 px-4 py-10 text-center">
           <p className="font-display text-base font-semibold text-foreground">
-            No exports yet
+            No downloads yet
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-            Open a document from Library and download audio when you listen.
+            Open something from Library, listen, then download the audio when
+            you’re ready.
           </p>
         </div>
       ) : null}
 
       {!loading && items.length > 0 ? (
-        <ul className="mt-8 list-none space-y-3 p-0" aria-label="Audio exports">
+        <ul className="mt-8 list-none space-y-3 p-0" aria-label="Downloads">
           {items.map((item) => {
             const detail =
               item.source === "page"
                 ? `Page ${item.pageNumber ?? "—"}`
-                : `Summary · ${item.summaryType ?? "—"}`;
+                : `Listen mode · ${listenModeLabel(item.summaryType)}`;
             const busy = downloadingId === item.exportId;
 
             return (
@@ -135,4 +136,17 @@ export function ExportsWorkspace() {
       ) : null}
     </WorkspaceCanvas>
   );
+}
+
+function listenModeLabel(summaryType: string | null | undefined): string {
+  switch (summaryType) {
+    case "detailed":
+      return "Listen to Everything";
+    case "short":
+      return "Quick Listen";
+    case "bullet":
+      return "Key Moments";
+    default:
+      return summaryType ?? "—";
+  }
 }

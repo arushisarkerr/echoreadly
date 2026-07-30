@@ -108,10 +108,10 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthPagePath(pathname)) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = ROUTES.dashboard;
-    dashboardUrl.search = "";
-    const redirect = NextResponse.redirect(dashboardUrl);
+    const libraryUrl = request.nextUrl.clone();
+    libraryUrl.pathname = ROUTES.library;
+    libraryUrl.search = "";
+    const redirect = NextResponse.redirect(libraryUrl);
     applySecurityHeaders(redirect.headers);
     return redirect;
   }

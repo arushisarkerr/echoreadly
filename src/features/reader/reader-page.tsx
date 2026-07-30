@@ -328,8 +328,8 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
           onSeek={tts.seek}
         />
 
-        <div className="flex min-h-0 flex-1">
-          <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
             {reader.documentLoading ? (
               <div className="absolute inset-0 z-10 bg-background/65 backdrop-blur-[1px]">
                 <ReaderLoading

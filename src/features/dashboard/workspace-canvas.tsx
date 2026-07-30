@@ -22,7 +22,7 @@ export function WorkspaceCanvas({
   description,
   children,
   actionHref = ROUTES.addContent,
-  actionLabel = "Add content",
+  actionLabel = "Import",
   wide = true,
 }: WorkspaceCanvasProps) {
   return (

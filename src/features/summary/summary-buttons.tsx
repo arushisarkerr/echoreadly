@@ -46,17 +46,19 @@ export function SummaryButtons({
               onSelect(option.type);
             }}
             className={cn(
-              "flex min-h-14 flex-col items-center justify-center rounded-2xl border px-2 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex min-h-[3.75rem] flex-col items-start justify-center rounded-2xl border px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-16 sm:items-center sm:text-center",
               active
                 ? "border-foreground bg-foreground text-background"
                 : "border-border/80 bg-background/50 text-foreground hover:bg-surface-muted",
               disabled && "cursor-not-allowed opacity-50",
             )}
           >
-            <span className="text-xs font-semibold">{option.label}</span>
+            <span className="text-xs font-semibold leading-snug sm:text-[0.8rem]">
+              {option.label}
+            </span>
             <span
               className={cn(
-                "mt-0.5 text-[0.65rem]",
+                "mt-1 text-[0.65rem] leading-snug",
                 active ? "text-background/70" : "text-subtle",
               )}
             >

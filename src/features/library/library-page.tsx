@@ -346,7 +346,7 @@ export function LibraryPage() {
           className="mt-6 rounded-[1.5rem] border border-danger/35 bg-[color-mix(in_srgb,var(--danger)_7%,transparent)] px-5 py-6"
         >
           <p className="font-display text-lg font-semibold text-foreground">
-            Couldn’t load the shelf
+            Couldn’t load Library
           </p>
           <p className="mt-2 text-sm text-danger">{error}</p>
           <button

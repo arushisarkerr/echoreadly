@@ -73,7 +73,7 @@ export function FilePreview({
               <StatusChip tone="accent">Uploading</StatusChip>
             ) : null}
             {status === "success" ? (
-              <StatusChip tone="success">Uploaded</StatusChip>
+              <StatusChip tone="success">Imported</StatusChip>
             ) : null}
             {status === "failed" ? (
               <StatusChip tone="danger">Failed</StatusChip>
@@ -83,7 +83,7 @@ export function FilePreview({
 
           {showLargeHint ? (
             <p className="mt-2 text-xs text-muted">
-              Large PDF — upload may take a moment on slower connections.
+              Large file — upload may take a moment on slower connections.
             </p>
           ) : null}
 
@@ -92,14 +92,21 @@ export function FilePreview({
           ) : null}
 
           {uploading ? (
-            <div className="mt-3" role="status" aria-live="polite">
-              <p className="text-xs font-medium text-muted">
-                {hasDeterminateProgress
-                  ? `Uploading… ${Math.round(progressPercent)}%`
-                  : "Uploading to secure storage…"}
-              </p>
+            <div className="mt-4" role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-muted">
+                  {hasDeterminateProgress
+                    ? `Uploading… ${Math.round(progressPercent)}%`
+                    : "Uploading to secure storage…"}
+                </p>
+                {hasDeterminateProgress ? (
+                  <span className="text-[0.7rem] tabular-nums text-subtle">
+                    {Math.round(progressPercent)}%
+                  </span>
+                ) : null}
+              </div>
               <div
-                className="mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/10"
+                className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10"
                 aria-hidden="true"
               >
                 <div
@@ -111,7 +118,7 @@ export function FilePreview({
                 />
               </div>
               <p className="mt-2 text-[0.7rem] text-subtle">
-                Please keep this tab open until the upload finishes.
+                Keep this tab open until the upload finishes.
               </p>
             </div>
           ) : null}
@@ -120,7 +127,7 @@ export function FilePreview({
             <p
               role={status === "failed" ? "alert" : "status"}
               className={cn(
-                "mt-2 text-xs leading-relaxed",
+                "mt-3 text-xs leading-relaxed",
                 status === "failed"
                   ? "font-medium text-danger"
                   : status === "success"
@@ -134,60 +141,56 @@ export function FilePreview({
 
           {status === "ready" && !statusMessage ? (
             <p className="mt-2 text-xs text-subtle">
-              Upload-ready · PDF checked on this device (type & size)
+              Ready to upload · checked on this device (type & size)
             </p>
           ) : null}
 
           {status === "success" ? (
-            <p className="mt-3 text-xs text-muted">
-              Ready on your shelf.{" "}
+            <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href={ROUTES.library}
-                className="font-semibold text-foreground underline-offset-2 hover:underline"
+                className="inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background no-underline transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Open library
+                Open Library
               </Link>
-            </p>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="inline-flex h-10 min-h-10 items-center justify-center rounded-full border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Import another
+              </button>
+            </div>
           ) : null}
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {status === "success" ? (
+      {status !== "success" ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onReplace}
+            disabled={uploading}
+            className={cn(
+              "inline-flex h-10 min-h-10 items-center justify-center rounded-full border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              uploading && "cursor-not-allowed opacity-50",
+            )}
+          >
+            Replace
+          </button>
           <button
             type="button"
             onClick={onRemove}
-            className="inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            disabled={uploading}
+            className={cn(
+              "inline-flex h-10 min-h-10 items-center justify-center rounded-full px-4 text-xs font-semibold text-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              uploading && "cursor-not-allowed opacity-50",
+            )}
           >
-            Upload another
+            Remove
           </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={onReplace}
-              disabled={uploading}
-              className={cn(
-                "inline-flex h-10 min-h-10 items-center justify-center rounded-full border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                uploading && "cursor-not-allowed opacity-50",
-              )}
-            >
-              Replace
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              disabled={uploading}
-              className={cn(
-                "inline-flex h-10 min-h-10 items-center justify-center rounded-full px-4 text-xs font-semibold text-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                uploading && "cursor-not-allowed opacity-50",
-              )}
-            >
-              Remove
-            </button>
-          </>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -13,7 +13,7 @@ type ReaderErrorProps = {
  * Reader error panel with optional retry and back actions.
  */
 export function ReaderError({
-  title = "Unable to open PDF",
+  title = "Unable to open document",
   message,
   onRetry,
   onBackHref = ROUTES.library,
@@ -27,7 +27,7 @@ export function ReaderError({
         aria-hidden="true"
         className="flex size-14 items-center justify-center rounded-2xl border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] font-display text-xs font-bold text-danger"
       >
-        PDF
+        !
       </div>
       <h2 className="font-display mt-5 text-2xl font-semibold tracking-tight text-foreground">
         {title}
@@ -48,7 +48,7 @@ export function ReaderError({
           href={onBackHref}
           className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Back to shelf
+          Back to Library
         </Link>
       </div>
     </div>

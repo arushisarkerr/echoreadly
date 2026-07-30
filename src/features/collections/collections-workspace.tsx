@@ -71,9 +71,9 @@ export function CollectionsWorkspace() {
     <WorkspaceCanvas
       kicker="Collections"
       title="Rooms for your listening."
-      description="Organize shelf documents into reusable collections. Membership is yours alone — open a room to add, remove, or move PDFs."
+      description="Group Library items into collections. Membership is yours alone — open a room to add, remove, or move documents."
       actionHref={ROUTES.library}
-      actionLabel="Browse shelf"
+      actionLabel="Open Library"
     >
       <form
         onSubmit={(event) => {
@@ -153,8 +153,7 @@ export function CollectionsWorkspace() {
             No collections yet
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            Create a room above, then open it to add documents from your library
-            shelf.
+            Create a room above, then open it to add documents from Library.
           </p>
         </div>
       ) : null}

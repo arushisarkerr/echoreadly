@@ -64,7 +64,7 @@ export function LibraryCard({
                 ]
                   .filter(Boolean)
                   .join(" · ")
-              : "PDF"}
+              : "Ready to listen"}
           </p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function LibraryCard({
           href={readerHref}
           className="inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {progress ? "Resume" : "Start Reading"}
+          {progress ? "Resume" : "Listen"}
         </Link>
         <DeleteDocumentButton
           storagePath={item.storagePath}

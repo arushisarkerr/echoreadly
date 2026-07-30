@@ -34,7 +34,7 @@ export async function requireUser(): Promise<RequireUserResult> {
  * Server Component / page gate. Redirects unauthenticated visitors to login.
  */
 export async function requireUserOrRedirect(
-  nextPath = ROUTES.dashboard,
+  nextPath = ROUTES.library,
 ): Promise<User> {
   const result = await getUser();
 

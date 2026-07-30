@@ -8,7 +8,7 @@ const PLANS = [
     price: "$0",
     blurb: "Import, prepare, and listen — available now.",
     features: [
-      "File import (PDF)",
+      "File import (PDF, DOCX, TXT, Markdown)",
       "Preparing status",
       "Natural AI audio listening",
       "বাংলা as primary language",
@@ -24,7 +24,7 @@ const PLANS = [
     features: [
       "Everything in Free",
       "Richer listening voices (planned)",
-      "MP3 · M4A · WAV downloads (planned)",
+      "More download formats (planned)",
       "Link imports & more files (planned)",
     ],
     cta: "Join free for now",
@@ -41,8 +41,8 @@ const PLANS = [
       "API access (planned)",
       "Custom integrations (planned)",
     ],
-    cta: "Contact sales",
-    href: "#contact",
+    cta: "Ask in FAQ",
+    href: "#faq",
     featured: false,
   },
 ] as const;

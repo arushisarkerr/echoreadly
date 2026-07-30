@@ -33,7 +33,7 @@ type ReaderToolbarProps = {
 };
 
 /**
- * Listening Studio chrome — navigation and zoom; logic unchanged.
+ * Listen chrome — navigation and zoom; logic unchanged.
  */
 export function ReaderToolbar({
   fileName,
@@ -70,8 +70,8 @@ export function ReaderToolbar({
         : "Page";
 
   return (
-    <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-[color-mix(in_srgb,var(--surface)_78%,transparent)] backdrop-blur-xl">
-      <div className="mx-auto flex w-full flex-col gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3">
+    <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,transparent)] backdrop-blur-xl">
+      <div className="mx-auto flex w-full flex-col gap-2.5 px-3 py-3 sm:gap-3 sm:px-5 sm:py-3.5">
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href={ROUTES.library}
@@ -85,7 +85,7 @@ export function ReaderToolbar({
               Listen
             </p>
             <p
-              className="truncate text-sm font-semibold tracking-tight text-foreground"
+              className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-[0.9375rem]"
               title={fileName}
             >
               {fileName}
@@ -216,7 +216,7 @@ export function ReaderToolbar({
 
         <p className="sr-only">
           Keyboard: Left and Right arrows change page. Plus and Minus zoom when
-          the reader is focused. Open Listen options for modes and language.
+          the listen view is focused. Open Listen options for modes and language.
         </p>
       </div>
     </header>

@@ -13,7 +13,7 @@ export function SummaryError({ message, onRetry }: SummaryErrorProps) {
       className="rounded-[1.25rem] border border-danger/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-4"
     >
       <p className="font-display text-base font-semibold text-foreground">
-        Summary unavailable
+        Listening mode unavailable
       </p>
       <p className="mt-2 text-sm leading-relaxed text-muted">{message}</p>
       {onRetry ? (

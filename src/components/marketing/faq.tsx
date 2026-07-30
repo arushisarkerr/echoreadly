@@ -8,23 +8,23 @@ const FAQS = [
   },
   {
     q: "What can I import?",
-    a: "File uploads (starting with PDF) are available today. Website URLs and more link sources are coming soon. Cloud connectors are planned.",
+    a: "File uploads are live for PDF, DOCX, TXT, and Markdown. Website URLs, YouTube, EPUB, and more sources are coming soon.",
   },
   {
     q: "How does listening work?",
-    a: "After you import, we prepare your content and show status. When it’s ready, press play and listen to natural AI audio in the browser.",
+    a: "Import a file. We prepare it automatically and show status in Library. When it’s ready, open it and press play.",
   },
   {
     q: "Which languages can I listen in?",
-    a: "বাংলা is the primary listening language. More voices and languages are planned as the library grows.",
+    a: "বাংলা is the primary listening language. You can change listening language per document from Listen options.",
   },
   {
     q: "Can I download or take audio with me?",
-    a: "You can listen online today. Downloadable exports such as MP3, M4A, and WAV are coming soon so you can take audio with you.",
+    a: "Yes — download prepared MP3 files from Downloads after you listen. More formats are planned.",
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Start free to import, prepare, and listen. Premium voices, downloads, and extra sources are planned for paid tiers.",
+    a: "Yes. Start free to import, prepare, and listen. Premium voices and higher limits are available on paid tiers.",
   },
 ] as const;
 

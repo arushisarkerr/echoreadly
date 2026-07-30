@@ -6,7 +6,7 @@ import { DashboardShell } from "@/features/dashboard";
 import { PreferencesBootstrap } from "@/features/settings";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Library",
   robots: {
     index: false,
     follow: false,

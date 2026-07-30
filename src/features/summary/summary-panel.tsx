@@ -81,6 +81,7 @@ export function SummaryPanel({
   const isLoading =
     summary.status === "loading" || summary.status === "streaming";
   const [activeTab, setActiveTab] = useState<StudioTab>("listen");
+  const [viewport, setViewport] = useState<"mobile" | "desktop">("desktop");
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const summaryTabId = useId();
@@ -89,6 +90,16 @@ export function SummaryPanel({
   const summaryPanelId = useId();
   const chatPanelId = useId();
   const translatePanelId = useId();
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      setViewport(media.matches ? "desktop" : "mobile");
+    };
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -103,8 +114,7 @@ export function SummaryPanel({
 
     document.addEventListener("keydown", onKeyDown);
 
-    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
-    if (isMobile) {
+    if (viewport === "mobile") {
       document.body.style.overflow = "hidden";
     }
 
@@ -117,7 +127,7 @@ export function SummaryPanel({
       document.body.style.overflow = "";
       window.cancelAnimationFrame(frame);
     };
-  }, [onClose, open]);
+  }, [onClose, open, viewport]);
 
   function onTabListKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
@@ -354,40 +364,46 @@ export function SummaryPanel({
       <div
         className={cn(
           "fixed inset-0 z-40 bg-foreground/25 transition-opacity lg:hidden",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
+          open && viewport === "mobile"
+            ? "opacity-100"
+            : "pointer-events-none opacity-0",
         )}
-        aria-hidden={!open}
+        aria-hidden={!open || viewport !== "mobile"}
         onClick={onClose}
       />
 
-      <aside
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[var(--elevation-md)] backdrop-blur-xl transition-transform duration-300 lg:hidden",
-          open ? "translate-y-0" : "translate-y-full",
-        )}
-        aria-hidden={!open}
-        aria-labelledby={titleId}
-        aria-modal={open ? true : undefined}
-        role="dialog"
-      >
-        <div className="flex justify-center py-3" aria-hidden="true">
-          <span className="h-1 w-10 rounded-full bg-border" />
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden">{panelBody}</div>
-      </aside>
-
-      <aside
-        className={cn(
-          "relative hidden min-h-0 w-full max-w-[24rem] shrink-0 flex-col border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] backdrop-blur-xl transition-[width,opacity] lg:flex",
-          open ? "opacity-100" : "pointer-events-none w-0 max-w-0 overflow-hidden opacity-0",
-        )}
-        aria-hidden={!open}
-        aria-labelledby={titleId}
-      >
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          {panelBody}
-        </div>
-      </aside>
+      {viewport === "mobile" ? (
+        <aside
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[1.75rem] border border-border/70 bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[var(--elevation-md)] backdrop-blur-xl transition-transform duration-300 lg:hidden",
+            open ? "translate-y-0" : "translate-y-full",
+          )}
+          aria-hidden={!open}
+          aria-labelledby={titleId}
+          aria-modal={open ? true : undefined}
+          role="dialog"
+        >
+          <div className="flex justify-center py-3" aria-hidden="true">
+            <span className="h-1 w-10 rounded-full bg-border" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">{panelBody}</div>
+        </aside>
+      ) : (
+        <aside
+          className={cn(
+            "relative hidden min-h-0 w-full max-w-[24rem] shrink-0 flex-col border-l border-border/60 bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] backdrop-blur-xl transition-[width,opacity] lg:flex",
+            open
+              ? "opacity-100"
+              : "pointer-events-none w-0 max-w-0 overflow-hidden opacity-0",
+          )}
+          aria-hidden={!open}
+          aria-labelledby={titleId}
+        >
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            {panelBody}
+          </div>
+        </aside>
+      )}
     </>
   );
 }

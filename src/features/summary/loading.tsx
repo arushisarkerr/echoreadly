@@ -6,7 +6,7 @@ type SummaryLoadingProps = {
  * Skeleton placeholder while a summary is being generated.
  */
 export function SummaryLoading({
-  message = "Generating summary…",
+  message = "Preparing listening mode…",
 }: SummaryLoadingProps) {
   return (
     <div

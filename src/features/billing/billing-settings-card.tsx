@@ -23,8 +23,7 @@ function billingNoticeFromParams(
 }
 
 /**
- * Settings Plan & billing card — status, upgrade, manage portal.
- * Matches existing Settings section styling (no redesign).
+ * Account billing card — status, upgrade, manage portal.
  */
 export function BillingSettingsCard() {
   const billing = useBilling();
@@ -37,13 +36,13 @@ export function BillingSettingsCard() {
   const pro = PLAN_CATALOG.pro;
 
   return (
-    <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5">
+    <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
       <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-        Plan & billing
+        Billing
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        View your plan, upgrade to Pro, or manage payment methods and
-        cancellation in the customer portal.
+        View your plan, upgrade to Pro, or manage payment methods in the
+        customer portal.
       </p>
 
       {notice ? (

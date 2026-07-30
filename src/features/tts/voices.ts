@@ -33,7 +33,7 @@ export const TTS_VOICE_CATALOG: readonly TtsVoiceDefinition[] = [
   {
     id: "alloy",
     name: "Alloy",
-    description: "Balanced studio default — clear and versatile.",
+    description: "Balanced listening default — clear and versatile.",
     tone: "neutral",
     presentation: "neutral",
   },

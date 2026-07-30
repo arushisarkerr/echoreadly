@@ -42,14 +42,14 @@ export function DashboardHeader({
           className="relative mx-auto hidden h-10 min-w-0 flex-1 items-center rounded-full border border-border/70 bg-background/50 pr-3 pl-9 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground md:flex md:max-w-md"
         >
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" />
-          Search your shelf…
+          Search Library…
         </Link>
 
         <Link
           href={ROUTES.addContent}
           className="ml-auto inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-foreground px-3.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 sm:px-4"
         >
-          Add
+          Import
         </Link>
       </div>
     </header>

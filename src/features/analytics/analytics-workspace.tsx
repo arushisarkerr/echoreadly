@@ -31,7 +31,7 @@ export function AnalyticsWorkspace() {
   return (
     <WorkspaceCanvas
       kicker="Analytics"
-      title="Your studio activity."
+      title="Your listening activity."
       description="Reading time, AI usage, documents, and plan metrics for your account. Aggregated server-side — nothing here slows the Reader."
       actionHref={ROUTES.library}
       actionLabel="Open Library"
@@ -202,12 +202,12 @@ export function AnalyticsWorkspace() {
               />
               <div className="grid gap-5 lg:grid-cols-2">
                 <BarChart
-                  title="Summary"
+                  title="Listen modes"
                   series={overview.series}
                   valueKey="summary"
                 />
                 <BarChart
-                  title="Chat"
+                  title="Advanced"
                   series={overview.series}
                   valueKey="chat"
                 />
@@ -283,7 +283,7 @@ export function AnalyticsWorkspace() {
                 Recent activity
               </h2>
               <p className="mt-1 text-sm text-muted">
-                Latest studio actions on your account.
+                Latest listening actions on your account.
               </p>
               {overview.recentActivity.length === 0 ? (
                 <p className="mt-6 text-sm text-muted">

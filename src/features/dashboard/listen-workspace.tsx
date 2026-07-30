@@ -22,10 +22,10 @@ export function ListenWorkspace() {
   return (
     <WorkspaceCanvas
       kicker="Listen"
-      title="Press play on a PDF."
-      description="Each tile opens the existing Listening Studio — reader, summary, chat, and TTS intact."
+      title="Press play on a document."
+      description="Each tile opens Listen — player, modes, language, and the document."
       actionHref={ROUTES.library}
-      actionLabel="Browse shelf"
+      actionLabel="Open Library"
     >
       {loading ? <p className="text-sm text-muted">Loading…</p> : null}
       {error ? (
@@ -37,7 +37,7 @@ export function ListenWorkspace() {
         <div className="rounded-[1.75rem] border border-dashed border-border p-10 text-sm text-muted">
           Nothing to hear yet.{" "}
           <Link href={ROUTES.addContent} className="font-semibold text-foreground">
-            Add content
+            Import
           </Link>
           .
         </div>
@@ -69,7 +69,7 @@ export function ListenWorkspace() {
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center p-5">
                   <p className="text-[0.65rem] font-semibold tracking-[0.16em] text-accent uppercase">
-                    {progress ? "Resume" : "Start Reading"}
+                    {progress ? "Resume" : "Listen"}
                   </p>
                   <h2 className="mt-2 truncate font-display text-xl font-semibold tracking-tight text-foreground">
                     {item.name}
