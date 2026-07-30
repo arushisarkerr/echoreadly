@@ -11,3 +11,7 @@ export { LibraryLoading } from "./loading";
 export { LibraryPage } from "./library-page";
 export { notifyLibraryChanged } from "./library-events";
 export { useLibrary, type UseLibraryOptions } from "./use-library";
+export {
+  useDocumentPrepStatus,
+  type DocumentPrepStatus,
+} from "./document-prep-status";

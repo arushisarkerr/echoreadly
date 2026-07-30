@@ -4,11 +4,11 @@ import { siteConfig } from "@/config";
 const FAQS = [
   {
     q: `What is ${siteConfig.name}?`,
-    a: `${siteConfig.name} turns files and links into natural AI audio. Import content, wait while it prepares, then listen — with বাংলা as the primary listening language.`,
+    a: `${siteConfig.name} turns PDF, DOCX, TXT, and Markdown files into natural AI audio. Import a file, wait while it prepares, then listen — with বাংলা as the primary listening language.`,
   },
   {
     q: "What can I import?",
-    a: "File uploads are live for PDF, DOCX, TXT, and Markdown. Website URLs, YouTube, EPUB, and more sources are coming soon.",
+    a: "PDF, DOCX, TXT, and Markdown files.",
   },
   {
     q: "How does listening work?",
@@ -19,12 +19,12 @@ const FAQS = [
     a: "বাংলা is the primary listening language. You can change listening language per document from Listen options.",
   },
   {
-    q: "Can I download or take audio with me?",
-    a: "Yes — download prepared MP3 files from Downloads after you listen. More formats are planned.",
+    q: "Can I download audio?",
+    a: "Yes — download prepared MP3 files from Downloads after you listen.",
   },
   {
-    q: "Is there a free plan?",
-    a: "Yes. Start free to import, prepare, and listen. Paid tiers with premium voices and higher limits are planned — not billed yet.",
+    q: "Is it free to use?",
+    a: "Yes. Sign up to import, prepare, listen, and download MP3 audio for personal use.",
   },
 ] as const;
 

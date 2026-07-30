@@ -1,25 +1,7 @@
 import { Reveal } from "@/components/marketing/reveal";
 
-const FORMATS = [
-  {
-    name: "MP3",
-    line: "Available now",
-    detail: "Download prepared audio from Downloads after you listen.",
-  },
-  {
-    name: "M4A",
-    line: "Coming soon",
-    detail: "Download for modern devices without leaving your library behind.",
-  },
-  {
-    name: "WAV",
-    line: "Coming soon",
-    detail: "A full-fidelity download when you need the original sound.",
-  },
-] as const;
-
 /**
- * Audio export experience — timeline + formats as a product moment.
+ * Audio downloads — MP3 only, as implemented.
  */
 export function MarketingAudioExport() {
   return (
@@ -38,22 +20,23 @@ export function MarketingAudioExport() {
               Listen now. Download when ready.
             </h2>
             <p className="er-copy mt-5 text-muted">
-              Stream natural AI audio in the browser today. MP3 downloads are
-              available from Downloads. M4A and WAV are planned.
+              Stream natural AI audio in the browser, then download prepared MP3
+              files from Downloads.
             </p>
 
             <ul className="mt-10 list-none space-y-0 divide-y divide-border border-y border-border p-0">
-              {FORMATS.map((format) => (
-                <li key={format.name} className="grid gap-2 py-6 sm:grid-cols-[5rem_1fr]">
-                  <span className="font-display text-2xl font-bold tracking-tight text-foreground">
-                    {format.name}
-                  </span>
-                  <div>
-                    <p className="er-display-sm text-foreground">{format.line}</p>
-                    <p className="er-copy-sm mt-1 text-muted">{format.detail}</p>
-                  </div>
-                </li>
-              ))}
+              <li className="grid gap-2 py-6 sm:grid-cols-[5rem_1fr]">
+                <span className="font-display text-2xl font-bold tracking-tight text-foreground">
+                  MP3
+                </span>
+                <div>
+                  <p className="er-display-sm text-foreground">Download ready</p>
+                  <p className="er-copy-sm mt-1 text-muted">
+                    Export page or summary narration, then reopen it anytime from
+                    Downloads.
+                  </p>
+                </div>
+              </li>
             </ul>
           </Reveal>
 
@@ -64,34 +47,12 @@ export function MarketingAudioExport() {
                   <span className="text-xs font-semibold tracking-[0.14em] text-accent uppercase">
                     Downloads
                   </span>
-                  <span className="text-xs text-subtle">MP3 live</span>
+                  <span className="text-xs text-subtle">MP3</span>
                 </div>
-                <div className="mt-8 space-y-4">
-                  {(
-                    [
-                      { file: "briefing.mp3", status: "Available" },
-                      { file: "chapter-03.m4a", status: "Planned" },
-                      { file: "master.wav", status: "Planned" },
-                    ] as const
-                  ).map((item, i) => (
-                      <div
-                        key={item.file}
-                        className="flex items-center gap-3 rounded-2xl border border-border bg-surface/70 px-4 py-3"
-                      >
-                        <span
-                          className="size-2.5 rounded-full bg-accent"
-                          style={{ opacity: 1 - i * 0.2 }}
-                        />
-                        <span className="flex-1 font-mono text-sm text-foreground">
-                          {item.file}
-                        </span>
-                        <span className="text-xs text-subtle">{item.status}</span>
-                      </div>
-                    ))}
-                </div>
-                <div className="mt-8 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                  <div className="h-full w-[28%] rounded-full bg-accent" />
-                </div>
+                <p className="mt-8 text-sm leading-relaxed text-muted">
+                  Your exported MP3 files appear here after you listen and
+                  download from the reader.
+                </p>
               </div>
               <div
                 aria-hidden="true"

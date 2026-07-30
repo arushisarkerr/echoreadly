@@ -3,15 +3,10 @@
  */
 
 export { AddContentWorkspace } from "./add-content-workspace";
-export { AnalyticsWorkspace } from "@/features/analytics";
-export { JobsWorkspace } from "@/features/jobs";
 export { CollectionsWorkspace } from "@/features/collections";
 export { CommandDock } from "./command-dock";
 export { ExportsWorkspace } from "@/features/export";
 export { DashboardHeader } from "./header";
-export { HistoryWorkspace } from "./history-workspace";
-export { HomeWorkspace } from "./home-workspace";
-export { ListenWorkspace } from "./listen-workspace";
 export { DASHBOARD_NAV } from "./nav";
 export { SettingsWorkspace } from "@/features/settings";
 export { DashboardShell } from "./shell";

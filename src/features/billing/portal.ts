@@ -42,7 +42,7 @@ export async function createCustomerPortalSession(
       return {
         ok: false,
         code: "NOT_FOUND",
-        error: "No billing account found. Upgrade to Pro first.",
+        error: "No billing account found.",
       };
     }
 

@@ -1,7 +1,7 @@
 import { Reveal } from "@/components/marketing/reveal";
 
 /**
- * Visual story: content types flow into a living audio stream.
+ * Visual story: files become listen-ready audio.
  */
 export function MarketingTransform() {
   return (
@@ -24,27 +24,22 @@ export function MarketingTransform() {
             From what you bring to what you hear.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            EchoReadly converts files and links into natural AI audio. Import,
-            wait while it prepares, then listen.
+            EchoReadly converts PDF, DOCX, TXT, and Markdown into natural AI
+            audio. Import, wait while it prepares, then listen.
           </p>
         </Reveal>
 
         <div className="relative mt-16 grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <Reveal delayClassName="er-reveal-delay-1">
             <ul className="space-y-4">
-              {[
-                "Files · Available now",
-                "Links · Coming soon",
-                "More formats · Coming soon",
-              ].map((label) => (
-                  <li
-                    key={label}
-                    className="er-glass rounded-2xl px-5 py-4 font-display text-lg font-semibold tracking-tight text-foreground"
-                  >
-                    {label}
-                  </li>
-                ),
-              )}
+              {["PDF", "DOCX", "TXT", "Markdown"].map((label) => (
+                <li
+                  key={label}
+                  className="er-glass rounded-2xl px-5 py-4 font-display text-lg font-semibold tracking-tight text-foreground"
+                >
+                  {label}
+                </li>
+              ))}
             </ul>
           </Reveal>
 
@@ -70,8 +65,8 @@ export function MarketingTransform() {
                 Output
               </p>
               <p className="er-display-sm mt-3 text-foreground">
-                Natural AI audio ready to listen — বাংলা first. MP3 downloads
-                are available; more voices are planned.
+                Natural AI audio ready to listen — বাংলা first. Download MP3
+                from Downloads after you listen.
               </p>
               <div className="mt-8 flex h-20 items-end gap-1.5">
                 {[30, 55, 40, 75, 48, 82, 36, 68, 44, 70, 32, 60].map((h, i) => (

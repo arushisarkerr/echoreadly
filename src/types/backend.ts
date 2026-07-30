@@ -287,6 +287,7 @@ export type Database = {
         Row: {
           user_id: string;
           preferred_tts_voice: string;
+          preferred_listening_language: string;
           display_name: string | null;
           playback_speed: number;
           auto_play_next_page: boolean;
@@ -300,6 +301,7 @@ export type Database = {
         Insert: {
           user_id: string;
           preferred_tts_voice?: string;
+          preferred_listening_language?: string;
           display_name?: string | null;
           playback_speed?: number;
           auto_play_next_page?: boolean;
@@ -312,6 +314,7 @@ export type Database = {
         };
         Update: Partial<{
           preferred_tts_voice: string;
+          preferred_listening_language: string;
           display_name: string | null;
           playback_speed: number;
           auto_play_next_page: boolean;

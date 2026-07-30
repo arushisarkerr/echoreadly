@@ -94,11 +94,16 @@ export async function POST(request: Request) {
     return apiError("VALIDATION", "Unsupported jobType.", 400);
   }
 
-  // Cleanup is system-only via worker secret endpoint.
-  if (body.jobType === "cleanup") {
+  // System-only jobs — not started from the personal app UI.
+  if (
+    body.jobType === "cleanup" ||
+    body.jobType === "embedding_generate" ||
+    body.jobType === "analytics_aggregate" ||
+    body.jobType === "cache_refresh"
+  ) {
     return apiError(
       "FORBIDDEN",
-      "Cleanup jobs can only be started by the worker.",
+      "That job type can't be started from the app.",
       403,
     );
   }

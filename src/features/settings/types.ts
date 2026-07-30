@@ -2,6 +2,7 @@
  * User settings / preference types — single `user_preferences` table.
  */
 
+import type { TargetLanguageCode } from "@/constants";
 import type { TtsPlaybackSpeed } from "@/features/tts";
 import type { TtsVoiceId } from "@/features/tts/voices";
 
@@ -17,6 +18,7 @@ export type ExportFormatPreference = "mp3";
 export type UserPreferences = {
   displayName: string;
   preferredTtsVoice: TtsVoiceId;
+  preferredListeningLanguage: TargetLanguageCode;
   playbackSpeed: TtsPlaybackSpeed;
   autoPlayNextPage: boolean;
   fontSize: FontSizePreference;
@@ -28,6 +30,7 @@ export type UserPreferences = {
 export type UserPreferencesRow = {
   user_id: string;
   preferred_tts_voice: string;
+  preferred_listening_language?: string | null;
   display_name: string | null;
   playback_speed: number;
   auto_play_next_page: boolean;
@@ -42,6 +45,7 @@ export type UserPreferencesRow = {
 export type UserPreferencesUpdateInput = {
   displayName: string;
   preferredTtsVoice: TtsVoiceId;
+  preferredListeningLanguage: TargetLanguageCode;
   playbackSpeed: TtsPlaybackSpeed;
   autoPlayNextPage: boolean;
   fontSize: FontSizePreference;

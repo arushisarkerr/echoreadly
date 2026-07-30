@@ -43,7 +43,7 @@ export type TextExtractionResult =
 
 /** User-facing copy when PDFium finds no text and OCR is not configured for launch. */
 export const EMPTY_PDF_NO_OCR_MESSAGE =
-  "This PDF has no extractable text (it may be scanned or image-only). OCR is not available in this launch. Please upload a text-based PDF with selectable text.";
+  "This PDF has no extractable text (it may be scanned or image-only). Upload a text-based PDF instead.";
 
 /** User-facing copy when optional OCR ran but still produced no usable text. */
 export const EMPTY_PDF_OCR_UNSUCCESSFUL_MESSAGE =

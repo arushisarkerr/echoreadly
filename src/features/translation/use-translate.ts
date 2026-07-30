@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { consumeAiSse } from "@/features/ai/consume-sse";
 import {
   DEFAULT_TARGET_LANGUAGE,
+  isSupportedTargetLanguage,
   type TargetLanguageCode,
 } from "@/constants";
 import type { SummaryType } from "@/features/ai";
+import { loadUserPreferences } from "@/features/settings/preferences-client";
 
 import type {
   TranslateUiStatus,
@@ -58,6 +60,22 @@ export function useTranslate(): UseTranslateState {
   const [selectionText, setSelectionText] = useState("");
   const [summaryType, setSummaryType] = useState<SummaryType>("short");
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadUserPreferences().then((result) => {
+      if (cancelled || !result.ok) {
+        return;
+      }
+      const language = result.data.preferences.preferredListeningLanguage;
+      if (isSupportedTargetLanguage(language)) {
+        setTargetLanguage(language);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function stop() {
     abortRef.current?.abort();

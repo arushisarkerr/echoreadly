@@ -2,6 +2,7 @@
  * Default user preferences.
  */
 
+import { DEFAULT_TARGET_LANGUAGE } from "@/constants";
 import { DEFAULT_TTS_VOICE } from "@/features/tts";
 import { resolveTtsVoiceId } from "@/features/tts/voices";
 
@@ -13,6 +14,7 @@ export function createDefaultUserPreferences(
   return {
     displayName: "",
     preferredTtsVoice: resolveTtsVoiceId(DEFAULT_TTS_VOICE),
+    preferredListeningLanguage: DEFAULT_TARGET_LANGUAGE,
     playbackSpeed: 1,
     autoPlayNextPage: false,
     fontSize: "md",

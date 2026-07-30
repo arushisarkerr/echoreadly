@@ -11,7 +11,7 @@ const secondaryCta =
   "er-btn inline-flex h-12 items-center justify-center rounded-full border border-border bg-[color:var(--glass)] px-7 text-foreground backdrop-blur-md transition-colors hover:bg-surface";
 
 /**
- * Immersive hero — content floating into audio. Asymmetric, not a centered template.
+ * Immersive hero — content floating into audio.
  */
 export function MarketingHero() {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -81,17 +81,17 @@ export function MarketingHero() {
             {siteConfig.name}
           </h1>
           <p className="er-reveal er-reveal-delay-2 er-display-md mt-6 max-w-[16ch] text-foreground">
-            Drop any file.
+            Drop a file.
             <br />
-            Paste any link.
+            Press play.
           </p>
           <p className="er-reveal er-reveal-delay-3 er-copy mt-6 text-muted">
-            We&apos;ll turn it into natural AI audio — with বাংলা as the primary
-            listening language.
+            We&apos;ll turn PDF, DOCX, TXT, or Markdown into natural AI audio —
+            with বাংলা as the primary listening language.
           </p>
           <div className="er-reveal er-reveal-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a href={ROUTES.signup} className={primaryCta}>
-              Start free
+              Open EchoReadly
             </a>
             <a href="#how-it-works" className={secondaryCta}>
               See how it works
@@ -113,11 +113,9 @@ function HeroStage() {
       aria-hidden="true"
       className="relative mx-auto aspect-[4/5] w-full max-w-lg lg:aspect-square lg:max-w-none"
     >
-      {/* Depth field */}
       <div className="absolute inset-[8%] rounded-[2rem] bg-[radial-gradient(circle_at_50%_40%,_color-mix(in_srgb,var(--accent)_22%,transparent),_transparent_65%)]" />
 
-      {/* Floating PDF */}
-      <div className="er-float-a er-glass absolute top-[6%] left-[2%] w-[42%] rounded-2xl p-3">
+      <div className="er-float-a er-glass absolute top-[10%] left-[4%] w-[46%] rounded-2xl p-3">
         <div className="mb-2 h-2 w-12 rounded-full bg-accent/50" />
         <div className="space-y-1.5">
           <div className="h-1.5 w-full rounded-full bg-foreground/15" />
@@ -126,48 +124,25 @@ function HeroStage() {
           <div className="h-1.5 w-[80%] rounded-full bg-foreground/12" />
         </div>
         <p className="mt-3 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-          Research.pdf
+          Your document
         </p>
       </div>
 
-      {/* Website preview */}
-      <div className="er-float-b er-glass absolute top-[18%] right-[0%] w-[48%] rounded-2xl p-2.5">
-        <div className="mb-2 flex items-center gap-1">
-          <span className="size-1.5 rounded-full bg-border" />
-          <span className="size-1.5 rounded-full bg-border" />
-          <span className="size-1.5 rounded-full bg-border" />
-          <span className="ml-2 h-1.5 flex-1 rounded-full bg-foreground/10" />
-        </div>
-        <div className="overflow-hidden rounded-xl bg-surface-muted/80 p-3">
-          <div className="h-2 w-1/2 rounded-full bg-foreground/20" />
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
-            <div className="aspect-square rounded-md bg-accent/25" />
-            <div className="aspect-square rounded-md bg-foreground/10" />
-            <div className="aspect-square rounded-md bg-foreground/10" />
-          </div>
-        </div>
-        <p className="mt-2 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-          Web · Coming soon
+      <div className="er-float-b er-glass absolute top-[28%] right-[2%] w-[44%] rounded-2xl p-3">
+        <p className="text-[0.65rem] font-semibold tracking-wide text-accent uppercase">
+          Preparing
         </p>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+          <div className="h-full w-2/3 rounded-full bg-accent" />
+        </div>
+        <p className="mt-3 text-[0.65rem] text-muted">Natural AI audio…</p>
       </div>
 
-      {/* Media card — planned */}
-      <div className="er-float-c er-glass absolute bottom-[34%] left-[8%] w-[46%] rounded-2xl p-2.5">
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-[linear-gradient(135deg,_color-mix(in_srgb,var(--accent)_35%,#0a1210),_#0a1210)]">
-          <span className="absolute inset-0 m-auto size-8 rounded-full border border-white/30 bg-white/15" />
-        </div>
-        <p className="mt-2 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-          Media · Coming soon
-        </p>
-      </div>
-
-      {/* Audio timeline / waveform destination */}
       <div className="er-glass absolute right-[4%] bottom-[8%] w-[62%] rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-[0.7rem] font-semibold tracking-wide text-accent uppercase">
             Now playing
           </span>
-          <span className="text-[0.65rem] text-subtle">02:14 / 18:40</span>
         </div>
         <div className="flex h-16 items-end justify-between gap-1">
           {bars.map((h, i) => (
@@ -181,23 +156,7 @@ function HeroStage() {
             />
           ))}
         </div>
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-foreground/10">
-          <div className="h-full w-[38%] rounded-full bg-accent" />
-        </div>
       </div>
-
-      {/* Particles */}
-      {Array.from({ length: 8 }).map((_, i) => (
-        <span
-          key={i}
-          className="er-particle absolute size-1 rounded-full bg-accent/70"
-          style={{
-            left: `${18 + i * 9}%`,
-            bottom: `${28 + (i % 3) * 6}%`,
-            animationDelay: `${i * 0.35}s`,
-          }}
-        />
-      ))}
     </div>
   );
 }

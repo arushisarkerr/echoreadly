@@ -44,6 +44,7 @@ function preferencesEqual(a: UserPreferences, b: UserPreferences): boolean {
   return (
     a.displayName === b.displayName &&
     a.preferredTtsVoice === b.preferredTtsVoice &&
+    a.preferredListeningLanguage === b.preferredListeningLanguage &&
     a.playbackSpeed === b.playbackSpeed &&
     a.autoPlayNextPage === b.autoPlayNextPage &&
     a.fontSize === b.fontSize &&
@@ -200,6 +201,7 @@ export function useSettings(): UseSettingsState {
     const result = await saveUserPreferences({
       displayName: draft.displayName.trim(),
       preferredTtsVoice: draft.preferredTtsVoice,
+      preferredListeningLanguage: draft.preferredListeningLanguage,
       playbackSpeed: draft.playbackSpeed,
       autoPlayNextPage: draft.autoPlayNextPage,
       fontSize: draft.fontSize,

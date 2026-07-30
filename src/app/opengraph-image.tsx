@@ -83,7 +83,7 @@ export default function OpenGraphImage() {
               maxWidth: 860,
             }}
           >
-            Drop any file. Paste any link. We will turn it into natural AI
+            Drop a file. We will turn it into natural AI
             audio — Bangla first.
           </div>
         </div>

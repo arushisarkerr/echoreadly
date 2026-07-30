@@ -2,6 +2,10 @@
  * Server-side validation for user preference payloads.
  */
 
+import {
+  isSupportedTargetLanguage,
+  type TargetLanguageCode,
+} from "@/constants";
 import { TTS_PLAYBACK_SPEEDS, type TtsPlaybackSpeed } from "@/features/tts";
 import {
   isSupportedTtsVoiceId,
@@ -141,9 +145,19 @@ export function validatePreferredVoice(
   return { ok: true, data: resolveTtsVoiceId(value) };
 }
 
+export function validatePreferredListeningLanguage(
+  value: unknown,
+): ValidationResult<TargetLanguageCode> {
+  if (!isSupportedTargetLanguage(value)) {
+    return failure("preferredListeningLanguage is not supported.");
+  }
+  return { ok: true, data: value };
+}
+
 type PreferencesBody = {
   displayName?: unknown;
   preferredTtsVoice?: unknown;
+  preferredListeningLanguage?: unknown;
   playbackSpeed?: unknown;
   autoPlayNextPage?: unknown;
   fontSize?: unknown;
@@ -163,6 +177,11 @@ export function validateUserPreferencesUpdate(
 
   const preferredTtsVoice = validatePreferredVoice(body.preferredTtsVoice);
   if (!preferredTtsVoice.ok) return preferredTtsVoice;
+
+  const preferredListeningLanguage = validatePreferredListeningLanguage(
+    body.preferredListeningLanguage,
+  );
+  if (!preferredListeningLanguage.ok) return preferredListeningLanguage;
 
   const playbackSpeed = validatePlaybackSpeed(body.playbackSpeed);
   if (!playbackSpeed.ok) return playbackSpeed;
@@ -189,6 +208,7 @@ export function validateUserPreferencesUpdate(
     data: {
       displayName: displayName.data,
       preferredTtsVoice: preferredTtsVoice.data,
+      preferredListeningLanguage: preferredListeningLanguage.data,
       playbackSpeed: playbackSpeed.data,
       autoPlayNextPage: autoPlayNextPage.data,
       fontSize: fontSize.data,

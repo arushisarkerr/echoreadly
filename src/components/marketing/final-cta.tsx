@@ -22,21 +22,21 @@ export function FinalCta() {
             Import. Listen.
           </h2>
           <p className="er-copy mx-auto mt-6 text-muted">
-            Join {siteConfig.name} to turn files and links into natural AI
+            Sign in to {siteConfig.name} and turn your files into natural AI
             audio. {siteConfig.tagline}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href={ROUTES.signup}
+              href={ROUTES.login}
               className="er-btn inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-background transition-transform hover:scale-[1.02]"
             >
-              Start free — Import → Listen
+              Sign in — Import → Listen
             </a>
             <a
-              href={ROUTES.login}
+              href={ROUTES.signup}
               className="er-btn inline-flex h-12 items-center justify-center rounded-full border border-border bg-[color:var(--glass)] px-8 text-foreground backdrop-blur-md"
             >
-              Sign In
+              Create account
             </a>
           </div>
         </Reveal>

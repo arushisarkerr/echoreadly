@@ -88,15 +88,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         <div className="rounded-2xl border border-border/60 bg-background/40 p-2 backdrop-blur-md">
           <AccountMenu />
         </div>
-        <button
-          type="button"
-          disabled
-          aria-label="Workspace switcher (coming soon)"
-          className="flex h-10 w-full items-center justify-between rounded-2xl border border-dashed border-border/80 px-3 text-left text-[0.7rem] font-medium tracking-wide text-subtle"
-        >
-          <span>Personal</span>
-          <span aria-hidden="true">···</span>
-        </button>
       </div>
     </div>
   );

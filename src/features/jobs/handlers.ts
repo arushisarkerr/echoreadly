@@ -2,8 +2,6 @@
  * Background job handlers — wrap existing feature services.
  */
 
-import { createHash } from "crypto";
-
 import { serverEnv } from "@/config";
 import { isSupportedTargetLanguage } from "@/constants";
 import type { SummaryType } from "@/features/ai";
@@ -108,7 +106,7 @@ const handleOcr: JobHandler = async (ctx) => {
   const mistralKey = serverEnv.mistralApiKey;
   if (!mistralKey) {
     throw new Error(
-      "OCR is not configured. Set MISTRAL_API_KEY to enable scanned PDF OCR.",
+      "OCR isn't available for this document. Upload a text-based PDF instead.",
     );
   }
 
@@ -452,48 +450,9 @@ const handleEmbedding: JobHandler = async (ctx) => {
     throw new Error("documentId or storagePath is required for embeddings.");
   }
 
-  await ctx.updateProgress(40, "loading_chunks");
-  const chunks = await listChunksByDocumentId(
-    resolvedDocumentId,
-    ctx.job.user_id,
-    ownership.client,
+  throw new Error(
+    "Semantic embeddings aren't available in this personal build. Chat uses document text directly.",
   );
-  if (!chunks.ok) {
-    throw new Error(chunks.error);
-  }
-
-  await ctx.updateProgress(70, "hashing_chunks");
-  assertNotAborted(ctx.signal);
-
-  // Deterministic placeholder embeddings until a vector store ships.
-  const embeddings = chunks.data.slice(0, 200).map((chunk) => {
-    const digest = createHash("sha256")
-      .update(chunk.text)
-      .digest("hex")
-      .slice(0, 32);
-    return {
-      chunkId: chunk.id,
-      pageNumber: chunk.page_number,
-      chunkIndex: chunk.chunk_index,
-      digest,
-      dimensions: 8,
-      vector: Array.from({ length: 8 }, (_, index) => {
-        const byte = Number.parseInt(digest.slice(index * 2, index * 2 + 2), 16);
-        return Number.isFinite(byte) ? byte / 255 : 0;
-      }),
-    };
-  });
-
-  return {
-    step: "embeddings_ready",
-    result: {
-      documentId: resolvedDocumentId,
-      chunkCount: chunks.data.length,
-      embeddingCount: embeddings.length,
-      mode: "deterministic_stub",
-      embeddings: embeddings.slice(0, 20),
-    },
-  };
 };
 
 const handleAnalyticsAggregate: JobHandler = async (ctx) => {

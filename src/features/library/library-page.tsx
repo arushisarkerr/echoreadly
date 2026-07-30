@@ -19,6 +19,10 @@ import {
 import type { StoredPdfObject } from "@/lib/storage";
 import { cn, formatFileSize } from "@/utils";
 
+import {
+  useDocumentPrepStatus,
+  type DocumentPrepStatus,
+} from "./document-prep-status";
 import { LibraryEmptyState } from "./empty-state";
 import { DeleteDocumentButton } from "./delete-document-button";
 import { LibraryHomeHub } from "./library-home-hub";
@@ -27,6 +31,25 @@ import { useLibrary } from "./use-library";
 
 type ViewMode = "grid" | "list" | "compact";
 type SortMode = "newest" | "oldest" | "name";
+type SourceFilter = "all" | "pdf" | "docx" | "txt" | "md";
+type StatusFilter = "all" | "ready" | "processing" | "failed";
+
+function sourceKindFromName(name: string): SourceFilter | "other" {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".pdf")) {
+    return "pdf";
+  }
+  if (lower.endsWith(".docx")) {
+    return "docx";
+  }
+  if (lower.endsWith(".txt")) {
+    return "txt";
+  }
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+    return "md";
+  }
+  return "other";
+}
 
 /**
  * Editorial library shelf — paginated useLibrary / listPdfsPage data.
@@ -36,9 +59,8 @@ export function LibraryPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortMode>("newest");
-  const [source, setSource] = useState("all");
-  const [language, setLanguage] = useState("all");
-  const [status, setStatus] = useState("all");
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [collection, setCollection] = useState("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [collectionOptions, setCollectionOptions] = useState<
@@ -60,6 +82,7 @@ export function LibraryPage() {
     loadMore,
     removeItem,
   } = useLibrary({ sort });
+  const { statusFor } = useDocumentPrepStatus(loadedCount > 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,10 +131,24 @@ export function LibraryPage() {
       collection !== "all" && membershipFilter?.collectionId === collection
         ? membershipFilter.paths
         : null;
-
     return items.filter((item) => {
-      if (source !== "all" && source !== "pdf") {
-        return false;
+      if (source !== "all") {
+        if (sourceKindFromName(item.name) !== source) {
+          return false;
+        }
+      }
+
+      if (status !== "all") {
+        const prep = statusFor(item.storagePath);
+        if (status === "processing" && prep !== "preparing") {
+          return false;
+        }
+        if (status === "ready" && prep !== "ready") {
+          return false;
+        }
+        if (status === "failed" && prep !== "failed") {
+          return false;
+        }
       }
 
       if (collection !== "all") {
@@ -128,10 +165,17 @@ export function LibraryPage() {
       }
       return item.name.toLowerCase().includes(q);
     });
-  }, [items, query, source, collection, membershipFilter]);
+  }, [
+    items,
+    query,
+    source,
+    status,
+    collection,
+    membershipFilter,
+    statusFor,
+  ]);
 
   const hasQuery = query.trim().length > 0;
-  const previewFiltersActive = language !== "all" || status !== "all";
 
   function clearSearch() {
     setQuery("");
@@ -219,34 +263,24 @@ export function LibraryPage() {
             <FilterSelect
               label="Source"
               value={source}
-              onChange={setSource}
+              onChange={(value) => setSource(value as SourceFilter)}
               options={[
                 ["all", "All sources"],
                 ["pdf", "PDF"],
-                ["doc", "DOC (soon)"],
-                ["url", "URL (soon)"],
-              ]}
-            />
-            <FilterSelect
-              label="Language"
-              value={language}
-              onChange={setLanguage}
-              options={[
-                ["all", "All languages"],
-                ["en", "English"],
-                ["bn", "Bangla"],
-                ["hi", "Hindi"],
-                ["pt", "Portuguese"],
+                ["docx", "DOCX"],
+                ["txt", "TXT"],
+                ["md", "Markdown"],
               ]}
             />
             <FilterSelect
               label="Status"
               value={status}
-              onChange={setStatus}
+              onChange={(value) => setStatus(value as StatusFilter)}
               options={[
                 ["all", "Any status"],
                 ["ready", "Ready"],
-                ["processing", "Processing"],
+                ["processing", "Preparing"],
+                ["failed", "Failed"],
               ]}
             />
             <FilterSelect
@@ -259,13 +293,6 @@ export function LibraryPage() {
                   (entry) => [entry.id, entry.name] as [string, string],
                 ),
               ]}
-            />
-            <FilterSelect
-              label="Duration"
-              value="all"
-              onChange={() => undefined}
-              disabled
-              options={[["all", "Any duration"]]}
             />
           </div>
 
@@ -304,13 +331,6 @@ export function LibraryPage() {
             </div>
           </div>
         </div>
-
-        {previewFiltersActive ? (
-          <p className="text-[0.7rem] text-subtle">
-            Language and status filters are preview-only until item metadata
-            ships. Search, source, and collections still apply.
-          </p>
-        ) : null}
       </div>
 
       <div
@@ -319,7 +339,7 @@ export function LibraryPage() {
       >
         {!loading && !error && loadedCount > 0 ? (
           <p className="text-xs text-muted">
-            {hasQuery || source !== "all"
+            {hasQuery || source !== "all" || status !== "all" || collection !== "all"
               ? `${filtered.length} of ${loadedCount} loaded`
               : `${loadedCount} loaded${hasMore ? " · more available" : ""}`}
           </p>
@@ -405,6 +425,7 @@ export function LibraryPage() {
           <LibraryViews
             items={filtered}
             view={view}
+            statusFor={statusFor}
             onDeleted={handleDeleted}
           />
 
@@ -442,10 +463,12 @@ export function LibraryPage() {
 function LibraryViews({
   items,
   view,
+  statusFor,
   onDeleted,
 }: {
   items: StoredPdfObject[];
   view: ViewMode;
+  statusFor: (storagePath: string) => DocumentPrepStatus;
   onDeleted: (storagePath: string) => void;
 }) {
   const { byStoragePath } = useListeningProgressMap();
@@ -458,6 +481,7 @@ function LibraryViews({
             byStoragePath,
             item.storagePath,
           );
+          const prep = statusFor(item.storagePath);
           return (
           <li
             key={item.path}
@@ -478,11 +502,11 @@ function LibraryViews({
                   {item.name}
                 </span>
                 <span className="mt-0.5 block text-xs text-muted">
-                  {progressMeta(progress, item)}
+                  {prepLabel(prep)} · {progressMeta(progress, item)}
                 </span>
               </span>
               <span className="hidden shrink-0 rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background opacity-90 transition group-hover:opacity-100 sm:inline-flex">
-                {progress ? "Resume" : "Listen"}
+                {listenLabel(prep, progress)}
               </span>
             </Link>
             <DeleteDocumentButton
@@ -505,6 +529,7 @@ function LibraryViews({
             byStoragePath,
             item.storagePath,
           );
+          const prep = statusFor(item.storagePath);
           return (
           <li
             key={item.path}
@@ -517,6 +542,9 @@ function LibraryViews({
             >
               {item.name}
             </Link>
+            <span className="shrink-0 text-[0.7rem] text-subtle">
+              {prepLabel(prep)}
+            </span>
             <span className="shrink-0 text-[0.7rem] tabular-nums text-subtle">
               {progress?.progressPercent != null
                 ? `${progress.progressPercent}%`
@@ -542,6 +570,7 @@ function LibraryViews({
           byStoragePath,
           item.storagePath,
         );
+        const prep = statusFor(item.storagePath);
         return (
         <li key={item.path}>
           <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/70 bg-surface/50 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[var(--elevation-sm)]">
@@ -549,6 +578,19 @@ function LibraryViews({
               aria-hidden="true"
               className="relative h-28 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--accent)_28%,transparent),transparent_55%),linear-gradient(135deg,var(--surface-muted),var(--background))]"
             >
+              <span
+                className={cn(
+                  "absolute top-3 left-3 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase",
+                  prep === "preparing" &&
+                    "border-accent/30 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-foreground",
+                  prep === "failed" &&
+                    "border-danger/40 bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] text-danger",
+                  prep === "ready" &&
+                    "border-border bg-background/80 text-muted",
+                )}
+              >
+                {prepLabel(prep)}
+              </span>
               <div className="absolute inset-x-5 bottom-4 flex h-10 items-end gap-1 opacity-80">
                 {[30, 55, 40, 70, 45, 60, 35].map((h, i) => (
                   <span
@@ -567,19 +609,23 @@ function LibraryViews({
                 {item.name}
               </h3>
               <p className="mt-2 text-sm text-muted">
-                {progressMeta(progress, item)}
+                {progressMeta(progress, item, prep)}
               </p>
               <p className="mt-1 truncate text-[0.65rem] text-subtle">
                 {progress
                   ? `Last opened ${formatLastOpened(progress.lastOpenedAt)}`
-                  : "PDF"}
+                  : prep === "failed"
+                    ? "Open to retry listening"
+                    : prep === "preparing"
+                      ? "Text extraction in progress"
+                      : "Ready to listen"}
               </p>
               <div className="mt-auto flex flex-wrap items-start gap-2 pt-5">
                 <Link
                   href={readerPathForStorage(item.storagePath)}
                   className="inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {progress ? "Resume" : "Listen"}
+                  {listenLabel(prep, progress)}
                 </Link>
                 <DeleteDocumentButton
                   storagePath={item.storagePath}
@@ -596,10 +642,40 @@ function LibraryViews({
   );
 }
 
+function prepLabel(status: DocumentPrepStatus): string {
+  if (status === "preparing") {
+    return "Preparing";
+  }
+  if (status === "failed") {
+    return "Failed";
+  }
+  return "Ready";
+}
+
+function listenLabel(
+  prep: DocumentPrepStatus,
+  progress: LibraryProgressView | null,
+): string {
+  if (prep === "preparing") {
+    return "Open";
+  }
+  if (prep === "failed") {
+    return "Retry";
+  }
+  return progress ? "Resume" : "Listen";
+}
+
 function progressMeta(
   progress: LibraryProgressView | null,
   item: StoredPdfObject,
+  prep?: DocumentPrepStatus,
 ): string {
+  if (prep === "preparing") {
+    return "Preparing audio…";
+  }
+  if (prep === "failed") {
+    return "Couldn't prepare this file";
+  }
   if (!progress) {
     return [
       formatFileSize(item.size),

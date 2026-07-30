@@ -4,7 +4,7 @@ const STEPS = [
   {
     n: "01",
     title: "Import",
-    copy: "Drop a file to import (PDF, DOCX, TXT, or Markdown). Link import is coming soon.",
+    copy: "Drop a PDF, DOCX, TXT, or Markdown file to import.",
   },
   {
     n: "02",
@@ -19,7 +19,7 @@ const STEPS = [
 ] as const;
 
 /**
- * How it works — editorial horizontal steps, not a card grid.
+ * How it works — editorial horizontal steps.
  */
 export function HowItWorks() {
   return (

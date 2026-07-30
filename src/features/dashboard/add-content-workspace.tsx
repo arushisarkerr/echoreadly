@@ -8,7 +8,7 @@ import { useLibrary } from "@/features/library";
 import { UploadCard } from "@/features/upload";
 
 /**
- * Import — drop a file (or paste a link when available).
+ * Import — drop a supported file.
  */
 export function AddContentWorkspace() {
   const { items } = useLibrary();
@@ -16,7 +16,7 @@ export function AddContentWorkspace() {
   return (
     <WorkspaceCanvas
       kicker="Import"
-      title="Drop any file. Paste any link."
+      title="Drop a file to import."
       description="EchoReadly prepares natural AI audio automatically. When it’s ready, you listen — no tools to operate."
       actionHref={ROUTES.library}
       actionLabel="Open Library"
@@ -82,43 +82,11 @@ export function AddContentWorkspace() {
           ) : null}
         </aside>
 
-        <div className="space-y-5">
-          <div className="rounded-[1.75rem] border border-dashed border-border/80 bg-surface/40 px-5 py-5 sm:px-6">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <label
-                  htmlFor="import-link"
-                  className="text-xs font-semibold tracking-wide text-subtle uppercase"
-                >
-                  Paste a link
-                </label>
-                <p className="mt-1 text-sm text-muted">
-                  Websites, blogs, and YouTube — not available yet.
-                </p>
-              </div>
-              <span className="inline-flex rounded-full border border-border/70 bg-background/60 px-2.5 py-1 text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-                Coming soon
-              </span>
-            </div>
-            <input
-              id="import-link"
-              type="url"
-              disabled
-              placeholder="https://…"
-              aria-describedby="import-link-help"
-              className="mt-3 h-11 w-full rounded-full border border-border/80 bg-background/50 px-4 text-sm text-muted outline-none disabled:cursor-not-allowed"
-            />
-            <p id="import-link-help" className="mt-2 text-xs text-subtle">
-              File import is live below. Link import will land here when ready.
-            </p>
-          </div>
-
-          <div>
-            <p className="mb-3 text-xs font-semibold tracking-wide text-subtle uppercase">
-              Drop a file
-            </p>
-            <UploadCard />
-          </div>
+        <div>
+          <p className="mb-3 text-xs font-semibold tracking-wide text-subtle uppercase">
+            Drop a file
+          </p>
+          <UploadCard />
         </div>
       </div>
     </WorkspaceCanvas>

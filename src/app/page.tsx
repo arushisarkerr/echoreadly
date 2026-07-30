@@ -6,16 +6,14 @@ import {
   MarketingFeatureStories,
   MarketingFooter,
   MarketingHero,
-  MarketingIntegrations,
   MarketingNavbar,
   MarketingSources,
   MarketingTransform,
   MarketingVoiceExperience,
-  PricingPreview,
 } from "@/components/marketing";
 
 /**
- * EchoReadly landing — Import → Listen marketing.
+ * EchoReadly landing — Import → Listen.
  */
 export default function HomePage() {
   return (
@@ -29,8 +27,6 @@ export default function HomePage() {
         <MarketingVoiceExperience />
         <MarketingAudioExport />
         <MarketingFeatureStories />
-        <MarketingIntegrations />
-        <PricingPreview />
         <Faq />
         <FinalCta />
       </main>

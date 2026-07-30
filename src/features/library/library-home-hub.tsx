@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import { ROUTES, readerPathForStorage } from "@/constants";
 import {
@@ -12,47 +11,17 @@ import {
 import type { StoredPdfObject } from "@/lib/storage";
 import { cn, formatFileSize } from "@/utils";
 
-const PREPARING_WINDOW_MS = 10 * 60 * 1000;
-
-function audioStatus(
-  item: StoredPdfObject,
-  hasProgress: boolean,
-  nowMs: number,
-): "Preparing..." | "Ready" {
-  if (hasProgress) {
-    return "Ready";
-  }
-  if (item.createdAt) {
-    const created = new Date(item.createdAt).getTime();
-    if (
-      Number.isFinite(created) &&
-      nowMs - created < PREPARING_WINDOW_MS
-    ) {
-      return "Preparing...";
-    }
-  }
-  return "Ready";
-}
+import {
+  useDocumentPrepStatus,
+  type DocumentPrepStatus,
+} from "./document-prep-status";
 
 /**
  * Library-as-home hub — Continue, Recent, Preparing statuses, secondary links.
  */
 export function LibraryHomeHub({ items }: { items: StoredPdfObject[] }) {
   const { byStoragePath, recent: progressRecent } = useListeningProgressMap();
-  const [nowMs, setNowMs] = useState<number | null>(null);
-
-  useEffect(() => {
-    const boot = window.setTimeout(() => {
-      setNowMs(Date.now());
-    }, 0);
-    const timer = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 30_000);
-    return () => {
-      window.clearTimeout(boot);
-      window.clearInterval(timer);
-    };
-  }, []);
+  const { statusFor } = useDocumentPrepStatus(items.length > 0);
 
   const continueItem = (() => {
     for (const progress of progressRecent) {
@@ -71,16 +40,9 @@ export function LibraryHomeHub({ items }: { items: StoredPdfObject[] }) {
   })();
 
   const recent = items.slice(0, 6);
-  const preparing =
-    nowMs == null
-      ? []
-      : items.filter((item) => {
-          const progress = progressForStoragePath(
-            byStoragePath,
-            item.storagePath,
-          );
-          return audioStatus(item, Boolean(progress), nowMs) === "Preparing...";
-        });
+  const preparing = items.filter(
+    (item) => statusFor(item.storagePath) === "preparing",
+  );
 
   return (
     <div className="space-y-10">
@@ -190,10 +152,7 @@ export function LibraryHomeHub({ items }: { items: StoredPdfObject[] }) {
                 byStoragePath,
                 item.storagePath,
               );
-              const status =
-                nowMs == null
-                  ? "Ready"
-                  : audioStatus(item, Boolean(progress), nowMs);
+              const prep = statusFor(item.storagePath);
               return (
                 <li key={item.path}>
                   <Link
@@ -206,12 +165,8 @@ export function LibraryHomeHub({ items }: { items: StoredPdfObject[] }) {
                       </span>
                       <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <StatusBadge
-                          tone={
-                            status === "Preparing..." ? "preparing" : "ready"
-                          }
-                          label={
-                            status === "Preparing..." ? "Preparing" : "Ready"
-                          }
+                          tone={prepTone(prep)}
+                          label={prepLabel(prep)}
                         />
                         <span className="text-[0.7rem] text-muted">
                           {progress?.progressPercent != null
@@ -252,12 +207,28 @@ export function LibraryHomeHub({ items }: { items: StoredPdfObject[] }) {
   );
 }
 
+function prepTone(
+  status: DocumentPrepStatus,
+): "preparing" | "ready" | "failed" {
+  return status;
+}
+
+function prepLabel(status: DocumentPrepStatus): string {
+  if (status === "preparing") {
+    return "Preparing";
+  }
+  if (status === "failed") {
+    return "Failed";
+  }
+  return "Ready";
+}
+
 function StatusBadge({
   label,
   tone,
 }: {
   label: string;
-  tone: "preparing" | "ready" | "ready-on-dark";
+  tone: "preparing" | "ready" | "failed" | "ready-on-dark";
 }) {
   return (
     <span
@@ -266,6 +237,8 @@ function StatusBadge({
         tone === "preparing" &&
           "border-accent/30 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-foreground",
         tone === "ready" && "border-border bg-background text-muted",
+        tone === "failed" &&
+          "border-danger/40 bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] text-danger",
         tone === "ready-on-dark" &&
           "border-background/25 bg-background/15 text-background",
       )}

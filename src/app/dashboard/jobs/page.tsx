@@ -1,5 +1,8 @@
-import { JobsWorkspace } from "@/features/jobs";
+import { redirect } from "next/navigation";
 
+import { ROUTES } from "@/constants";
+
+/** Preparing status lives on Library items — not a separate app. */
 export default function JobsPage() {
-  return <JobsWorkspace />;
+  redirect(ROUTES.library);
 }

@@ -5,7 +5,7 @@ const STORIES = [
     id: "listen",
     eyebrow: "Natural AI audio",
     title: "Hear what you imported.",
-    copy: "When preparing finishes, press play. Your file or link becomes natural AI audio you can listen to right away.",
+    copy: "When preparing finishes, press play. Your file becomes natural AI audio you can listen to right away.",
     visual: "wave",
   },
   {
@@ -19,7 +19,7 @@ const STORIES = [
     id: "bangla",
     eyebrow: "বাংলা first",
     title: "Built for listening in বাংলা.",
-    copy: "বাংলা is the primary listening language. More voices and languages are planned as EchoReadly grows.",
+    copy: "বাংলা is the primary listening language. Change listening language per document from Listen options.",
     visual: "orbit",
   },
 ] as const;

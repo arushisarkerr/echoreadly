@@ -118,6 +118,53 @@ export async function getDocumentByHash(
   }
 }
 
+/**
+ * List storage paths + processing status for the signed-in user (Library prep badges).
+ */
+export async function listDocumentProcessingStatuses(
+  userId: string,
+  client?: SupabaseClient,
+): Promise<
+  PersistenceResult<
+    Array<{ storagePath: string; processingStatus: DocumentRow["processing_status"] }>
+  >
+> {
+  try {
+    const supabase = await resolveClient(client);
+    const { data, error } = await supabase
+      .from("documents")
+      .select("storage_path, processing_status")
+      .eq("user_id", userId)
+      .order("uploaded_at", { ascending: false });
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const rows =
+      (data as Array<{
+        storage_path: string;
+        processing_status: DocumentRow["processing_status"];
+      }> | null) ?? [];
+
+    return {
+      ok: true,
+      data: rows.map((row) => ({
+        storagePath: row.storage_path,
+        processingStatus: row.processing_status,
+      })),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to list document statuses.",
+    };
+  }
+}
+
 export async function getDocumentByStoragePath(
   storagePath: string,
   userId: string,

@@ -239,7 +239,7 @@ export function isPremiumVoiceAllowed(
 
 export function usageLimitMessage(
   metric: UsageMetric,
-  planName: string,
+  _planName: string,
 ): string {
   const labels: Record<UsageMetric, string> = {
     documents: "document uploads",
@@ -250,24 +250,24 @@ export function usageLimitMessage(
     export: "audio exports",
   };
 
-  return `You've reached the ${planName} plan limit for ${labels[metric]}. Upgrade to continue.`;
+  return `You've reached the personal limit for ${labels[metric]}. Try again later.`;
 }
 
 export function featureDeniedMessage(feature: PlanFeature): string {
   switch (feature) {
     case "translate":
-      return "Translation is available on the Pro plan.";
+      return "Translation isn't available right now.";
     case "export":
-      return "Audio export is available on the Pro plan.";
+      return "Audio export isn't available right now.";
     case "premium_voices":
-      return "Premium voices are available on the Pro plan.";
+      return "That voice isn't available right now.";
     case "chat":
-      return "AI chat is not available on your current plan.";
+      return "AI chat isn't available right now.";
     case "summarize":
-      return "AI summary is not available on your current plan.";
+      return "AI summary isn't available right now.";
     case "tts":
-      return "Narration is not available on your current plan.";
+      return "Narration isn't available right now.";
     case "upload":
-      return "Uploads are not available on your current plan.";
+      return "Uploads aren't available right now.";
   }
 }

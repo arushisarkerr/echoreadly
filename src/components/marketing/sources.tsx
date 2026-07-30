@@ -2,23 +2,11 @@ import { Reveal } from "@/components/marketing/reveal";
 
 const AVAILABLE = ["PDF", "DOCX", "TXT", "Markdown"] as const;
 
-const COMING_SOON = [
-  "EPUB",
-  "Website URL",
-  "Blog",
-  "News",
-  "Documentation",
-  "Audio File",
-  "Video File",
-  "YouTube Link",
-] as const;
-
 /**
- * Supported sources — dual-direction marquees, not a static chip grid.
+ * Supported import formats — only what actually works.
  */
 export function MarketingSources() {
   const availableLoop = [...AVAILABLE, ...AVAILABLE, ...AVAILABLE, ...AVAILABLE];
-  const comingLoop = [...COMING_SOON, ...COMING_SOON];
 
   return (
     <section
@@ -29,11 +17,11 @@ export function MarketingSources() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <Reveal>
           <h2 id="sources-heading" className="er-display-lg max-w-[16ch] text-foreground">
-            Files are live. Links are coming.
+            Import the files you already have.
           </h2>
           <p className="er-copy mt-5 text-muted">
-            Import PDF, DOCX, TXT, or Markdown today. Website URLs and other
-            link sources are coming soon.
+            PDF, DOCX, TXT, and Markdown — drop a file and EchoReadly prepares
+            natural AI audio.
           </p>
         </Reveal>
       </div>
@@ -57,21 +45,7 @@ export function MarketingSources() {
               key={`a-${source}-${i}`}
               className="er-glass shrink-0 rounded-full px-5 py-3 font-display text-sm font-semibold tracking-tight text-foreground"
             >
-              {source} · Available
-            </li>
-          ))}
-        </ul>
-
-        <ul
-          className="er-marquee-track flex w-max list-none gap-3 p-0 [animation-direction:reverse] [animation-duration:48s]"
-          aria-label="Coming soon import sources"
-        >
-          {comingLoop.map((source, i) => (
-            <li
-              key={`b-${source}-${i}`}
-              className="shrink-0 rounded-full border border-border bg-surface px-5 py-3 font-display text-sm font-semibold tracking-tight text-muted"
-            >
-              {source} · Coming soon
+              {source}
             </li>
           ))}
         </ul>

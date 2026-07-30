@@ -1,11 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
 import Link from "next/link";
 
-import { ROUTES } from "@/constants";
+import { ROUTES, TARGET_LANGUAGE_CATALOG } from "@/constants";
 import { AccountMenu } from "@/features/auth";
-import { BillingSettingsCard } from "@/features/billing";
 import { WorkspaceCanvas } from "@/features/dashboard/workspace-canvas";
 import { TTS_PLAYBACK_SPEEDS } from "@/features/tts";
 import { cn } from "@/utils";
@@ -23,7 +21,7 @@ import {
 import { useSettings } from "./use-settings";
 
 /**
- * Account — playback, language, voice, billing, profile, downloads, display.
+ * Account — playback, language, voice, profile, downloads, display.
  */
 export function SettingsWorkspace() {
   const settings = useSettings();
@@ -34,7 +32,7 @@ export function SettingsWorkspace() {
     <WorkspaceCanvas
       kicker="Account"
       title="Your listening preferences."
-      description="Language, voice, playback, downloads, and plan — keep listening effortless."
+      description="Language, voice, playback, and downloads — keep listening effortless."
       actionHref={ROUTES.library}
       actionLabel="Open Library"
       wide={false}
@@ -168,12 +166,31 @@ export function SettingsWorkspace() {
               Language
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              বাংলা is the primary listening language. Change language per listen
-              from Listen options → Listening Language.
+              Default listening language for Listen options. You can still
+              change language per document while listening.
             </p>
-            <p className="mt-4 inline-flex rounded-full border border-border/70 bg-background/60 px-3 py-1.5 text-xs font-semibold text-foreground">
-              Default · বাংলা (bn)
-            </p>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold tracking-wide text-subtle uppercase">
+                Default listening language
+              </span>
+              <select
+                value={settings.draft.preferredListeningLanguage}
+                disabled={saving}
+                onChange={(event) => {
+                  settings.setField(
+                    "preferredListeningLanguage",
+                    event.target.value as typeof settings.draft.preferredListeningLanguage,
+                  );
+                }}
+                className="mt-2 w-full rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {TARGET_LANGUAGE_CATALOG.map((language) => (
+                  <option key={language.code} value={language.code}>
+                    {language.nativeName} ({language.name})
+                  </option>
+                ))}
+              </select>
+            </label>
           </section>
 
           <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
@@ -212,19 +229,6 @@ export function SettingsWorkspace() {
               Browse voices
             </Link>
           </section>
-
-          <Suspense
-            fallback={
-              <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-                  Billing
-                </h2>
-                <p className="mt-2 text-sm text-muted">Loading plan…</p>
-              </section>
-            }
-          >
-            <BillingSettingsCard />
-          </Suspense>
 
           <section className="rounded-[1.5rem] border border-border/70 bg-surface/50 px-5 py-5 sm:px-6">
             <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">

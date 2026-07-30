@@ -11,7 +11,10 @@ import {
   TTS_VOICE_CATALOG,
 } from "@/features/tts/voices";
 import { requireVoiceAccess } from "@/features/billing/gate";
-import { getEntitlement } from "@/features/billing/entitlements";
+import {
+  getEntitlement,
+  hasFeatureAccess,
+} from "@/features/billing/entitlements";
 import { FREE_TTS_VOICE_IDS } from "@/constants";
 import { logger } from "@/lib/logger";
 import {
@@ -44,7 +47,7 @@ export async function GET() {
   }
 
   const entitlement = await getEntitlement(auth.user.id);
-  const voices = entitlement.isPremium
+  const voices = hasFeatureAccess(entitlement, "premium_voices")
     ? TTS_VOICE_CATALOG
     : TTS_VOICE_CATALOG.filter((voice) =>
         (FREE_TTS_VOICE_IDS as readonly string[]).includes(voice.id),

@@ -14,6 +14,7 @@ export {
   getDocumentByHash,
   getDocumentById,
   getDocumentByStoragePath,
+  listDocumentProcessingStatuses,
   updateDocumentFields,
   upsertDocument,
 } from "./documents";

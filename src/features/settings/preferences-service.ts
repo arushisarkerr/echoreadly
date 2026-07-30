@@ -4,6 +4,11 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  DEFAULT_TARGET_LANGUAGE,
+  isSupportedTargetLanguage,
+  type TargetLanguageCode,
+} from "@/constants";
 import { TTS_PLAYBACK_SPEEDS, type TtsPlaybackSpeed } from "@/features/tts";
 import { resolveTtsVoiceId } from "@/features/tts/voices";
 
@@ -26,6 +31,12 @@ function isPlaybackSpeed(value: unknown): value is TtsPlaybackSpeed {
   return TTS_PLAYBACK_SPEEDS.includes(value as TtsPlaybackSpeed);
 }
 
+function resolveListeningLanguage(value: unknown): TargetLanguageCode {
+  return isSupportedTargetLanguage(value)
+    ? value
+    : DEFAULT_TARGET_LANGUAGE;
+}
+
 function mapRow(row: UserPreferencesRow | null): UserPreferences {
   if (!row) {
     return createDefaultUserPreferences();
@@ -34,6 +45,9 @@ function mapRow(row: UserPreferencesRow | null): UserPreferences {
   return createDefaultUserPreferences({
     displayName: row.display_name?.trim() ?? "",
     preferredTtsVoice: resolveTtsVoiceId(row.preferred_tts_voice),
+    preferredListeningLanguage: resolveListeningLanguage(
+      row.preferred_listening_language,
+    ),
     playbackSpeed: isPlaybackSpeed(row.playback_speed)
       ? row.playback_speed
       : 1,
@@ -98,6 +112,7 @@ export async function upsertUserPreferences(
       user_id: userId,
       display_name: input.displayName || null,
       preferred_tts_voice: input.preferredTtsVoice,
+      preferred_listening_language: input.preferredListeningLanguage,
       playback_speed: input.playbackSpeed,
       auto_play_next_page: input.autoPlayNextPage,
       font_size: input.fontSize,

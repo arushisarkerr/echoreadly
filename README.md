@@ -1,6 +1,6 @@
 # EchoReadly
 
-Drop any file. Paste any link. We'll turn it into natural AI audio.
+Drop a PDF, DOCX, TXT, or Markdown file. We'll turn it into natural AI audio.
 
 EchoReadly imports your content, prepares it automatically, and lets you listen in natural AI speech — with বাংলা as the primary listening language.
 
@@ -14,7 +14,7 @@ EchoReadly imports your content, prepares it automatically, and lets you listen 
 
 ## Product journey
 
-1. **Import** — drop a file (or paste a link when available)
+1. **Import** — drop a PDF, DOCX, TXT, or Markdown file
 2. **Preparing** — automatic status on your item (never a separate app)
 3. **Listen** — player-first audio experience
 
