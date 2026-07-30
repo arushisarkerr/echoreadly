@@ -66,6 +66,14 @@ export const serverEnv = {
   get openAiApiKey(): string {
     return requireEnv("OPENAI_API_KEY", process.env.OPENAI_API_KEY);
   },
+
+  /**
+   * Mistral API key for OCR fallback (optional until OCR is wired).
+   * Required when calling MistralOcrProvider.extractPdf.
+   */
+  get mistralApiKey(): string | undefined {
+    return normalizeEnv(process.env.MISTRAL_API_KEY);
+  },
 } as const;
 
 export type PublicEnv = typeof publicEnv;
