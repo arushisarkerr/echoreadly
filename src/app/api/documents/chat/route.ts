@@ -115,12 +115,7 @@ export async function POST(request: Request) {
         storagePath: storagePath.data,
       }, processed.error);
 
-      return apiSuccess({
-        content: NOT_FOUND_IN_DOCUMENT,
-        pages: [],
-        generatedAt: new Date().toISOString(),
-        model: "none",
-      });
+      return mapDomainFailure(processed.error, "processing");
     }
 
     const context = formatChatContext(processed.data.chunks);
