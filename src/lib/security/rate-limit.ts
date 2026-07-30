@@ -12,7 +12,12 @@ import { isProductionRuntime } from "@/config/validate-env";
 
 import { consumeDurableRateLimit } from "./rate-limit-store";
 
-export type RateLimitBucket = "upload" | "summarize" | "chat" | "tts";
+export type RateLimitBucket =
+  | "upload"
+  | "summarize"
+  | "chat"
+  | "tts"
+  | "delete";
 
 export type RateLimitConfig = {
   /** Max requests per window for an authenticated user. */
@@ -42,6 +47,11 @@ export const RATE_LIMITS: Record<RateLimitBucket, RateLimitConfig> = {
   tts: {
     userLimit: 30,
     ipLimit: 60,
+    windowMs: 60 * 60 * 1000,
+  },
+  delete: {
+    userLimit: 40,
+    ipLimit: 80,
     windowMs: 60 * 60 * 1000,
   },
 };

@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 
 import { ROUTES, readerPathForStorage } from "@/constants";
 import { useAuth } from "@/features/auth";
+import {
+  formatLastOpened,
+  progressForStoragePath,
+  useListeningProgressMap,
+} from "@/features/progress";
 import { useLibrary } from "@/features/library";
 import { UploadCard } from "@/features/upload";
 import { formatFileSize } from "@/utils";
@@ -17,13 +22,38 @@ const VOICES = ["Female", "Male", "Bangla", "English", "Calm", "Podcast"] as con
 export function HomeWorkspace() {
   const { user } = useAuth();
   const { items, loading, error } = useLibrary();
+  const { byStoragePath, recent: progressRecent } = useListeningProgressMap();
   const name =
     (typeof user?.user_metadata?.full_name === "string" &&
       user.user_metadata.full_name.trim()) ||
     user?.email?.split("@")[0] ||
     "Creator";
 
-  const lead = items[0] ?? null;
+  const leadFromProgress = (() => {
+    for (const progress of progressRecent) {
+      const item = items.find((entry) => {
+        const hit = progressForStoragePath(byStoragePath, entry.storagePath);
+        return hit != null && hit.lastOpenedAt === progress.lastOpenedAt;
+      });
+      if (item) {
+        return {
+          item,
+          progress: progressForStoragePath(byStoragePath, item.storagePath),
+        };
+      }
+    }
+    return null;
+  })();
+
+  const lead = leadFromProgress
+    ? leadFromProgress
+    : items[0]
+      ? {
+          item: items[0],
+          progress: progressForStoragePath(byStoragePath, items[0].storagePath),
+        }
+      : null;
+
   const recent = items.slice(0, 5);
 
   return (
@@ -66,7 +96,7 @@ export function HomeWorkspace() {
           <Eyebrow>Continue listening</Eyebrow>
           {lead ? (
             <Link
-              href={readerPathForStorage(lead.storagePath)}
+              href={readerPathForStorage(lead.item.storagePath)}
               className="group relative block overflow-hidden rounded-[2rem] bg-foreground p-7 text-background no-underline shadow-[var(--elevation-md)]"
             >
               <div
@@ -74,13 +104,27 @@ export function HomeWorkspace() {
                 className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_80%_30%,color-mix(in_srgb,var(--accent-soft)_45%,transparent),transparent_60%)]"
               />
               <p className="relative text-[0.65rem] font-semibold tracking-[0.2em] text-background/55 uppercase">
-                Resume
+                {lead.progress ? "Resume" : "Start Reading"}
               </p>
               <h2 className="relative mt-4 max-w-[16ch] font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                {lead.name}
+                {lead.item.name}
               </h2>
               <p className="relative mt-3 text-sm text-background/65">
-                {formatFileSize(lead.size)} · Open Listening Studio
+                {lead.progress
+                  ? [
+                      `Page ${lead.progress.pageNumber}${
+                        lead.progress.pageCount
+                          ? ` of ${lead.progress.pageCount}`
+                          : ""
+                      }`,
+                      lead.progress.progressPercent != null
+                        ? `${lead.progress.progressPercent}%`
+                        : null,
+                      `Last opened ${formatLastOpened(lead.progress.lastOpenedAt)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : `${formatFileSize(lead.item.size)} · Open Listening Studio`}
               </p>
             </Link>
           ) : (
@@ -97,7 +141,12 @@ export function HomeWorkspace() {
           ) : null}
           {!loading && recent.length > 0 ? (
             <ul className="list-none space-y-2 p-0">
-              {recent.map((item, index) => (
+              {recent.map((item, index) => {
+                const progress = progressForStoragePath(
+                  byStoragePath,
+                  item.storagePath,
+                );
+                return (
                 <li key={item.path}>
                   <Link
                     href={readerPathForStorage(item.storagePath)}
@@ -110,11 +159,16 @@ export function HomeWorkspace() {
                       {item.name}
                     </span>
                     <span className="shrink-0 text-xs text-muted">
-                      {formatFileSize(item.size)}
+                      {progress
+                        ? progress.progressPercent != null
+                          ? `${progress.progressPercent}% · Resume`
+                          : `Page ${progress.pageNumber} · Resume`
+                        : formatFileSize(item.size)}
                     </span>
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : null}
         </div>

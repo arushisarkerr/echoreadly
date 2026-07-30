@@ -1,18 +1,32 @@
+"use client";
+
 import Link from "next/link";
 
 import { readerPathForStorage } from "@/constants";
+import {
+  formatLastOpened,
+  type LibraryProgressView,
+} from "@/features/progress";
 import type { StoredPdfObject } from "@/lib/storage";
 import { formatFileSize } from "@/utils";
 
+import { DeleteDocumentButton } from "./delete-document-button";
+
 type LibraryCardProps = {
   item: StoredPdfObject;
+  progress?: LibraryProgressView | null;
+  onDeleted?: (storagePath: string) => void;
 };
 
 /**
  * Single library item card.
- * Open navigates to the reader; Delete remains a disabled UI placeholder.
+ * Open navigates to the reader; Delete removes owned Storage + DB records.
  */
-export function LibraryCard({ item }: LibraryCardProps) {
+export function LibraryCard({
+  item,
+  progress = null,
+  onDeleted,
+}: LibraryCardProps) {
   const uploadedLabel = formatUploadDate(item.createdAt);
   const readerHref = readerPathForStorage(item.storagePath);
 
@@ -37,26 +51,36 @@ export function LibraryCard({ item }: LibraryCardProps) {
             <span className="tabular-nums">{formatFileSize(item.size)}</span>
             {uploadedLabel ? ` · ${uploadedLabel}` : null}
           </p>
-          <p className="mt-2 truncate text-[0.6875rem] text-subtle">PDF</p>
+          <p className="mt-2 text-[0.6875rem] text-subtle">
+            {progress
+              ? [
+                  `Page ${progress.pageNumber}${
+                    progress.pageCount ? ` of ${progress.pageCount}` : ""
+                  }`,
+                  progress.progressPercent != null
+                    ? `${progress.progressPercent}%`
+                    : null,
+                  `Last opened ${formatLastOpened(progress.lastOpenedAt)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "PDF"}
+          </p>
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap items-start gap-2">
         <Link
           href={readerHref}
           className="inline-flex h-10 min-h-10 items-center justify-center rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Open studio
+          {progress ? "Resume" : "Start Reading"}
         </Link>
-        <button
-          type="button"
-          disabled
-          title="Delete is coming soon"
-          aria-label="Delete (coming soon)"
-          className="inline-flex h-10 min-h-10 cursor-not-allowed items-center justify-center rounded-full border border-border bg-background px-4 text-xs font-semibold text-muted opacity-55"
-        >
-          Delete
-        </button>
+        <DeleteDocumentButton
+          storagePath={item.storagePath}
+          fileName={item.name}
+          onDeleted={onDeleted}
+        />
       </div>
     </article>
   );

@@ -18,11 +18,12 @@ export type UseTtsState = {
   duration: number | null;
   speed: TtsPlaybackSpeed;
   speeds: TtsPlaybackSpeed[];
-  listenSummary: (text: string) => Promise<void>;
+  listenSummary: (text: string, options?: { seekTo?: number }) => Promise<void>;
   listenPage: (input: {
     storagePath: string;
     pageNumber: number;
     originalFileName?: string;
+    seekTo?: number;
   }) => Promise<void>;
   play: () => void;
   pause: () => void;
@@ -123,7 +124,11 @@ export function useTts(): UseTtsState {
   }, []);
 
   const loadAndPlay = useCallback(
-    async (payload: TtsRequestPayload, nextSource: TtsSource) => {
+    async (
+      payload: TtsRequestPayload,
+      nextSource: TtsSource,
+      options?: { seekTo?: number },
+    ) => {
       const requestId = ++requestIdRef.current;
       setStatus("loading");
       setError(null);
@@ -153,6 +158,30 @@ export function useTts(): UseTtsState {
       audio.src = objectUrl;
       audio.playbackRate = speed;
 
+      const seekTo =
+        typeof options?.seekTo === "number" &&
+        Number.isFinite(options.seekTo) &&
+        options.seekTo > 0
+          ? options.seekTo
+          : null;
+
+      const applySeek = () => {
+        if (seekTo == null) {
+          return;
+        }
+        const max = Number.isFinite(audio.duration) ? audio.duration : seekTo;
+        audio.currentTime = Math.max(0, Math.min(seekTo, max));
+        setCurrentTime(audio.currentTime);
+      };
+
+      if (seekTo != null) {
+        if (audio.readyState >= 1) {
+          applySeek();
+        } else {
+          audio.addEventListener("loadedmetadata", applySeek, { once: true });
+        }
+      }
+
       try {
         await audio.play();
         if (requestId !== requestIdRef.current) {
@@ -171,7 +200,7 @@ export function useTts(): UseTtsState {
   );
 
   const listenSummary = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { seekTo?: number }) => {
       const trimmed = text.trim();
       if (!trimmed) {
         setStatus("error");
@@ -179,7 +208,11 @@ export function useTts(): UseTtsState {
         return;
       }
 
-      await loadAndPlay({ source: "summary", text: trimmed }, "summary");
+      await loadAndPlay(
+        { source: "summary", text: trimmed },
+        "summary",
+        options,
+      );
     },
     [loadAndPlay],
   );
@@ -189,6 +222,7 @@ export function useTts(): UseTtsState {
       storagePath: string;
       pageNumber: number;
       originalFileName?: string;
+      seekTo?: number;
     }) => {
       await loadAndPlay(
         {
@@ -198,6 +232,7 @@ export function useTts(): UseTtsState {
           originalFileName: input.originalFileName,
         },
         "page",
+        { seekTo: input.seekTo },
       );
     },
     [loadAndPlay],

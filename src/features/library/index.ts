@@ -3,6 +3,8 @@
  */
 
 export { LibraryEmptyState } from "./empty-state";
+export { DeleteDocumentButton } from "./delete-document-button";
+export { requestDeleteDocument } from "./delete-document";
 export { LibraryCard } from "./library-card";
 export { LibraryGrid } from "./library-grid";
 export { LibraryLoading } from "./loading";

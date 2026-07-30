@@ -55,6 +55,21 @@ type DocumentSummariesRow = {
   updated_at: string;
 };
 
+type DocumentListeningProgressRow = {
+  id: string;
+  user_id: string;
+  storage_path: string;
+  document_id: string | null;
+  page_number: number;
+  page_count: number | null;
+  scroll_ratio: number;
+  playback_seconds: number;
+  playback_source: "page" | "summary" | null;
+  last_opened_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /**
  * Supabase database schema for EchoReadly persistence tables.
  */
@@ -95,6 +110,15 @@ export type Database = {
           model: string;
         };
         Update: Partial<DocumentSummariesRow>;
+        Relationships: [];
+      };
+      document_listening_progress: {
+        Row: DocumentListeningProgressRow;
+        Insert: Partial<DocumentListeningProgressRow> & {
+          user_id: string;
+          storage_path: string;
+        };
+        Update: Partial<DocumentListeningProgressRow>;
         Relationships: [];
       };
     };

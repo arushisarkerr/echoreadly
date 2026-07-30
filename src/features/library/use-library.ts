@@ -11,6 +11,7 @@ type LibraryState = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  removeItem: (storagePath: string) => void;
 };
 
 async function fetchLibrary(): Promise<{
@@ -25,7 +26,7 @@ async function fetchLibrary(): Promise<{
 }
 
 /**
- * Loads PDF objects from Supabase Storage and refreshes after upload events.
+ * Loads PDF objects from Supabase Storage and refreshes after upload/delete events.
  */
 export function useLibrary(): LibraryState {
   const [items, setItems] = useState<StoredPdfObject[]>([]);
@@ -37,6 +38,12 @@ export function useLibrary(): LibraryState {
     setItems(result.items);
     setError(result.error);
     setLoading(false);
+  }, []);
+
+  const removeItem = useCallback((storagePath: string) => {
+    setItems((current) =>
+      current.filter((item) => item.storagePath !== storagePath),
+    );
   }, []);
 
   useEffect(() => {
@@ -82,5 +89,6 @@ export function useLibrary(): LibraryState {
     loading,
     error,
     refresh,
+    removeItem,
   };
 }

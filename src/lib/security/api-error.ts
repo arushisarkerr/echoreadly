@@ -21,6 +21,7 @@ export type ApiErrorCode =
   | "TTS_ERROR"
   | "PROCESSING_ERROR"
   | "UPLOAD_ERROR"
+  | "DELETE_ERROR"
   | "INTERNAL";
 
 export type ApiErrorBody = {
@@ -36,7 +37,7 @@ export type ApiSuccessBody<T> = {
   data: T;
 };
 
-export type DomainErrorArea = "ai" | "tts" | "processing" | "upload";
+export type DomainErrorArea = "ai" | "tts" | "processing" | "upload" | "delete";
 
 function withSecurityHeaders<T>(response: NextResponse<T>): NextResponse<T> {
   applySecurityHeaders(response.headers);
@@ -273,6 +274,10 @@ function classifyDomainMessage(
     upload: {
       code: "UPLOAD_ERROR",
       publicMessage: "Unable to upload this file. Please try again.",
+    },
+    delete: {
+      code: "DELETE_ERROR",
+      publicMessage: "Unable to delete this document. Please try again.",
     },
   };
 

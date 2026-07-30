@@ -10,6 +10,7 @@ export {
 } from "./chunks";
 export {
   documentRowToProcessed,
+  deleteDocumentsByStoragePath,
   getDocumentByHash,
   getDocumentById,
   getDocumentByStoragePath,
@@ -18,16 +19,30 @@ export {
 } from "./documents";
 export { hashDocumentBytes, isDocumentHash } from "./hash-document";
 export {
+  deleteListeningProgressByStoragePath,
+  getListeningProgressByStoragePath,
+  listeningProgressPercent,
+  listListeningProgressForUser,
+  upsertListeningProgress,
+} from "./progress";
+export {
+  normalizeStoragePath,
+  uniqueStoragePathVariants,
+} from "./storage-path";
+export {
   getDocumentSummaryByType,
   summaryRowToResult,
   upsertDocumentSummary,
 } from "./summaries";
 export type {
   DocumentChunkRow,
+  DocumentListeningProgressRow,
   DocumentRow,
   DocumentSummaryRow,
+  ListeningProgressPlaybackSource,
   PersistChunkInput,
   PersistSummaryInput,
   PersistenceResult,
   UpsertDocumentInput,
+  UpsertListeningProgressInput,
 } from "./types";

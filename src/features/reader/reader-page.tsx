@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useProgressPersistence } from "@/features/progress";
 import { SummaryPanel } from "@/features/summary";
 import { AudioPlayer, useTts } from "@/features/tts";
 
@@ -42,6 +43,63 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
   const ttsBusy = tts.status === "loading";
   const controlsLocked = reader.documentLoading || reader.loadingUrl;
 
+  const playbackActive =
+    tts.status === "playing" ||
+    tts.status === "paused" ||
+    tts.status === "ready" ||
+    tts.status === "loading";
+
+  const pendingPlayback = reader.playbackResume;
+  const restoredPageRef = useRef<number | null>(null);
+
+  useProgressPersistence({
+    storagePath,
+    pageNumber: reader.pageNumber,
+    pageCount: reader.numPages,
+    scrollRatio: reader.scrollRatio,
+    playbackSeconds: playbackActive
+      ? tts.currentTime
+      : (pendingPlayback?.seconds ?? 0),
+    playbackSource: playbackActive
+      ? tts.source
+      : (pendingPlayback?.source ?? null),
+    enabled: reader.progressHydrated && !reader.loadingUrl && !reader.urlError,
+  });
+
+  const {
+    goToPreviousPage,
+    goToNextPage,
+    zoomIn,
+    zoomOut,
+    documentError,
+    urlError,
+    clearPlaybackResume,
+    playbackResume,
+    progressHydrated,
+    pageNumber,
+  } = reader;
+
+  useEffect(() => {
+    restoredPageRef.current = null;
+  }, [storagePath]);
+
+  useEffect(() => {
+    if (!progressHydrated) {
+      return;
+    }
+    if (restoredPageRef.current === null) {
+      restoredPageRef.current = pageNumber;
+      return;
+    }
+    if (
+      pageNumber !== restoredPageRef.current &&
+      playbackResume?.source === "page"
+    ) {
+      clearPlaybackResume();
+    }
+    restoredPageRef.current = pageNumber;
+  }, [progressHydrated, pageNumber, playbackResume?.source, clearPlaybackResume]);
+
   const toolbarProps = {
     fileName: reader.fileName,
     pageNumber: reader.pageNumber,
@@ -53,10 +111,18 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
       setSummaryOpen((current) => !current);
     },
     onListenPage: () => {
+      const seekTo =
+        playbackResume?.source === "page"
+          ? playbackResume.seconds
+          : undefined;
+      if (seekTo != null) {
+        clearPlaybackResume();
+      }
       void tts.listenPage({
         storagePath,
         pageNumber: reader.pageNumber,
         originalFileName: reader.fileName,
+        seekTo,
       });
     },
     listenPageDisabled: ttsBusy || reader.documentLoading,
@@ -67,15 +133,6 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
     onFitWidth: reader.fitWidth,
     onFitPage: reader.fitPage,
   };
-
-  const {
-    goToPreviousPage,
-    goToNextPage,
-    zoomIn,
-    zoomOut,
-    documentError,
-    urlError,
-  } = reader;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -124,7 +181,7 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
     zoomOut,
   ]);
 
-  if (reader.loadingUrl) {
+  if (reader.loadingUrl || !reader.progressHydrated) {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <ReaderToolbar {...toolbarProps} pageNumber={1} numPages={null} disabled />
@@ -185,6 +242,8 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
               pageNumber={reader.pageNumber}
               scale={reader.scale}
               fitMode={reader.fitMode}
+              scrollRatio={reader.scrollRatio}
+              onScrollRatioChange={reader.setScrollRatio}
               onLoadSuccess={reader.setNumPages}
               onLoadError={reader.setDocumentError}
               onDocumentLoadingChange={reader.setDocumentLoading}
@@ -202,7 +261,14 @@ export function ReaderPage({ storagePath }: ReaderPageProps) {
             }}
             listenDisabled={ttsBusy}
             onListenSummary={(text) => {
-              void tts.listenSummary(text);
+              const seekTo =
+                playbackResume?.source === "summary"
+                  ? playbackResume.seconds
+                  : undefined;
+              if (seekTo != null) {
+                clearPlaybackResume();
+              }
+              void tts.listenSummary(text, { seekTo });
             }}
           />
         </div>

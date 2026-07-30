@@ -4,10 +4,17 @@ import Link from "next/link";
 import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { ROUTES, readerPathForStorage } from "@/constants";
+import {
+  formatLastOpened,
+  progressForStoragePath,
+  useListeningProgressMap,
+  type LibraryProgressView,
+} from "@/features/progress";
 import type { StoredPdfObject } from "@/lib/storage";
 import { cn, formatFileSize } from "@/utils";
 
 import { LibraryEmptyState } from "./empty-state";
+import { DeleteDocumentButton } from "./delete-document-button";
 import { LibraryLoading } from "./loading";
 import { useLibrary } from "./use-library";
 
@@ -19,7 +26,7 @@ type SortMode = "newest" | "oldest" | "name";
  * Presentation and client filter UX only; fetching unchanged.
  */
 export function LibraryPage() {
-  const { items, loading, error, refresh } = useLibrary();
+  const { items, loading, error, refresh, removeItem } = useLibrary();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortMode>("newest");
@@ -27,7 +34,7 @@ export function LibraryPage() {
   const [language, setLanguage] = useState("all");
   const [status, setStatus] = useState("all");
   const [collection, setCollection] = useState("all");
-
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
 
@@ -63,6 +70,12 @@ export function LibraryPage() {
 
   function clearSearch() {
     setQuery("");
+  }
+
+  function handleDeleted(storagePath: string) {
+    removeItem(storagePath);
+    setStatusMessage("Document deleted.");
+    void refresh();
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -232,6 +245,11 @@ export function LibraryPage() {
         ) : (
           <span className="text-xs text-transparent">·</span>
         )}
+        {statusMessage ? (
+          <p role="status" className="text-xs font-medium text-foreground">
+            {statusMessage}
+          </p>
+        ) : null}
       </div>
 
       {loading ? (
@@ -302,7 +320,11 @@ export function LibraryPage() {
       ) : null}
 
       {!loading && !error && filtered.length > 0 ? (
-        <LibraryViews items={filtered} view={view} />
+        <LibraryViews
+          items={filtered}
+          view={view}
+          onDeleted={handleDeleted}
+        />
       ) : null}
     </section>
   );
@@ -311,18 +333,30 @@ export function LibraryPage() {
 function LibraryViews({
   items,
   view,
+  onDeleted,
 }: {
   items: StoredPdfObject[];
   view: ViewMode;
+  onDeleted: (storagePath: string) => void;
 }) {
+  const { byStoragePath } = useListeningProgressMap();
+
   if (view === "list") {
     return (
       <ul className="mt-2 list-none divide-y divide-border/80 border-y border-border/80 p-0">
-        {items.map((item) => (
-          <li key={item.path}>
+        {items.map((item) => {
+          const progress = progressForStoragePath(
+            byStoragePath,
+            item.storagePath,
+          );
+          return (
+          <li
+            key={item.path}
+            className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-1"
+          >
             <Link
               href={readerPathForStorage(item.storagePath)}
-              className="group flex items-center gap-3 py-3.5 no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-4 sm:px-1"
+              className="group flex min-w-0 flex-1 items-center gap-3 no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 aria-hidden="true"
@@ -335,18 +369,21 @@ function LibraryViews({
                   {item.name}
                 </span>
                 <span className="mt-0.5 block text-xs text-muted">
-                  {formatFileSize(item.size)}
-                  {item.createdAt
-                    ? ` · ${formatUploadDate(item.createdAt)}`
-                    : ""}
+                  {progressMeta(progress, item)}
                 </span>
               </span>
-              <span className="shrink-0 rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background opacity-90 transition group-hover:opacity-100">
-                Open
+              <span className="hidden shrink-0 rounded-full bg-foreground px-3.5 py-2 text-xs font-semibold text-background opacity-90 transition group-hover:opacity-100 sm:inline-flex">
+                {progress ? "Resume" : "Start Reading"}
               </span>
             </Link>
+            <DeleteDocumentButton
+              storagePath={item.storagePath}
+              fileName={item.name}
+              onDeleted={onDeleted}
+            />
           </li>
-        ))}
+          );
+        })}
       </ul>
     );
   }
@@ -354,29 +391,49 @@ function LibraryViews({
   if (view === "compact") {
     return (
       <ul className="mt-2 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => (
-          <li key={item.path}>
+        {items.map((item) => {
+          const progress = progressForStoragePath(
+            byStoragePath,
+            item.storagePath,
+          );
+          return (
+          <li
+            key={item.path}
+            className="flex min-h-11 items-center gap-2 rounded-xl border border-border/70 bg-surface/50 px-3 py-2"
+          >
             <Link
               href={readerPathForStorage(item.storagePath)}
               title={item.name}
-              className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/70 bg-surface/50 px-3 py-2.5 text-sm no-underline transition-colors hover:border-foreground/20 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-w-0 flex-1 truncate text-sm font-medium text-foreground no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="truncate font-medium text-foreground">
-                {item.name}
-              </span>
-              <span className="shrink-0 text-[0.7rem] tabular-nums text-subtle">
-                {formatFileSize(item.size)}
-              </span>
+              {item.name}
             </Link>
+            <span className="shrink-0 text-[0.7rem] tabular-nums text-subtle">
+              {progress?.progressPercent != null
+                ? `${progress.progressPercent}%`
+                : formatFileSize(item.size)}
+            </span>
+            <DeleteDocumentButton
+              storagePath={item.storagePath}
+              fileName={item.name}
+              onDeleted={onDeleted}
+              className="shrink-0 [&_button]:h-8 [&_button]:min-h-8 [&_button]:px-3"
+            />
           </li>
-        ))}
+          );
+        })}
       </ul>
     );
   }
 
   return (
     <ul className="mt-2 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
+      {items.map((item) => {
+        const progress = progressForStoragePath(
+          byStoragePath,
+          item.storagePath,
+        );
+        return (
         <li key={item.path}>
           <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/70 bg-surface/50 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[var(--elevation-sm)]">
             <div
@@ -401,37 +458,57 @@ function LibraryViews({
                 {item.name}
               </h3>
               <p className="mt-2 text-sm text-muted">
-                <span className="tabular-nums">{formatFileSize(item.size)}</span>
-                {item.createdAt
-                  ? ` · ${formatUploadDate(item.createdAt)}`
-                  : ""}
+                {progressMeta(progress, item)}
               </p>
-              <p className="mt-1 truncate font-mono text-[0.65rem] text-subtle">
-                PDF
+              <p className="mt-1 truncate text-[0.65rem] text-subtle">
+                {progress
+                  ? `Last opened ${formatLastOpened(progress.lastOpenedAt)}`
+                  : "PDF"}
               </p>
-              <div className="mt-auto flex gap-2 pt-5">
+              <div className="mt-auto flex flex-wrap items-start gap-2 pt-5">
                 <Link
                   href={readerPathForStorage(item.storagePath)}
                   className="inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  Open studio
+                  {progress ? "Resume" : "Start Reading"}
                 </Link>
-                <button
-                  type="button"
-                  disabled
-                  title="Delete is coming soon"
-                  aria-label="Delete (coming soon)"
-                  className="inline-flex h-10 min-h-10 cursor-not-allowed items-center justify-center rounded-full border border-border px-3 text-xs font-semibold text-muted opacity-55"
-                >
-                  Delete
-                </button>
+                <DeleteDocumentButton
+                  storagePath={item.storagePath}
+                  fileName={item.name}
+                  onDeleted={onDeleted}
+                />
               </div>
             </div>
           </article>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
+}
+
+function progressMeta(
+  progress: LibraryProgressView | null,
+  item: StoredPdfObject,
+): string {
+  if (!progress) {
+    return [
+      formatFileSize(item.size),
+      item.createdAt ? formatUploadDate(item.createdAt) : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  return [
+    `Page ${progress.pageNumber}${
+      progress.pageCount ? ` of ${progress.pageCount}` : ""
+    }`,
+    progress.progressPercent != null ? `${progress.progressPercent}%` : null,
+    formatFileSize(item.size),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function FilterSelect({

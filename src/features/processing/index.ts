@@ -54,6 +54,7 @@ export {
 export {
   ensureDocumentProcessed,
   extractDocumentText,
+  forgetDocumentByStoragePath,
   generateDocumentChunks,
   getDocument,
   getDocumentChunks,

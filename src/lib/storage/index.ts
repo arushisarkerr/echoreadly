@@ -9,6 +9,10 @@ export {
   type PdfSignedUrlResult,
 } from "./create-signed-url";
 export {
+  removePdfObject,
+  type RemovePdfResult,
+} from "./delete-pdf";
+export {
   downloadPdfBytes,
   type DownloadPdfResult,
 } from "./download-pdf";

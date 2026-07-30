@@ -10,6 +10,10 @@
 
 export { summarizeDocumentByStoragePath, type SummarizeByStoragePathInput } from "./summarize-document";
 export {
+  deleteOwnedDocument,
+  type DeleteDocumentResult,
+} from "./delete-document";
+export {
   getUser,
   requireUser,
   requireUserOrRedirect,

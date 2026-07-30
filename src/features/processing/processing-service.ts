@@ -288,6 +288,25 @@ export function resetProcessingRegistry(): void {
 }
 
 /**
+ * Drop in-memory processing state for a storage path (after user delete).
+ */
+export function forgetDocumentByStoragePath(storagePath: string): void {
+  const normalize = (value: string) => {
+    const trimmed = value.replace(/^\/+/, "").trim();
+    return trimmed.startsWith("pdfs/") ? trimmed.slice("pdfs/".length) : trimmed;
+  };
+
+  const target = normalize(storagePath);
+
+  for (const [id, doc] of documentsById.entries()) {
+    if (normalize(doc.storagePath) === target) {
+      documentsById.delete(id);
+      documentTextStore.delete?.(id);
+    }
+  }
+}
+
+/**
  * Download a registered PDF from Storage and extract readable text.
  * Updates in-memory state and persists document metadata for the owner.
  */

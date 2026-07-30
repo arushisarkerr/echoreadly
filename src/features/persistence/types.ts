@@ -75,3 +75,32 @@ export type PersistSummaryInput = {
   model: string;
   generatedAt?: string;
 };
+
+export type ListeningProgressPlaybackSource = "page" | "summary";
+
+export type DocumentListeningProgressRow = {
+  id: string;
+  user_id: string;
+  storage_path: string;
+  document_id: string | null;
+  page_number: number;
+  page_count: number | null;
+  scroll_ratio: number;
+  playback_seconds: number;
+  playback_source: ListeningProgressPlaybackSource | null;
+  last_opened_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UpsertListeningProgressInput = {
+  userId: string;
+  storagePath: string;
+  documentId?: string | null;
+  pageNumber: number;
+  pageCount?: number | null;
+  scrollRatio?: number;
+  playbackSeconds?: number;
+  playbackSource?: ListeningProgressPlaybackSource | null;
+  lastOpenedAt?: string;
+};

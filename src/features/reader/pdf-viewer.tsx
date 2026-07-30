@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type UIEvent as ReactUIEvent,
 } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 
@@ -25,6 +26,8 @@ type PdfViewerProps = {
   pageNumber: number;
   scale: number;
   fitMode: ReaderFitMode;
+  scrollRatio: number;
+  onScrollRatioChange: (ratio: number) => void;
   onLoadSuccess: (numPages: number) => void;
   onLoadError: (message: string) => void;
   onDocumentLoadingChange: (loading: boolean) => void;
@@ -40,6 +43,8 @@ export function PdfViewer({
   pageNumber,
   scale,
   fitMode,
+  scrollRatio,
+  onScrollRatioChange,
   onLoadSuccess,
   onLoadError,
   onDocumentLoadingChange,
@@ -50,6 +55,13 @@ export function PdfViewer({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [pageAspect, setPageAspect] = useState(1.294);
   const pointerStartX = useRef<number | null>(null);
+  const scrollRatioRef = useRef(scrollRatio);
+  const restoredPageRef = useRef<number | null>(null);
+  const skipScrollReportRef = useRef(false);
+
+  useEffect(() => {
+    scrollRatioRef.current = scrollRatio;
+  }, [scrollRatio]);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -72,6 +84,35 @@ export function PdfViewer({
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
+
+  const applyScrollRestore = useCallback(() => {
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    skipScrollReportRef.current = true;
+    const max = node.scrollHeight - node.clientHeight;
+    node.scrollTop = max > 0 ? scrollRatioRef.current * max : 0;
+    window.requestAnimationFrame(() => {
+      skipScrollReportRef.current = false;
+    });
+  }, []);
+
+  useEffect(() => {
+    restoredPageRef.current = null;
+  }, [fileUrl]);
+
+  useEffect(() => {
+    if (restoredPageRef.current === pageNumber) {
+      return;
+    }
+    restoredPageRef.current = pageNumber;
+    const frame = window.requestAnimationFrame(() => {
+      applyScrollRestore();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pageNumber, applyScrollRestore]);
 
   const pageWidth =
     fitMode === "width"
@@ -120,6 +161,20 @@ export function PdfViewer({
     [onNextPage, onPreviousPage],
   );
 
+  const handleScroll = useCallback(
+    (event: ReactUIEvent<HTMLDivElement>) => {
+      if (skipScrollReportRef.current) {
+        return;
+      }
+
+      const node = event.currentTarget;
+      const max = node.scrollHeight - node.clientHeight;
+      const next = max > 0 ? node.scrollTop / max : 0;
+      onScrollRatioChange(Math.min(1, Math.max(0, next)));
+    },
+    [onScrollRatioChange],
+  );
+
   return (
     <div
       ref={containerRef}
@@ -135,6 +190,7 @@ export function PdfViewer({
       onPointerCancel={() => {
         pointerStartX.current = null;
       }}
+      onScroll={handleScroll}
     >
       <Document
         file={fileUrl}
@@ -163,6 +219,7 @@ export function PdfViewer({
             if (viewport.height > 0) {
               setPageAspect(viewport.height / viewport.width);
             }
+            applyScrollRestore();
           }}
           onRenderError={(error) => {
             onLoadError(error.message || "Failed to render this page.");

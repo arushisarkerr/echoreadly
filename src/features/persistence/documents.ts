@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { ProcessedDocument } from "@/features/processing/types";
 
+import { uniqueStoragePathVariants } from "./storage-path";
 import type {
   DocumentRow,
   PersistenceResult,
@@ -242,6 +243,45 @@ export async function updateDocumentFields(
       ok: false,
       error:
         error instanceof Error ? error.message : "Unable to update document.",
+    };
+  }
+}
+
+/**
+ * Delete all document rows for this user + storage path.
+ * Chunks and summaries cascade via FK.
+ */
+export async function deleteDocumentsByStoragePath(
+  storagePath: string,
+  userId: string,
+  client?: SupabaseClient,
+): Promise<PersistenceResult<{ deletedCount: number }>> {
+  try {
+    const supabase = await resolveClient(client);
+    const paths = uniqueStoragePathVariants(storagePath);
+
+    const { data, error } = await supabase
+      .from("documents")
+      .delete()
+      .eq("user_id", userId)
+      .in("storage_path", paths)
+      .select("id");
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    return {
+      ok: true,
+      data: { deletedCount: data?.length ?? 0 },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to delete document records.",
     };
   }
 }
