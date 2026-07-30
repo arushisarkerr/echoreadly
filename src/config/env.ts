@@ -74,6 +74,11 @@ export const serverEnv = {
   get mistralApiKey(): string | undefined {
     return normalizeEnv(process.env.MISTRAL_API_KEY);
   },
+
+  /** Gemini API key for summarization fallback when OpenAI is rate-limited. */
+  get geminiApiKey(): string | undefined {
+    return normalizeEnv(process.env.GEMINI_API_KEY);
+  },
 } as const;
 
 export type PublicEnv = typeof publicEnv;

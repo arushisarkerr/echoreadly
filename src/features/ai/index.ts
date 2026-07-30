@@ -3,6 +3,11 @@
  */
 
 export type { AiGenerateInput, AiGenerateOutput, AiGenerateResult, AiProvider } from "./ai-provider";
+export {
+  createGeminiProvider,
+  GeminiProvider,
+  type GeminiProviderOptions,
+} from "./gemini-provider";
 export { createOpenAiProvider, OpenAiProvider, type OpenAiProviderOptions } from "./openai-provider";
 export {
   buildSummaryInput,

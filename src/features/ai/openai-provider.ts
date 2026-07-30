@@ -10,7 +10,7 @@ import { DEFAULT_SUMMARY_MODEL, type AiError } from "./types";
 
 function classifyOpenAiError(error: unknown): AiError {
   if (error instanceof OpenAI.APIError) {
-    if (error.status === 429) {
+    if (error.status === 429 || error.status === 503) {
       return {
         code: "rate_limit",
         message: "OpenAI rate limit reached. Please try again shortly.",
@@ -21,6 +21,18 @@ function classifyOpenAiError(error: unknown): AiError {
       return {
         code: "missing_api_key",
         message: "OpenAI API key is invalid or unauthorized.",
+      };
+    }
+
+    const apiMessage = (error.message || "").toLowerCase();
+    if (
+      apiMessage.includes("quota") ||
+      apiMessage.includes("rate limit") ||
+      apiMessage.includes("temporarily unavailable")
+    ) {
+      return {
+        code: "rate_limit",
+        message: error.message || "OpenAI rate limit reached. Please try again shortly.",
       };
     }
 
@@ -51,7 +63,12 @@ function classifyOpenAiError(error: unknown): AiError {
 
   const normalized = message.toLowerCase();
 
-  if (normalized.includes("rate limit") || normalized.includes("429")) {
+  if (
+    normalized.includes("rate limit") ||
+    normalized.includes("429") ||
+    normalized.includes("quota") ||
+    normalized.includes("temporarily unavailable")
+  ) {
     return {
       code: "rate_limit",
       message: "OpenAI rate limit reached. Please try again shortly.",

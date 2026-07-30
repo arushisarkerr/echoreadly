@@ -11,8 +11,10 @@ import {
 } from "@/features/citations";
 
 import { serverEnv } from "@/config";
+import { logger } from "@/lib/logger";
 
 import type { AiProvider } from "./ai-provider";
+import { createGeminiProvider } from "./gemini-provider";
 import { createOpenAiProvider } from "./openai-provider";
 import {
   buildSummaryInput,
@@ -22,6 +24,7 @@ import {
 import {
   DEFAULT_SUMMARY_MODEL,
   MAX_SUMMARY_SOURCE_CHARS,
+  type AiError,
   type SummaryResult,
   type SummaryServiceResult,
   type SummaryType,
@@ -78,13 +81,59 @@ function sectionsToPlainText(
   return sections.map((section) => section.text).join("\n\n");
 }
 
+/**
+ * OpenAI failures that should trigger an automatic Gemini retry.
+ */
+function shouldFallbackToGemini(error: AiError): boolean {
+  if (error.code === "rate_limit") {
+    return true;
+  }
+
+  const normalized = error.message.toLowerCase();
+  return (
+    normalized.includes("429") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("quota") ||
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("service unavailable")
+  );
+}
+
+/** Compact error label for server logs (no message body / PII). */
+function summarizeErrorType(error: AiError): string {
+  const normalized = error.message.toLowerCase();
+
+  if (normalized.includes("quota")) {
+    return "quota";
+  }
+
+  if (
+    error.code === "rate_limit" ||
+    normalized.includes("429") ||
+    normalized.includes("rate limit")
+  ) {
+    return "rate_limit";
+  }
+
+  if (
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("service unavailable")
+  ) {
+    return "temporarily_unavailable";
+  }
+
+  return error.code;
+}
+
 /** In-memory summary cache until database persistence ships. */
 const summariesByKey = new Map<string, SummaryResult>();
 
 let defaultProvider: AiProvider | null = null;
+let geminiFallbackProvider: AiProvider | null = null;
 
 /**
  * Resolve the shared AI provider, lazily initialized from environment.
+ * OpenAI remains the primary summarization provider.
  */
 export function getDefaultAiProvider(apiKey?: string): AiProvider {
   if (!defaultProvider) {
@@ -92,6 +141,14 @@ export function getDefaultAiProvider(apiKey?: string): AiProvider {
   }
 
   return defaultProvider;
+}
+
+function getGeminiFallbackProvider(): AiProvider {
+  if (!geminiFallbackProvider) {
+    geminiFallbackProvider = createGeminiProvider(serverEnv.geminiApiKey);
+  }
+
+  return geminiFallbackProvider;
 }
 
 /** Replace the default provider (useful for tests or alternate vendors). */
@@ -103,10 +160,12 @@ export function setDefaultAiProvider(provider: AiProvider): void {
 export function resetSummaryCache(): void {
   summariesByKey.clear();
   defaultProvider = null;
+  geminiFallbackProvider = null;
 }
 
 /**
  * Generate a summary from document chunks via the configured AI provider.
+ * On OpenAI rate-limit / quota / temporary unavailability, retries once with Gemini.
  */
 export async function generateDocumentSummary(
   input: GenerateSummaryInput,
@@ -137,16 +196,55 @@ export async function generateDocumentSummary(
     MAX_SUMMARY_SOURCE_CHARS,
   );
 
-  const generation = await provider.generateText({
-    instructions: buildSummaryInstructions(input.summaryType),
-    input: buildSummaryInput({
-      summaryType: input.summaryType,
-      documentTitle: input.documentTitle,
-      sourceText,
-    }),
-    model: input.model ?? DEFAULT_SUMMARY_MODEL,
-    maxOutputTokens: getSummaryMaxOutputTokens(input.summaryType),
+  const instructions = buildSummaryInstructions(input.summaryType);
+  const promptInput = buildSummaryInput({
+    summaryType: input.summaryType,
+    documentTitle: input.documentTitle,
+    sourceText,
   });
+  const maxOutputTokens = getSummaryMaxOutputTokens(input.summaryType);
+
+  let generation = await provider.generateText({
+    instructions,
+    input: promptInput,
+    model: input.model ?? DEFAULT_SUMMARY_MODEL,
+    maxOutputTokens,
+  });
+
+  if (
+    !generation.ok &&
+    shouldFallbackToGemini(generation.error) &&
+    provider.name !== "gemini"
+  ) {
+    const fallback = getGeminiFallbackProvider();
+    if (fallback.isConfigured()) {
+      logger.warn("Summarization falling back to Gemini", {
+        primaryProvider: provider.name,
+        fallbackProvider: "gemini",
+        errorType: summarizeErrorType(generation.error),
+      });
+
+      generation = await fallback.generateText({
+        instructions,
+        input: promptInput,
+        // Use Gemini's own default model — never reuse the OpenAI model id.
+        maxOutputTokens,
+      });
+
+      if (generation.ok) {
+        logger.info("Summarization Gemini fallback succeeded", {
+          provider: "gemini",
+          reason: "fallback_from_openai",
+        });
+      } else {
+        logger.error("Summarization Gemini fallback failed", {
+          provider: "gemini",
+          originalProvider: "openai",
+          errorType: summarizeErrorType(generation.error),
+        });
+      }
+    }
+  }
 
   if (!generation.ok) {
     return generation;
