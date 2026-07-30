@@ -10,7 +10,7 @@ import type { AiGenerateInput, AiGenerateResult, AiProvider } from "./ai-provide
 import type { AiError } from "./types";
 
 /** Provider-owned default — do not change shared DEFAULT_SUMMARY_MODEL. */
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
 
 export type GeminiProviderOptions = {
   apiKey?: string;
