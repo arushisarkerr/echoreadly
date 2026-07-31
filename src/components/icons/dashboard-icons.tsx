@@ -277,6 +277,17 @@ export function IconClose(props: IconProps) {
   );
 }
 
+export function IconTrash(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M9 4h6l1 2h4v2H4V6h4l1-2Z" />
+      <path d="M6 8h12l-1 12H7L6 8Z" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </IconBase>
+  );
+}
+
 export function IconFile(props: IconProps) {
   return (
     <IconBase {...props}>

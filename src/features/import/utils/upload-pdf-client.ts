@@ -5,6 +5,7 @@ import type {
 
 type UploadPdfClientOptions = {
   ownerId: string;
+  idempotencyKey: string;
   onProgress?: (event: PdfUploadProgressEvent) => void;
   signal?: AbortSignal;
 };
@@ -21,18 +22,21 @@ type UploadApiFailure = {
 
 /**
  * Upload a PDF through the import API with byte-level progress events.
+ * Sends a client idempotency key so in-flight retries share one attempt token;
+ * server dedupe is content-addressed (file SHA-256).
  */
 export function uploadPdfToSupabase(
   file: File,
   options: UploadPdfClientOptions,
 ): Promise<PdfUploadResult> {
-  const { ownerId, onProgress, signal } = options;
+  const { ownerId, idempotencyKey, onProgress, signal } = options;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const form = new FormData();
     form.append("file", file);
     form.append("ownerId", ownerId);
+    form.append("idempotencyKey", idempotencyKey);
 
     function cleanup() {
       signal?.removeEventListener("abort", onAbort);

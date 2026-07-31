@@ -66,6 +66,11 @@ export function Dropdown({
             "absolute top-[calc(100%+0.4rem)] z-30 min-w-44 overflow-hidden rounded-xl border border-border bg-background p-1 shadow-[var(--elevation-md)]",
             align === "right" ? "right-0" : "left-0",
           )}
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest('[role="menuitem"]')) {
+              setOpen(false);
+            }
+          }}
         >
           {children}
         </div>

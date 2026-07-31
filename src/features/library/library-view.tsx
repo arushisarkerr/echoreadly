@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import {
   IconFile,
@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui";
 import { Dropdown, DropdownItem, SelectField } from "@/components/ui/dropdown";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,50 @@ import { DocumentCard } from "@/features/library/document-card";
 import { useLibraryDocuments } from "@/features/library/hooks/use-library-documents";
 import { formatFileSize } from "@/features/import/utils/format-file-size";
 import { cn } from "@/utils";
+
+const LIBRARY_VIEW_KEY = "echoreadly-library-view";
+
+type LibraryViewMode = "grid" | "list";
+
+const viewListeners = new Set<() => void>();
+
+function emitViewChange() {
+  viewListeners.forEach((listener) => listener());
+}
+
+function readStoredView(): LibraryViewMode {
+  if (typeof window === "undefined") {
+    return "list";
+  }
+  try {
+    const stored = window.localStorage.getItem(LIBRARY_VIEW_KEY);
+    if (stored === "grid" || stored === "list") {
+      return stored;
+    }
+  } catch {
+    // Ignore storage failures; fall back to List.
+  }
+  return "list";
+}
+
+function subscribeView(listener: () => void) {
+  viewListeners.add(listener);
+  return () => {
+    viewListeners.delete(listener);
+  };
+}
+
+function writeStoredView(view: LibraryViewMode) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(LIBRARY_VIEW_KEY, view);
+  } catch {
+    // Preference persistence is best-effort.
+  }
+  emitViewChange();
+}
 
 function formatUploadedAt(value: string): string {
   const date = new Date(value);
@@ -35,11 +80,24 @@ function formatUploadedAt(value: string): string {
 }
 
 export function LibraryView() {
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const view = useSyncExternalStore(
+    subscribeView,
+    readStoredView,
+    (): LibraryViewMode => "list",
+  );
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [filter, setFilter] = useState("all");
-  const { documents, loading, error } = useLibraryDocuments();
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { documents, loading, error, deleting, deleteDocuments } =
+    useLibraryDocuments();
+
+  function changeView(next: LibraryViewMode) {
+    writeStoredView(next);
+  }
 
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = documents.filter((document) => {
@@ -71,6 +129,71 @@ export function LibraryView() {
     return right.uploadedAt.localeCompare(left.uploadedAt);
   });
 
+  const selectedCount = selectedIds.length;
+
+  function toggleSelecting() {
+    setSelecting((value) => {
+      if (value) {
+        setSelectedIds([]);
+      }
+      return !value;
+    });
+    setActionError(null);
+  }
+
+  function toggleSelected(documentId: string) {
+    setSelectedIds((current) =>
+      current.includes(documentId)
+        ? current.filter((id) => id !== documentId)
+        : [...current, documentId],
+    );
+  }
+
+  async function handleDeleteOne(documentId: string) {
+    setActionError(null);
+    try {
+      await deleteDocuments([documentId]);
+      setSelectedIds((current) => current.filter((id) => id !== documentId));
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Unable to delete document.",
+      );
+    }
+  }
+
+  function requestBulkDelete() {
+    if (!selecting) {
+      setSelecting(true);
+      setActionError("Select documents, then confirm delete.");
+      return;
+    }
+    if (selectedCount === 0) {
+      setActionError("Select at least one document to delete.");
+      return;
+    }
+    setActionError(null);
+    setConfirmBulkDelete(true);
+  }
+
+  async function confirmDeleteSelected() {
+    setActionError(null);
+    try {
+      await deleteDocuments(selectedIds);
+      setSelectedIds([]);
+      setSelecting(false);
+      setConfirmBulkDelete(false);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Unable to delete documents.",
+      );
+      setConfirmBulkDelete(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -87,7 +210,7 @@ export function LibraryView() {
               size="icon"
               aria-label="Grid view"
               aria-pressed={view === "grid"}
-              onClick={() => setView("grid")}
+              onClick={() => changeView("grid")}
             >
               <IconGrid />
             </Button>
@@ -96,7 +219,7 @@ export function LibraryView() {
               size="icon"
               aria-label="List view"
               aria-pressed={view === "list"}
-              onClick={() => setView("list")}
+              onClick={() => changeView("list")}
             >
               <IconList />
             </Button>
@@ -140,12 +263,38 @@ export function LibraryView() {
           ]}
         />
         <Dropdown label="Bulk actions" align="right">
-          <DropdownItem>Multi select</DropdownItem>
+          <DropdownItem onClick={toggleSelecting}>
+            {selecting ? "Cancel multi select" : "Multi select"}
+          </DropdownItem>
           <DropdownItem>Rename</DropdownItem>
           <DropdownItem>Duplicate</DropdownItem>
-          <DropdownItem>Delete</DropdownItem>
+          <DropdownItem onClick={requestBulkDelete}>Delete</DropdownItem>
         </Dropdown>
       </div>
+
+      {selecting ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="accent">
+            {selectedCount} selected
+          </Badge>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={selectedCount === 0 || deleting}
+            onClick={requestBulkDelete}
+          >
+            Delete selected
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={deleting}
+            onClick={toggleSelecting}
+          >
+            Cancel
+          </Button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Badge>Tags</Badge>
@@ -154,13 +303,19 @@ export function LibraryView() {
         <Badge>Duration</Badge>
       </div>
 
+      {actionError || error ? (
+        <p className="text-sm text-danger" role="alert">
+          {actionError || error}
+        </p>
+      ) : null}
+
       {loading ? (
         <EmptyState
           icon={<IconFile />}
           title="Loading library"
           description="Fetching your uploaded documents."
         />
-      ) : error ? (
+      ) : error && documents.length === 0 ? (
         <EmptyState
           icon={<IconFile />}
           title="Unable to load library"
@@ -184,7 +339,9 @@ export function LibraryView() {
         <div
           className={cn(
             "grid gap-3",
-            view === "grid" ? "sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1",
+            view === "grid"
+              ? "sm:grid-cols-2 xl:grid-cols-6"
+              : "grid-cols-1",
           )}
         >
           {sorted.map((document) => (
@@ -196,6 +353,13 @@ export function LibraryView() {
               createdAt={formatUploadedAt(document.uploadedAt)}
               tags={[document.processingStatus]}
               layout={view}
+              selecting={selecting}
+              selected={selectedIds.includes(document.id)}
+              onToggleSelect={() => toggleSelected(document.id)}
+              onDelete={() => {
+                void handleDeleteOne(document.id);
+              }}
+              deleteDisabled={deleting}
             />
           ))}
         </div>
@@ -207,6 +371,36 @@ export function LibraryView() {
           list layouts are ready via the view toggles above.
         </p>
       </Card>
+
+      <Dialog
+        open={confirmBulkDelete}
+        onClose={() => {
+          if (!deleting) {
+            setConfirmBulkDelete(false);
+          }
+        }}
+        title="Delete selected documents?"
+        description={`This permanently removes ${selectedCount} document${selectedCount === 1 ? "" : "s"} from your library and storage.`}
+      >
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="ghost"
+            disabled={deleting}
+            onClick={() => setConfirmBulkDelete(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            disabled={deleting || selectedCount === 0}
+            onClick={() => {
+              void confirmDeleteSelected();
+            }}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

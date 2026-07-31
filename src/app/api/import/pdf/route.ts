@@ -9,6 +9,8 @@ export const runtime = "nodejs";
 const OWNER_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const IDEMPOTENCY_KEY_PATTERN = OWNER_ID_PATTERN;
+
 function jsonError(message: string, status: number) {
   return Response.json({ ok: false as const, error: message }, { status });
 }
@@ -38,6 +40,8 @@ export async function GET(request: Request) {
 
 /**
  * PDF import upload endpoint — storage + library document in one success flow.
+ * Rejects PDFs whose content already exists in the owner's Library.
+ * Same idempotency key retries the same attempt without creating a second row.
  */
 export async function POST(request: Request) {
   let form: FormData;
@@ -50,6 +54,7 @@ export async function POST(request: Request) {
 
   const fileEntry = form.get("file");
   const ownerIdEntry = form.get("ownerId");
+  const idempotencyKeyEntry = form.get("idempotencyKey");
 
   if (!(fileEntry instanceof File)) {
     return jsonError("Choose a PDF file to import.", 400);
@@ -59,8 +64,19 @@ export async function POST(request: Request) {
     return jsonError("Invalid upload owner id.", 400);
   }
 
+  if (
+    typeof idempotencyKeyEntry !== "string" ||
+    !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKeyEntry)
+  ) {
+    return jsonError("Invalid upload idempotency key.", 400);
+  }
+
   try {
-    const result = await uploadPdfToSupabaseBucket(fileEntry, ownerIdEntry);
+    const result = await uploadPdfToSupabaseBucket(
+      fileEntry,
+      ownerIdEntry,
+      idempotencyKeyEntry,
+    );
     return Response.json({ ok: true as const, result });
   } catch (cause) {
     const message =

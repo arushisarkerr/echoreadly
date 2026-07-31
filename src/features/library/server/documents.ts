@@ -30,7 +30,7 @@ function toRecord(row: DocumentRow): DocumentRecord {
 }
 
 /**
- * Stable content hash used by the existing documents.document_hash column.
+ * SHA-256 of PDF bytes — the documents.document_hash identity used for dedupe.
  */
 export function hashDocumentBytes(bytes: ArrayBuffer | Uint8Array): string {
   const buffer = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -60,15 +60,48 @@ export async function getDocumentByStoragePath(
 }
 
 /**
+ * Find an existing document for the same guest owner + idempotent document hash.
+ */
+export async function getDocumentByHash(
+  guestId: string,
+  documentHash: string,
+): Promise<DocumentRecord | null> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("documents")
+    .select(DOCUMENT_SELECT)
+    .eq("guest_id", guestId)
+    .eq("document_hash", documentHash)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Unable to look up document by hash.");
+  }
+
+  return data ? toRecord(data as DocumentRow) : null;
+}
+
+/**
  * Create a library document row for a guest upload, or return the existing one.
  * Uses guest_id so documents.user_id can keep its auth.users foreign key.
  */
 export async function createDocumentRecord(
   input: CreateDocumentInput,
 ): Promise<DocumentRecord> {
-  const existing = await getDocumentByStoragePath(input.guestId, input.storagePath);
-  if (existing) {
-    return existing;
+  const existingByPath = await getDocumentByStoragePath(
+    input.guestId,
+    input.storagePath,
+  );
+  if (existingByPath) {
+    return existingByPath;
+  }
+
+  const existingByHash = await getDocumentByHash(
+    input.guestId,
+    input.documentHash,
+  );
+  if (existingByHash) {
+    return existingByHash;
   }
 
   const client = createServiceClient();
@@ -90,9 +123,11 @@ export async function createDocumentRecord(
     .single();
 
   if (error) {
-    // Concurrent insert for the same storage path — return the winner.
+    // Concurrent insert for the same storage path / idempotency hash — return the winner.
     if (error.code === "23505") {
-      const raced = await getDocumentByStoragePath(input.guestId, input.storagePath);
+      const raced =
+        (await getDocumentByStoragePath(input.guestId, input.storagePath)) ??
+        (await getDocumentByHash(input.guestId, input.documentHash));
       if (raced) {
         return raced;
       }
@@ -138,4 +173,53 @@ export async function deleteDocumentByStoragePath(
   if (error) {
     throw new Error(error.message || "Unable to delete document record.");
   }
+}
+
+/**
+ * Find a document by id for a guest owner.
+ */
+export async function getDocumentByIdForOwner(
+  guestId: string,
+  documentId: string,
+): Promise<DocumentRecord | null> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("documents")
+    .select(DOCUMENT_SELECT)
+    .eq("guest_id", guestId)
+    .eq("id", documentId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Unable to look up document.");
+  }
+
+  return data ? toRecord(data as DocumentRow) : null;
+}
+
+/**
+ * Delete document rows by id for a guest owner.
+ * Related rows (chunks, summaries) cascade via FK.
+ */
+export async function deleteDocumentRowsByIds(
+  guestId: string,
+  documentIds: string[],
+): Promise<string[]> {
+  if (documentIds.length === 0) {
+    return [];
+  }
+
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("documents")
+    .delete()
+    .eq("guest_id", guestId)
+    .in("id", documentIds)
+    .select("id");
+
+  if (error) {
+    throw new Error(error.message || "Unable to delete document records.");
+  }
+
+  return ((data as Array<{ id: string }> | null) ?? []).map((row) => row.id);
 }

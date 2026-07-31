@@ -39,6 +39,13 @@ function toSelected(file: File): SelectedPdf {
   };
 }
 
+function createIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, "0").slice(-12)}`;
+}
+
 const serverSnapshot = {
   status: "idle" as const,
   selected: null,
@@ -47,6 +54,20 @@ const serverSnapshot = {
   error: null,
   result: null,
 };
+
+/**
+ * Module-scoped lock + key survive component remounts (e.g. Strict Mode).
+ * Component refs alone reset on remount and can allow a second in-flight upload.
+ */
+let uploadInFlight = false;
+let activeIdempotencyKey: string | null = null;
+
+function clearUploadAttempt(options?: { keepIdempotencyKey?: boolean }) {
+  uploadInFlight = false;
+  if (!options?.keepIdempotencyKey) {
+    activeIdempotencyKey = null;
+  }
+}
 
 /**
  * Reusable PDF upload state machine for the Import feature.
@@ -67,6 +88,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
   function selectFile(file: File | null | undefined) {
     abortRef.current?.abort();
     abortRef.current = null;
+    clearUploadAttempt();
 
     const validation = validatePdfFile(file);
     if (!validation.ok) {
@@ -97,8 +119,17 @@ export function usePdfUpload(): UsePdfUploadReturn {
   }
 
   async function upload() {
+    // Synchronous lock prevents double-submit races before React state updates.
+    if (uploadInFlight) {
+      return;
+    }
+
     const current = getPdfUploadState();
-    if (!current.selected || current.status === "uploading") {
+    if (
+      !current.selected ||
+      current.status === "uploading" ||
+      current.status === "success"
+    ) {
       return;
     }
 
@@ -112,7 +143,10 @@ export function usePdfUpload(): UsePdfUploadReturn {
       return;
     }
 
-    abortRef.current?.abort();
+    uploadInFlight = true;
+    const idempotencyKey = activeIdempotencyKey ?? createIdempotencyKey();
+    activeIdempotencyKey = idempotencyKey;
+
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -126,6 +160,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
     try {
       const next = await uploadPdfToSupabase(current.selected.file, {
         ownerId: getImportOwnerId(),
+        idempotencyKey,
         signal: controller.signal,
         onProgress: (event) => {
           setPdfUploadState({
@@ -157,6 +192,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
         status: "success",
         error: null,
       });
+      clearUploadAttempt();
     } catch (cause) {
       if (controller.signal.aborted) {
         return;
@@ -173,16 +209,20 @@ export function usePdfUpload(): UsePdfUploadReturn {
         status: "failed",
         error: message,
       });
+      // Keep the same idempotency key for retry of this failed attempt.
+      clearUploadAttempt({ keepIdempotencyKey: true });
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
       }
+      uploadInFlight = false;
     }
   }
 
   async function remove() {
     abortRef.current?.abort();
     abortRef.current = null;
+    clearUploadAttempt();
 
     const uploaded = getPdfUploadState().result;
     clearPdfUploadState();
@@ -201,6 +241,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
     // Clear the Import session only. Previous uploads remain in the Library.
     abortRef.current?.abort();
     abortRef.current = null;
+    clearUploadAttempt();
     clearPdfUploadState();
   }
 
