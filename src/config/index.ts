@@ -1,2 +1,2 @@
-export { publicEnv, type PublicEnv } from "./env";
+export { publicEnv, serverEnv, type PublicEnv } from "./env";
 export { siteConfig, type SiteConfig } from "./site";

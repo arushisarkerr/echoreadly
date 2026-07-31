@@ -17,12 +17,59 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROUTES } from "@/constants";
+import { DocumentCard } from "@/features/library/document-card";
+import { useLibraryDocuments } from "@/features/library/hooks/use-library-documents";
+import { formatFileSize } from "@/features/import/utils/format-file-size";
+import { cn } from "@/utils";
+
+function formatUploadedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export function LibraryView() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [filter, setFilter] = useState("all");
+  const { documents, loading, error } = useLibraryDocuments();
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = documents.filter((document) => {
+    if (filter === "pdf" && document.mimeType !== "application/pdf") {
+      return false;
+    }
+    if (filter === "web" || filter === "youtube" || filter === "favorites") {
+      return false;
+    }
+    if (!normalizedQuery) {
+      return true;
+    }
+    return (
+      document.filename.toLowerCase().includes(normalizedQuery) ||
+      document.originalFilename.toLowerCase().includes(normalizedQuery)
+    );
+  });
+
+  const sorted = [...filtered].sort((left, right) => {
+    if (sort === "oldest") {
+      return left.uploadedAt.localeCompare(right.uploadedAt);
+    }
+    if (sort === "title") {
+      return left.filename.localeCompare(right.filename);
+    }
+    if (sort === "duration") {
+      return right.fileSize - left.fileSize;
+    }
+    return right.uploadedAt.localeCompare(left.uploadedAt);
+  });
 
   return (
     <div className="space-y-6">
@@ -107,19 +154,52 @@ export function LibraryView() {
         <Badge>Duration</Badge>
       </div>
 
-      <EmptyState
-        icon={<IconFile />}
-        title="No documents in your library"
-        description="Document cards will show a thumbnail, title, language, duration, created date, tags, and favorite controls."
-        action={
-          <Button
-            variant="secondary"
-            leftIcon={<IconStar className="size-3.5" />}
-          >
-            Mark favorites later
-          </Button>
-        }
-      />
+      {loading ? (
+        <EmptyState
+          icon={<IconFile />}
+          title="Loading library"
+          description="Fetching your uploaded documents."
+        />
+      ) : error ? (
+        <EmptyState
+          icon={<IconFile />}
+          title="Unable to load library"
+          description={error}
+        />
+      ) : sorted.length === 0 ? (
+        <EmptyState
+          icon={<IconFile />}
+          title="No documents in your library"
+          description="Document cards will show a thumbnail, title, language, duration, created date, tags, and favorite controls."
+          action={
+            <Button
+              variant="secondary"
+              leftIcon={<IconStar className="size-3.5" />}
+            >
+              Mark favorites later
+            </Button>
+          }
+        />
+      ) : (
+        <div
+          className={cn(
+            "grid gap-3",
+            view === "grid" ? "sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1",
+          )}
+        >
+          {sorted.map((document) => (
+            <DocumentCard
+              key={document.id}
+              title={document.filename}
+              language="PDF"
+              duration={formatFileSize(document.fileSize)}
+              createdAt={formatUploadedAt(document.uploadedAt)}
+              tags={[document.processingStatus]}
+              layout={view}
+            />
+          ))}
+        </div>
+      )}
 
       <Card>
         <p className="text-sm text-muted">

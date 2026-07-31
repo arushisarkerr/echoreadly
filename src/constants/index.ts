@@ -5,3 +5,4 @@ export {
   APP_TAGLINE,
 } from "./app";
 export { ROUTES, type AppRoute } from "./routes";
+export { PDFS_BUCKET } from "./storage";

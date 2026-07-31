@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import {
   IconFile,
-  IconImport,
   IconLink,
 } from "@/components/icons/dashboard-icons";
 import { Badge } from "@/components/ui/badge";
@@ -14,23 +13,24 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/overlays";
+import { ImportSourceCards } from "@/features/import/components/import-source-cards";
+import { PdfImportPanel } from "@/features/import/components/pdf-import-panel";
 import { ROUTES } from "@/constants";
 
 const FORMATS = [
-  "PDF",
-  "DOC",
-  "DOCX",
-  "TXT",
-  "Markdown",
-  "EPUB",
-  "Website URL",
-  "Blog URL",
-  "YouTube URL",
-  "OCR",
+  { label: "PDF", available: true },
+  { label: "DOC", available: false },
+  { label: "DOCX", available: false },
+  { label: "TXT", available: false },
+  { label: "Markdown", available: false },
+  { label: "EPUB", available: false },
+  { label: "Website URL", available: false },
+  { label: "Blog URL", available: false },
+  { label: "YouTube URL", available: false },
+  { label: "OCR", available: false },
 ] as const;
 
 export function ImportView() {
-  const [dragging, setDragging] = useState(false);
   const [url, setUrl] = useState("");
 
   return (
@@ -44,6 +44,8 @@ export function ImportView() {
         ]}
       />
 
+      <ImportSourceCards />
+
       <Tabs defaultValue="files">
         <TabsList>
           <TabsTrigger value="files">Files</TabsTrigger>
@@ -52,53 +54,15 @@ export function ImportView() {
         </TabsList>
 
         <TabsContent value="files" className="mt-5 space-y-5">
-          <Card
-            padding="lg"
-            className={
-              dragging
-                ? "border-accent bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))]"
-                : undefined
-            }
-            onDragEnter={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragOver={(event) => event.preventDefault()}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              setDragging(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragging(false);
-            }}
-          >
-            <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-              <div className="flex size-14 items-center justify-center rounded-2xl border border-border bg-surface-muted text-foreground">
-                <IconImport className="size-5" />
-              </div>
-              <h2 className="font-display mt-5 text-xl font-semibold text-foreground">
-                Drop files to import
-              </h2>
-              <p className="mt-2 max-w-md text-sm text-muted">
-                PDF, DOC, DOCX, TXT, Markdown, and EPUB are welcome. This area is
-                visual-only for now.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-                <Button leftIcon={<IconFile className="size-3.5" />}>
-                  Choose files
-                </Button>
-                <Button variant="outline">Browse samples</Button>
-              </div>
-            </div>
-          </Card>
+          <PdfImportPanel />
         </TabsContent>
 
         <TabsContent value="links" className="mt-5 space-y-5">
-          <Card>
+          <Card className="opacity-70">
             <CardHeader
               title="Import from the web"
               description="Website, blog, or YouTube URLs."
+              action={<Badge>Coming Soon</Badge>}
             />
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
@@ -108,22 +72,24 @@ export function ImportView() {
                   placeholder="https://…"
                   leftSlot={<IconLink />}
                   aria-label="Import URL"
+                  disabled
                 />
               </div>
-              <Button>Add link</Button>
+              <Button disabled>Add link</Button>
             </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="ocr" className="mt-5">
-          <Card>
+          <Card className="opacity-70">
             <CardHeader
               title="OCR import"
               description="Scan image-based documents into readable text later."
+              action={<Badge>Coming Soon</Badge>}
             />
             <EmptyState
               icon={<IconFile />}
-              title="OCR is a placeholder"
+              title="OCR is coming soon"
               description="The surface is ready for scanned PDFs and image pages when processing is connected."
               className="py-12"
             />
@@ -137,8 +103,12 @@ export function ImportView() {
         </h2>
         <div className="flex flex-wrap gap-2">
           {FORMATS.map((format) => (
-            <Badge key={format} tone="neutral">
-              {format}
+            <Badge
+              key={format.label}
+              tone={format.available ? "accent" : "neutral"}
+            >
+              {format.label}
+              {!format.available ? " · Coming Soon" : ""}
             </Badge>
           ))}
         </div>
