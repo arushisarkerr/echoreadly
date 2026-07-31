@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import { IconSearch, IconSpark } from "@/components/icons/dashboard-icons";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROUTES } from "@/constants";
+import { getImportOwnerId } from "@/features/import/utils/pdf-upload-store";
 
 const SUGGESTIONS = [
   "Continue listening",
@@ -19,8 +21,49 @@ const SUGGESTIONS = [
   "Unread documents",
 ] as const;
 
+type SearchHit = {
+  documentId: string;
+  filename: string;
+  sourceFormat: string | null;
+  snippet: string;
+  matchSource: string;
+  languageCode: string;
+};
+
 export function SearchView() {
   const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const trimmedQuery = query.trim();
+  const visibleHits = trimmedQuery ? hits : [];
+
+  useEffect(() => {
+    if (!trimmedQuery) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setLoading(true);
+        try {
+          const response = await fetch(
+            `/api/search?ownerId=${encodeURIComponent(getImportOwnerId())}&q=${encodeURIComponent(trimmedQuery)}`,
+          );
+          const payload = (await response.json()) as {
+            ok?: boolean;
+            hits?: SearchHit[];
+          };
+          setHits(payload.ok && payload.hits ? payload.hits : []);
+        } catch {
+          setHits([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [trimmedQuery]);
 
   return (
     <div className="space-y-6">
@@ -96,12 +139,46 @@ export function SearchView() {
 
       <Card>
         <CardHeader title="Results" description="Matching documents and sessions." />
-        <EmptyState
-          icon={<IconSearch />}
-          title={query.trim() ? `No results for “${query.trim()}”` : "Start typing to search"}
-          description="Result cards will list title, source, tags, and last opened date."
-          className="py-14"
-        />
+        {loading ? (
+          <EmptyState
+            icon={<IconSearch />}
+            title="Searching…"
+            description="Looking through originals, translations, and chunks."
+            className="py-14"
+          />
+        ) : visibleHits.length > 0 ? (
+          <ul className="space-y-2 p-0">
+            {visibleHits.map((hit, index) => (
+              <li
+                key={`${hit.documentId}-${hit.matchSource}-${index}`}
+                className="rounded-xl border border-border/70 px-3 py-2.5"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`${ROUTES.reader}?id=${encodeURIComponent(hit.documentId)}`}
+                    className="font-medium text-foreground hover:underline"
+                  >
+                    {hit.filename}
+                  </Link>
+                  <Badge>{hit.sourceFormat || "Document"}</Badge>
+                  <Badge tone="accent">{hit.matchSource}</Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted">{hit.snippet}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={<IconSearch />}
+            title={
+              trimmedQuery
+                ? `No results for “${trimmedQuery}”`
+                : "Start typing to search"
+            }
+            description="Result cards will list title, source, tags, and last opened date."
+            className="py-14"
+          />
+        )}
       </Card>
     </div>
   );

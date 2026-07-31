@@ -61,6 +61,11 @@ export const serverEnv = {
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     );
   },
+
+  /** OpenAI API key for Whisper STT, translation, TTS, and AI tools. */
+  get openaiApiKey(): string | undefined {
+    return normalizeEnv(process.env.OPENAI_API_KEY);
+  },
 } as const;
 
 export type PublicEnv = typeof publicEnv;

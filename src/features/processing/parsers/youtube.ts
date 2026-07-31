@@ -1,6 +1,10 @@
 import { YoutubeTranscript } from "youtube-transcript";
 
 import type { DocumentParseResult } from "@/features/processing/parsers/types";
+import type { ProcessingStage } from "@/features/processing/stages";
+import { downloadYoutubeAudio } from "@/features/youtube/download-audio";
+import { transcribeAudioWithWhisper } from "@/features/youtube/whisper-stt";
+import { hasOpenAIKey } from "@/lib/ai/openai";
 
 const YOUTUBE_HOSTS = new Set([
   "youtube.com",
@@ -51,6 +55,8 @@ type YoutubeOEmbed = {
   thumbnail_url?: string;
 };
 
+type StageReporter = (stage: ProcessingStage) => Promise<void> | void;
+
 async function fetchYoutubeMetadata(videoId: string, pageUrl: string) {
   const oembed = new URL("https://www.youtube.com/oembed");
   oembed.searchParams.set("url", pageUrl);
@@ -66,7 +72,7 @@ async function fetchYoutubeMetadata(videoId: string, pageUrl: string) {
         title: `YouTube ${videoId}`,
         channel: null as string | null,
         thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        duration: null as string | null,
+        duration: null as string | number | null,
         publishDate: null as string | null,
       };
     }
@@ -78,7 +84,7 @@ async function fetchYoutubeMetadata(videoId: string, pageUrl: string) {
       thumbnail:
         payload.thumbnail_url ||
         `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      duration: null as string | null,
+      duration: null as string | number | null,
       publishDate: null as string | null,
     };
   } catch {
@@ -87,37 +93,49 @@ async function fetchYoutubeMetadata(videoId: string, pageUrl: string) {
       title: `YouTube ${videoId}`,
       channel: null as string | null,
       thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      duration: null as string | null,
+      duration: null as string | number | null,
       publishDate: null as string | null,
     };
   }
 }
 
-/**
- * Attempt Whisper STT when a transcript is unavailable and OPENAI_API_KEY is set.
- * Audio download from YouTube is best-effort; failures surface a clear error.
- */
-async function speechToTextFallback(videoId: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+async function speechToTextFallback(
+  videoId: string,
+  onStage?: StageReporter,
+): Promise<{
+  text: string;
+  language: string | null;
+  durationSeconds: number | null;
+  confidence: number | null;
+  source: "whisper";
+}> {
+  if (!hasOpenAIKey()) {
     throw new Error(
-      "No transcript is available for this video, and speech-to-text is not configured.",
+      "No transcript is available for this video, and speech-to-text is not configured (OPENAI_API_KEY).",
     );
   }
 
-  // Placeholder for audio download + Whisper. Without a stable YouTube audio
-  // downloader in this environment, fail clearly rather than invent content.
-  void videoId;
-  throw new Error(
-    "No caption transcript is available for this video. Speech-to-text fallback could not download audio.",
-  );
+  await onStage?.("downloading_audio");
+  const audio = await downloadYoutubeAudio(videoId);
+
+  await onStage?.("speech_to_text");
+  const whisper = await transcribeAudioWithWhisper(audio.bytes);
+
+  return {
+    text: whisper.text,
+    language: whisper.language,
+    durationSeconds: whisper.durationSeconds ?? audio.durationSeconds,
+    confidence: whisper.confidence,
+    source: "whisper",
+  };
 }
 
 /**
- * YouTube extractor — captions first, optional STT fallback.
+ * YouTube extractor — captions first, then audio download + Whisper STT.
  */
 export async function parseYoutubeVideo(
   pageUrl: string,
+  options?: { onStage?: StageReporter },
 ): Promise<DocumentParseResult> {
   const videoId = extractYoutubeVideoId(pageUrl);
   if (!videoId) {
@@ -126,6 +144,13 @@ export async function parseYoutubeVideo(
 
   const metadata = await fetchYoutubeMetadata(videoId, pageUrl);
   let text = "";
+  let textSource: "transcript" | "whisper" = "transcript";
+  let language: string | null = null;
+  let confidence: number | null = null;
+  let durationSeconds: number | null =
+    typeof metadata.duration === "number" ? metadata.duration : null;
+
+  await options?.onStage?.("extracting_transcript");
 
   try {
     const segments = await YoutubeTranscript.fetchTranscript(videoId);
@@ -136,7 +161,12 @@ export async function parseYoutubeVideo(
       .replace(/\s+/g, " ")
       .trim();
   } catch {
-    text = await speechToTextFallback(videoId);
+    const stt = await speechToTextFallback(videoId, options?.onStage);
+    text = stt.text;
+    textSource = "whisper";
+    language = stt.language;
+    confidence = stt.confidence;
+    durationSeconds = stt.durationSeconds;
   }
 
   if (!text) {
@@ -151,8 +181,14 @@ export async function parseYoutubeVideo(
     title: metadata.title,
     metadata: {
       ...metadata,
+      duration: durationSeconds,
       url: pageUrl,
       wordCount,
+      textSource,
+      originalLanguage: language,
+      detectedLanguage: language,
+      confidence,
+      documentType: "YouTube",
     },
   };
 }
@@ -162,7 +198,6 @@ export async function parseYoutubeVideo(
  */
 export async function parseYoutube(
   bytes: Uint8Array,
-  _filename: string,
 ): Promise<DocumentParseResult> {
   const raw = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   const payload = JSON.parse(raw) as { url?: string; videoId?: string };
@@ -173,4 +208,19 @@ export async function parseYoutube(
     throw new Error("Invalid YouTube import payload.");
   }
   return parseYoutubeVideo(url);
+}
+
+export async function parseYoutubeWithStages(
+  bytes: Uint8Array,
+  onStage?: StageReporter,
+): Promise<DocumentParseResult> {
+  const raw = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  const payload = JSON.parse(raw) as { url?: string; videoId?: string };
+  const url =
+    payload.url ||
+    (payload.videoId ? `https://www.youtube.com/watch?v=${payload.videoId}` : "");
+  if (!url) {
+    throw new Error("Invalid YouTube import payload.");
+  }
+  return parseYoutubeVideo(url, { onStage });
 }

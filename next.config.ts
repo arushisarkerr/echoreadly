@@ -7,8 +7,11 @@ const nextConfig: NextConfig = {
     "unpdf",
     "tesseract.js",
     "youtube-transcript",
+    "youtubei.js",
+    "openai",
     "linkedom",
     "@mozilla/readability",
+    "pdf-lib",
   ],
 };
 

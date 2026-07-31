@@ -9,7 +9,7 @@ import type {
 } from "@/features/library/types";
 
 const DOCUMENT_SELECT =
-  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash, page_count, source_format, source_url, source_metadata, extracted_text";
+  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash, page_count, source_format, source_url, source_metadata, extracted_text, processing_stage, processing_error, original_language";
 
 function toRecord(row: DocumentRow): DocumentRecord {
   const ownerId = row.user_id ?? row.guest_id;
@@ -32,6 +32,9 @@ function toRecord(row: DocumentRow): DocumentRecord {
     sourceUrl: row.source_url ?? null,
     sourceMetadata: row.source_metadata ?? null,
     extractedText: row.extracted_text ?? null,
+    processingStage: row.processing_stage ?? null,
+    processingError: row.processing_error ?? null,
+    originalLanguage: row.original_language ?? null,
   };
 }
 
@@ -132,6 +135,7 @@ export async function createDocumentRecord(
       source_format: input.sourceFormat ?? null,
       source_url: input.sourceUrl ?? null,
       source_metadata: input.sourceMetadata ?? null,
+      processing_stage: input.processingStage ?? "queued",
     })
     .select(DOCUMENT_SELECT)
     .single();
@@ -167,7 +171,50 @@ export async function listDocumentsForOwner(guestId: string): Promise<DocumentRe
     throw new Error(error.message || "Unable to load library documents.");
   }
 
-  return ((data as DocumentRow[] | null) ?? []).map(toRecord);
+  const documents = ((data as DocumentRow[] | null) ?? []).map(toRecord);
+  if (documents.length === 0) {
+    return documents;
+  }
+
+  const ids = documents.map((document) => document.id);
+  const [{ data: translations }, { data: audioRows }] = await Promise.all([
+    client
+      .from("document_translations")
+      .select("document_id, language_code, status")
+      .in("document_id", ids)
+      .eq("status", "ready"),
+    client
+      .from("document_audio")
+      .select("document_id, language_code, status")
+      .in("document_id", ids)
+      .eq("status", "ready"),
+  ]);
+
+  const translatedMap = new Map<string, string[]>();
+  for (const row of (translations as Array<{
+    document_id: string;
+    language_code: string;
+  }> | null) ?? []) {
+    const list = translatedMap.get(row.document_id) ?? [];
+    list.push(row.language_code);
+    translatedMap.set(row.document_id, list);
+  }
+
+  const audioMap = new Map<string, string[]>();
+  for (const row of (audioRows as Array<{
+    document_id: string;
+    language_code: string;
+  }> | null) ?? []) {
+    const list = audioMap.get(row.document_id) ?? [];
+    list.push(row.language_code);
+    audioMap.set(row.document_id, list);
+  }
+
+  return documents.map((document) => ({
+    ...document,
+    translatedLanguages: translatedMap.get(document.id) ?? [],
+    audioLanguages: audioMap.get(document.id) ?? [],
+  }));
 }
 
 /**
@@ -266,6 +313,9 @@ export type DocumentProcessingUpdate = {
   sourceFormat?: string | null;
   sourceMetadata?: Record<string, unknown> | null;
   filename?: string;
+  processingStage?: string | null;
+  processingError?: string | null;
+  originalLanguage?: string | null;
 };
 
 /**
@@ -297,6 +347,15 @@ export async function updateDocumentProcessing(
   }
   if (fields.filename) {
     patch.filename = fields.filename;
+  }
+  if (fields.processingStage !== undefined) {
+    patch.processing_stage = fields.processingStage;
+  }
+  if (fields.processingError !== undefined) {
+    patch.processing_error = fields.processingError;
+  }
+  if (fields.originalLanguage !== undefined) {
+    patch.original_language = fields.originalLanguage;
   }
 
   const { data, error } = await client

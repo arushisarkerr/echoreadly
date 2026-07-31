@@ -20,6 +20,11 @@ export type DocumentRecord = {
   sourceUrl?: string | null;
   sourceMetadata?: Record<string, unknown> | null;
   extractedText?: string | null;
+  processingStage?: string | null;
+  processingError?: string | null;
+  originalLanguage?: string | null;
+  translatedLanguages?: string[];
+  audioLanguages?: string[];
 };
 
 export type DocumentRow = {
@@ -39,6 +44,9 @@ export type DocumentRow = {
   source_url?: string | null;
   source_metadata?: Record<string, unknown> | null;
   extracted_text?: string | null;
+  processing_stage?: string | null;
+  processing_error?: string | null;
+  original_language?: string | null;
 };
 
 export type CreateDocumentInput = {
@@ -55,4 +63,5 @@ export type CreateDocumentInput = {
   sourceFormat?: string;
   sourceUrl?: string;
   sourceMetadata?: Record<string, unknown>;
+  processingStage?: string;
 };

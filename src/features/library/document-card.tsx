@@ -13,6 +13,7 @@ export function DocumentCard({
   duration = "Duration",
   createdAt = "Created date",
   tags = ["Tag"],
+  thumbnailUrl,
   favorite = false,
   layout = "grid",
   selected = false,
@@ -27,6 +28,7 @@ export function DocumentCard({
   duration?: string;
   createdAt?: string;
   tags?: string[];
+  thumbnailUrl?: string | null;
   favorite?: boolean;
   layout?: "grid" | "list";
   selected?: boolean;
@@ -51,11 +53,15 @@ export function DocumentCard({
     >
       <div
         className={cn(
-          "relative shrink-0 rounded-lg border border-border bg-surface-muted",
+          "relative shrink-0 overflow-hidden rounded-lg border border-border bg-surface-muted",
           layout === "list" ? "size-8" : "aspect-[4/3] w-full",
         )}
         aria-hidden="true"
       >
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbnailUrl} alt="" className="size-full object-cover" />
+        ) : null}
         {selecting ? (
           <span
             className={cn(

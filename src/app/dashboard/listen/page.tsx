@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+
 import { ListenView } from "@/features/listen/listen-view";
 
 export default function ListenPage() {
-  return <ListenView />;
+  return (
+    <Suspense fallback={null}>
+      <ListenView />
+    </Suspense>
+  );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { IconLink } from "@/components/icons/dashboard-icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -8,6 +10,7 @@ import { PdfUploadError } from "@/features/import/components/pdf-upload-error";
 import { PdfUploadProgress } from "@/features/import/components/pdf-upload-progress";
 import { PdfUploadSuccess } from "@/features/import/components/pdf-upload-success";
 import { useLinkImport } from "@/features/import/hooks/use-link-import";
+import { ROUTES } from "@/constants";
 
 /**
  * Links tab panel — same progress / error / success shells as file upload.
@@ -72,14 +75,24 @@ export function LinkImportPanel() {
       ) : null}
 
       {status === "success" && result ? (
-        <PdfUploadSuccess
-          result={result}
-          onUploadAnother={() => {
-            reset();
-          }}
-          title="Link imported"
-          anotherLabel="Import another link"
-        />
+        <div className="space-y-3">
+          <PdfUploadSuccess
+            result={result}
+            onUploadAnother={() => {
+              reset();
+            }}
+            title={result.alreadyExists ? "Already in Library" : "Link imported"}
+            anotherLabel="Import another link"
+          />
+          <Link
+            href={`${ROUTES.reader}?id=${encodeURIComponent(result.documentId)}`}
+            className="inline-flex"
+          >
+            <Button variant="outline">
+              {result.alreadyExists ? "Open existing document" : "Open in Reader"}
+            </Button>
+          </Link>
+        </div>
       ) : null}
 
       {error ? (

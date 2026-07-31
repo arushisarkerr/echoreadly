@@ -1,4 +1,7 @@
 -- EchoReadly: link/OCR metadata + chunks for shared processing pipeline.
+-- document_chunks ownership follows the existing schema: user_id on the row
+-- (nullable for guest docs) and/or inherit owner via documents.document_id.
+-- Do NOT invent document_chunks.guest_id — that column does not exist in production.
 
 alter table public.documents
   add column if not exists source_url text;
@@ -9,7 +12,7 @@ alter table public.documents
 create table if not exists public.document_chunks (
   id uuid primary key default gen_random_uuid(),
   document_id uuid not null references public.documents (id) on delete cascade,
-  guest_id uuid,
+  user_id uuid references auth.users (id) on delete cascade,
   chunk_index integer not null,
   text text not null default '',
   character_count integer not null default 0 check (character_count >= 0),

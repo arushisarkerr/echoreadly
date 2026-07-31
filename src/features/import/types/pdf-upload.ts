@@ -28,6 +28,8 @@ export type PdfUploadResult = {
   mimeType: string;
   ownerId: string;
   formatId?: DocumentFormatId;
+  /** True when an existing Library document was returned (e.g. YouTube video ID). */
+  alreadyExists?: boolean;
 };
 
 export type PdfValidationErrorCode =

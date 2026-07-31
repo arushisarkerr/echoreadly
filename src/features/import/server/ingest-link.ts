@@ -5,7 +5,6 @@ import {
   type DocumentFormatId,
 } from "@/features/import/formats/registry";
 import { validateSafeHttpUrl, fetchSafeUrl } from "@/features/import/safe-fetch-url";
-import { duplicateLibraryMessage } from "@/features/import/server/upload-pdf";
 import type { PdfUploadResult } from "@/features/import/types";
 import {
   createDocumentRecord,
@@ -37,6 +36,7 @@ function toUploadResult(input: {
   mimeType: string;
   ownerId: string;
   formatId: DocumentFormatId;
+  alreadyExists?: boolean;
 }): PdfUploadResult {
   return {
     uploadId: input.path,
@@ -49,6 +49,7 @@ function toUploadResult(input: {
     mimeType: input.mimeType,
     ownerId: input.ownerId,
     formatId: input.formatId,
+    alreadyExists: input.alreadyExists,
   };
 }
 
@@ -84,7 +85,6 @@ export async function ingestLinkToLibrary(
 
   const youtube = isYoutubeUrl(safe.url.toString());
   const formatId: DocumentFormatId = youtube ? "youtube" : "website";
-  const duplicateMessage = duplicateLibraryMessage(formatId);
 
   let identityKey: string;
   let filename: string;
@@ -144,7 +144,18 @@ export async function ingestLinkToLibrary(
 
   const existingByHash = await getDocumentByHash(normalizedOwner, documentHash);
   if (existingByHash) {
-    throw new Error(duplicateMessage);
+    // YouTube (and website) duplicates open the existing Library document.
+    return toUploadResult({
+      documentId: existingByHash.id,
+      name: existingByHash.filename,
+      size: existingByHash.fileSize,
+      uploadedAt: existingByHash.uploadedAt,
+      path: existingByHash.storagePath.replace(/^pdfs\//, ""),
+      mimeType: existingByHash.mimeType,
+      ownerId: normalizedOwner,
+      formatId,
+      alreadyExists: true,
+    });
   }
 
   const client = createServiceClient();
@@ -159,7 +170,17 @@ export async function ingestLinkToLibrary(
     if (message.includes("already exists") || message.includes("duplicate")) {
       const raced = await getDocumentByHash(normalizedOwner, documentHash);
       if (raced) {
-        throw new Error(duplicateMessage);
+        return toUploadResult({
+          documentId: raced.id,
+          name: raced.filename,
+          size: raced.fileSize,
+          uploadedAt: raced.uploadedAt,
+          path: raced.storagePath.replace(/^pdfs\//, ""),
+          mimeType: raced.mimeType,
+          ownerId: normalizedOwner,
+          formatId,
+          alreadyExists: true,
+        });
       }
     }
     throw new Error(error.message || "Upload failed. Please try again.");
@@ -169,7 +190,17 @@ export async function ingestLinkToLibrary(
     const raced = await getDocumentByHash(normalizedOwner, documentHash);
     if (raced && raced.storagePath !== finalStoragePath) {
       await removeStorageObject(path);
-      throw new Error(duplicateMessage);
+      return toUploadResult({
+        documentId: raced.id,
+        name: raced.filename,
+        size: raced.fileSize,
+        uploadedAt: raced.uploadedAt,
+        path: raced.storagePath.replace(/^pdfs\//, ""),
+        mimeType: raced.mimeType,
+        ownerId: normalizedOwner,
+        formatId,
+        alreadyExists: true,
+      });
     }
 
     const document = await createDocumentRecord({
@@ -191,7 +222,17 @@ export async function ingestLinkToLibrary(
 
     if (document.storagePath !== finalStoragePath) {
       await removeStorageObject(path);
-      throw new Error(duplicateMessage);
+      return toUploadResult({
+        documentId: document.id,
+        name: document.filename,
+        size: document.fileSize,
+        uploadedAt: document.uploadedAt,
+        path: document.storagePath.replace(/^pdfs\//, ""),
+        mimeType: document.mimeType,
+        ownerId: normalizedOwner,
+        formatId,
+        alreadyExists: true,
+      });
     }
 
     queueProcessing(document.id);
@@ -207,11 +248,9 @@ export async function ingestLinkToLibrary(
       formatId,
     });
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : "Unable to create library document.";
-    if (message !== duplicateMessage) {
-      await removeStorageObject(path);
-    }
-    throw cause instanceof Error ? cause : new Error(message);
+    await removeStorageObject(path);
+    throw cause instanceof Error
+      ? cause
+      : new Error("Unable to create library document.");
   }
 }

@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+
 import { AiView } from "@/features/ai/ai-view";
 
 export default function AiPage() {
-  return <AiView />;
+  return (
+    <Suspense fallback={null}>
+      <AiView />
+    </Suspense>
+  );
 }

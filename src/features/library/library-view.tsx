@@ -19,12 +19,47 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROUTES } from "@/constants";
+import { labelForLanguageCode } from "@/constants/languages";
 import { labelForMimeType } from "@/features/import/formats/registry";
 import { formatFileSize } from "@/features/import/utils/format-file-size";
 import { DocumentCard } from "@/features/library/document-card";
 import { useLibraryDocuments } from "@/features/library/hooks/use-library-documents";
 import { processingStatusLabel } from "@/features/library/status-labels";
 import { cn } from "@/utils";
+
+function thumbnailFromDocument(document: {
+  sourceMetadata?: Record<string, unknown> | null;
+}): string | null {
+  const thumb = document.sourceMetadata?.thumbnail;
+  return typeof thumb === "string" && thumb.trim() ? thumb.trim() : null;
+}
+
+function durationFromDocument(document: {
+  sourceMetadata?: Record<string, unknown> | null;
+  fileSize: number;
+}): string {
+  const duration = document.sourceMetadata?.duration;
+  if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+    const minutes = Math.floor(duration / 60);
+    const seconds = Math.round(duration % 60);
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+  if (typeof duration === "string" && duration.trim()) {
+    return duration;
+  }
+  return formatFileSize(document.fileSize);
+}
+
+function languageFromDocument(document: {
+  originalLanguage?: string | null;
+  mimeType: string;
+  sourceFormat?: string | null;
+}): string {
+  if (document.originalLanguage) {
+    return labelForLanguageCode(document.originalLanguage);
+  }
+  return labelForMimeType(document.mimeType, document.sourceFormat);
+}
 
 const LIBRARY_VIEW_KEY = "echoreadly-library-view";
 
@@ -376,30 +411,47 @@ export function LibraryView() {
               : "grid-cols-1",
           )}
         >
-          {sorted.map((document) => (
-            <DocumentCard
-              key={document.id}
-              title={document.filename}
-              language={labelForMimeType(
-                document.mimeType,
-                document.sourceFormat,
-              )}
-              duration={formatFileSize(document.fileSize)}
-              createdAt={formatUploadedAt(document.uploadedAt)}
-              tags={[processingStatusLabel(document.processingStatus)]}
-              layout={view}
-              selecting={selecting}
-              selected={selectedIds.includes(document.id)}
-              onToggleSelect={() => toggleSelected(document.id)}
-              onOpen={() => {
-                router.push(`${ROUTES.reader}?id=${encodeURIComponent(document.id)}`);
-              }}
-              onDelete={() => {
-                void handleDeleteOne(document.id);
-              }}
-              deleteDisabled={deleting}
-            />
-          ))}
+          {sorted.map((document) => {
+            const tags = [
+              processingStatusLabel(document.processingStatus),
+              labelForMimeType(document.mimeType, document.sourceFormat),
+            ];
+            if ((document.translatedLanguages?.length ?? 0) > 0) {
+              tags.push(
+                `Translated: ${document.translatedLanguages!
+                  .map((code) => labelForLanguageCode(code))
+                  .join(", ")}`,
+              );
+            }
+            if ((document.audioLanguages?.length ?? 0) > 0) {
+              tags.push("Audio Available");
+            }
+
+            return (
+              <DocumentCard
+                key={document.id}
+                title={document.filename}
+                language={languageFromDocument(document)}
+                duration={durationFromDocument(document)}
+                createdAt={formatUploadedAt(document.uploadedAt)}
+                tags={tags}
+                thumbnailUrl={thumbnailFromDocument(document)}
+                layout={view}
+                selecting={selecting}
+                selected={selectedIds.includes(document.id)}
+                onToggleSelect={() => toggleSelected(document.id)}
+                onOpen={() => {
+                  router.push(
+                    `${ROUTES.reader}?id=${encodeURIComponent(document.id)}`,
+                  );
+                }}
+                onDelete={() => {
+                  void handleDeleteOne(document.id);
+                }}
+                deleteDisabled={deleting}
+              />
+            );
+          })}
         </div>
       )}
 
