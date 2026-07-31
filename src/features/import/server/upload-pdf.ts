@@ -1,5 +1,11 @@
 import { PDFS_BUCKET } from "@/constants";
 import { createServiceClient } from "@/lib/supabase/server";
+import {
+  DOCUMENT_FORMATS,
+  labelForFormat,
+  type DocumentFormatId,
+} from "@/features/import/formats/registry";
+import { validateDocumentFile } from "@/features/import/formats/validate-document";
 import type { PdfUploadResult } from "@/features/import/types";
 import {
   createDocumentRecord,
@@ -8,8 +14,13 @@ import {
   getDocumentByStoragePath,
   hashDocumentBytes,
 } from "@/features/library/server/documents";
-import { validatePdfFile } from "@/features/import/utils/validate-pdf";
+import { processUploadedDocument } from "@/features/processing/process-document";
 
+export function duplicateLibraryMessage(formatId: DocumentFormatId): string {
+  return `This ${labelForFormat(formatId)} already exists in your Library.`;
+}
+
+/** @deprecated Prefer duplicateLibraryMessage(formatId) */
 export const DUPLICATE_LIBRARY_PDF_MESSAGE =
   "This PDF already exists in your Library.";
 
@@ -42,6 +53,7 @@ function toUploadResult(input: {
   path: string;
   mimeType: string;
   ownerId: string;
+  formatId: DocumentFormatId;
 }): PdfUploadResult {
   return {
     uploadId: input.path,
@@ -53,14 +65,21 @@ function toUploadResult(input: {
     storagePath: `${PDFS_BUCKET}/${input.path}`,
     mimeType: input.mimeType,
     ownerId: input.ownerId,
+    formatId: input.formatId,
   };
 }
 
 /**
  * Per-attempt Storage key. Same owner + idempotency key retries the same attempt.
+ * Extension matches the detected document format.
  */
-export function createAttemptObjectKey(ownerId: string, idempotencyKey: string): string {
-  return `${ownerId}/${idempotencyKey}.pdf`;
+export function createAttemptObjectKey(
+  ownerId: string,
+  idempotencyKey: string,
+  formatId: DocumentFormatId,
+): string {
+  const extension = DOCUMENT_FORMATS[formatId].extension.replace(/^\./, "");
+  return `${ownerId}/${idempotencyKey}.${extension}`;
 }
 
 async function removeStorageObject(path: string): Promise<void> {
@@ -76,21 +95,22 @@ async function removeStorageObject(path: string): Promise<void> {
   }
 }
 
+function queueProcessing(documentId: string) {
+  void processUploadedDocument(documentId).catch(() => {
+    // Processing failures are persisted as status=failed inside the pipeline.
+  });
+}
+
 /**
- * Upload a validated PDF, then create a library document when the content is new.
- *
- * - Each upload action uses a new attempt key → new Storage path.
- * - document_hash is SHA-256 of PDF bytes (Library uniqueness).
- * - If that content already exists for the owner: reject with a clear message,
- *   delete any temporary Storage object from this attempt, leave the original alone.
- * - Same attempt key is idempotent (retry after network failure returns the same row).
+ * Shared upload pipeline for PDF / DOCX / EPUB / TXT.
+ * Only validation MIME/extension and the post-upload parser differ by format.
  */
 export async function uploadPdfToSupabaseBucket(
   file: File,
   ownerId: string,
   idempotencyKey: string,
 ): Promise<PdfUploadResult> {
-  const validation = validatePdfFile(file);
+  const validation = validateDocumentFile(file);
   if (!validation.ok) {
     throw new Error(validation.message);
   }
@@ -104,14 +124,14 @@ export async function uploadPdfToSupabaseBucket(
     throw new Error("Invalid upload idempotency key.");
   }
 
-  const mimeType = validation.file.type || "application/pdf";
+  const { formatId, mimeType } = validation;
+  const duplicateMessage = duplicateLibraryMessage(formatId);
   const uploadedAt = new Date().toISOString();
   const bytes = new Uint8Array(await validation.file.arrayBuffer());
   const documentHash = hashDocumentBytes(bytes);
-  const path = createAttemptObjectKey(normalizedOwner, idempotencyKey);
+  const path = createAttemptObjectKey(normalizedOwner, idempotencyKey, formatId);
   const finalStoragePath = `${PDFS_BUCKET}/${path}`;
 
-  // Same upload attempt already completed (retry / double submit with same key).
   const existingByPath = await getDocumentByStoragePath(
     normalizedOwner,
     finalStoragePath,
@@ -125,13 +145,13 @@ export async function uploadPdfToSupabaseBucket(
       path,
       mimeType: existingByPath.mimeType,
       ownerId: normalizedOwner,
+      formatId,
     });
   }
 
-  // Separate prior upload of the same PDF content → reject; do not create another row.
   const existingByHash = await getDocumentByHash(normalizedOwner, documentHash);
   if (existingByHash) {
-    throw new Error(DUPLICATE_LIBRARY_PDF_MESSAGE);
+    throw new Error(duplicateMessage);
   }
 
   const client = createServiceClient();
@@ -146,8 +166,10 @@ export async function uploadPdfToSupabaseBucket(
   }
 
   if (error && isStorageConflict(error)) {
-    const sameAttempt =
-      (await getDocumentByStoragePath(normalizedOwner, finalStoragePath));
+    const sameAttempt = await getDocumentByStoragePath(
+      normalizedOwner,
+      finalStoragePath,
+    );
     if (sameAttempt) {
       return toUploadResult({
         documentId: sameAttempt.id,
@@ -157,14 +179,14 @@ export async function uploadPdfToSupabaseBucket(
         path,
         mimeType: sameAttempt.mimeType,
         ownerId: normalizedOwner,
+        formatId,
       });
     }
 
-    // Storage object exists for this attempt but no row yet — or content raced in.
     const racedHash = await getDocumentByHash(normalizedOwner, documentHash);
     if (racedHash && racedHash.storagePath !== finalStoragePath) {
       await removeStorageObject(path);
-      throw new Error(DUPLICATE_LIBRARY_PDF_MESSAGE);
+      throw new Error(duplicateMessage);
     }
 
     const document = await createDocumentRecord({
@@ -177,12 +199,15 @@ export async function uploadPdfToSupabaseBucket(
       uploadedAt,
       documentHash,
       processingStatus: "uploaded",
+      sourceFormat: formatId,
     });
 
     if (document.storagePath !== finalStoragePath) {
       await removeStorageObject(path);
-      throw new Error(DUPLICATE_LIBRARY_PDF_MESSAGE);
+      throw new Error(duplicateMessage);
     }
+
+    queueProcessing(document.id);
 
     return toUploadResult({
       documentId: document.id,
@@ -192,6 +217,7 @@ export async function uploadPdfToSupabaseBucket(
       path,
       mimeType: document.mimeType,
       ownerId: normalizedOwner,
+      formatId,
     });
   }
 
@@ -199,11 +225,10 @@ export async function uploadPdfToSupabaseBucket(
   const uploadedStoragePath = `${PDFS_BUCKET}/${uploadedPath}`;
 
   try {
-    // Re-check after Storage write — another attempt may have committed first.
     const racedAfterUpload = await getDocumentByHash(normalizedOwner, documentHash);
     if (racedAfterUpload && racedAfterUpload.storagePath !== uploadedStoragePath) {
       await removeStorageObject(uploadedPath);
-      throw new Error(DUPLICATE_LIBRARY_PDF_MESSAGE);
+      throw new Error(duplicateMessage);
     }
 
     const document = await createDocumentRecord({
@@ -216,13 +241,15 @@ export async function uploadPdfToSupabaseBucket(
       uploadedAt,
       documentHash,
       processingStatus: "uploaded",
+      sourceFormat: formatId,
     });
 
-    // createDocumentRecord may return an existing hash row from a concurrent winner.
     if (document.storagePath !== uploadedStoragePath) {
       await removeStorageObject(uploadedPath);
-      throw new Error(DUPLICATE_LIBRARY_PDF_MESSAGE);
+      throw new Error(duplicateMessage);
     }
+
+    queueProcessing(document.id);
 
     return toUploadResult({
       documentId: document.id,
@@ -232,6 +259,7 @@ export async function uploadPdfToSupabaseBucket(
       path: uploadedPath,
       mimeType,
       ownerId: normalizedOwner,
+      formatId,
     });
   } catch (cause) {
     const message =
@@ -239,11 +267,10 @@ export async function uploadPdfToSupabaseBucket(
         ? cause.message
         : "Unable to create library document for this upload.";
 
-    if (message === DUPLICATE_LIBRARY_PDF_MESSAGE) {
+    if (message === duplicateMessage) {
       throw cause;
     }
 
-    // Roll back Storage when this attempt created the object and DB write failed.
     if (!error) {
       await removeStorageObject(uploadedPath);
     }
@@ -255,7 +282,7 @@ export async function uploadPdfToSupabaseBucket(
 }
 
 /**
- * Check whether an object still exists in the configured `pdfs` bucket.
+ * Check whether an object still exists in the configured documents bucket.
  */
 export async function pdfExistsInSupabaseBucket(objectPath: string): Promise<boolean> {
   const key = toObjectKey(objectPath).trim();
@@ -273,7 +300,7 @@ export async function pdfExistsInSupabaseBucket(objectPath: string): Promise<boo
   );
 
   if (error) {
-    throw new Error(error.message || "Unable to verify uploaded PDF.");
+    throw new Error(error.message || "Unable to verify uploaded document.");
   }
 
   const fileName = key.includes("/") ? key.slice(key.lastIndexOf("/") + 1) : key;
@@ -281,7 +308,7 @@ export async function pdfExistsInSupabaseBucket(objectPath: string): Promise<boo
 }
 
 /**
- * Remove an uploaded PDF from storage and its library document row.
+ * Remove an uploaded document from storage and its library document row.
  */
 export async function deletePdfFromSupabaseBucket(
   objectPath: string,
@@ -299,7 +326,7 @@ export async function deletePdfFromSupabaseBucket(
   const client = createServiceClient();
   const { error } = await client.storage.from(PDFS_BUCKET).remove([key]);
   if (error) {
-    throw new Error(error.message || "Unable to remove uploaded PDF.");
+    throw new Error(error.message || "Unable to remove uploaded document.");
   }
 
   if (ownerId) {
