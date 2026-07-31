@@ -187,6 +187,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
     const uploaded = getPdfUploadState().result;
     clearPdfUploadState();
 
+    // Explicit delete only — removes the current document from storage + library.
     if (uploaded) {
       try {
         await removeUploadedPdf(uploaded);
@@ -197,7 +198,10 @@ export function usePdfUpload(): UsePdfUploadReturn {
   }
 
   function reset() {
-    void remove();
+    // Clear the Import session only. Previous uploads remain in the Library.
+    abortRef.current?.abort();
+    abortRef.current = null;
+    clearPdfUploadState();
   }
 
   return {
