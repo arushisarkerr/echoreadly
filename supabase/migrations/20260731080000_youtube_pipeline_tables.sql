@@ -27,6 +27,10 @@ create table if not exists public.document_translations (
     unique (document_id, language_code)
 );
 
+-- NOTE: If an older document_translations table already exists, the CREATE
+-- above is a no-op. Apply 20260731091000_document_translations_language_code.sql
+-- to add language_code / language_label / text / status for the library API.
+
 create index if not exists document_translations_document_id_idx
   on public.document_translations (document_id);
 

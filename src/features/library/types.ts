@@ -8,6 +8,8 @@ export type DocumentRecord = {
   id: string;
   /** Authenticated user id or guest owner id. */
   ownerId: string;
+  /** Authenticated auth.users id only; null for guest-owned docs. */
+  userId: string | null;
   filename: string;
   originalFilename: string;
   fileSize: number;

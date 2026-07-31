@@ -66,7 +66,13 @@ async function ocrScannedPdf(bytes: Uint8Array): Promise<DocumentParseResult> {
     }
   }
 
-  const text = pageTexts.join("\n\n").trim();
+  const pages = pageTexts
+    .map((pageText, index) => ({
+      pageNumber: index + 1,
+      text: pageText,
+    }))
+    .filter((page) => page.text.length > 0);
+  const text = pages.map((page) => page.text).join("\n\n").trim();
   if (!text) {
     throw new Error("OCR could not read any text from this scanned PDF.");
   }
@@ -76,6 +82,7 @@ async function ocrScannedPdf(bytes: Uint8Array): Promise<DocumentParseResult> {
     text,
     pageCount: totalPages,
     title: null,
+    pages,
     metadata: {
       width,
       height,
@@ -102,15 +109,27 @@ export async function parseOcr(
   if (isPdf) {
     try {
       const pdf = await getDocumentProxy(bytes);
-      const extracted = await extractText(pdf, { mergePages: true });
-      const text = String(extracted.text ?? "").trim();
+      const extracted = await extractText(pdf, { mergePages: false });
+      const rawPages = Array.isArray(extracted.text)
+        ? extracted.text.map((page) => String(page ?? "").trim())
+        : [String(extracted.text ?? "").trim()];
+      const pages = rawPages
+        .map((pageText, index) => ({
+          pageNumber: index + 1,
+          text: pageText,
+        }))
+        .filter((page) => page.text.length > 0);
+      const text = pages.map((page) => page.text).join("\n\n").trim();
       if (text.length >= 40) {
         const wordCount = text.split(/\s+/).filter(Boolean).length;
         return {
           text,
           pageCount:
-            typeof extracted.totalPages === "number" ? extracted.totalPages : null,
+            typeof extracted.totalPages === "number"
+              ? extracted.totalPages
+              : rawPages.length || null,
           title: filename,
+          pages,
           metadata: {
             width: null,
             height: null,
@@ -137,6 +156,8 @@ export async function parseOcr(
     text: ocr.text,
     pageCount: 1,
     title: filename,
+    // Single-image OCR is one logical stream — page_number = 1.
+    pages: [{ pageNumber: 1, text: ocr.text }],
     metadata: {
       width: ocr.width,
       height: ocr.height,

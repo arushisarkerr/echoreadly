@@ -5,7 +5,7 @@ import {
   getDocumentById,
   updateDocumentProcessing,
 } from "@/features/library/server/documents";
-import { chunkPlainText } from "@/features/processing/chunk-text";
+import { chunkParsedText } from "@/features/processing/chunk-text";
 import { replaceDocumentChunks } from "@/features/processing/document-chunks";
 import { parseDocumentBytes } from "@/features/processing/parsers";
 import { parseYoutubeWithStages } from "@/features/processing/parsers/youtube";
@@ -80,8 +80,13 @@ export async function processUploadedDocument(documentId: string): Promise<void>
         })();
 
     await setStage(documentId, "chunking");
-    const chunks = chunkPlainText(parsed.text);
-    await replaceDocumentChunks(documentId, chunks);
+    const chunks = chunkParsedText({
+      text: parsed.text,
+      pages: parsed.pages,
+    });
+    await replaceDocumentChunks(documentId, chunks, {
+      userId: document.userId,
+    });
 
     await setStage(documentId, "saving");
     const originalLanguage =

@@ -20,6 +20,7 @@ function toRecord(row: DocumentRow): DocumentRecord {
   return {
     id: row.id,
     ownerId,
+    userId: row.user_id,
     filename: row.filename,
     originalFilename: row.original_file_name,
     fileSize: Number(row.file_size),

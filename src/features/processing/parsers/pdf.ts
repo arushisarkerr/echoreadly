@@ -12,14 +12,24 @@ export async function parsePdf(
   void filename;
   const pdf = await getDocumentProxy(bytes);
   const extracted = await extractText(pdf, { mergePages: false });
-  const pages = Array.isArray(extracted.text)
+  const rawPages = Array.isArray(extracted.text)
     ? extracted.text.map((page) => String(page ?? "").trim())
     : [String(extracted.text ?? "").trim()];
-  const text = pages.filter(Boolean).join("\n\n");
+  const pages = rawPages
+    .map((pageText, index) => ({
+      pageNumber: index + 1,
+      text: pageText,
+    }))
+    .filter((page) => page.text.length > 0);
+  const text = pages.map((page) => page.text).join("\n\n");
 
   return {
     text,
-    pageCount: typeof extracted.totalPages === "number" ? extracted.totalPages : pages.length || null,
+    pageCount:
+      typeof extracted.totalPages === "number"
+        ? extracted.totalPages
+        : rawPages.length || null,
     title: null,
+    pages,
   };
 }

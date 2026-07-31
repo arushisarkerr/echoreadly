@@ -2,7 +2,7 @@ import {
   TRANSLATION_LANGUAGES,
   labelForLanguageCode,
 } from "@/constants/languages";
-import { getOpenAIClient } from "@/lib/ai/openai";
+import { generateText } from "@/lib/ai/generate-text";
 import { createServiceClient } from "@/lib/supabase/server";
 import { chunkPlainText } from "@/features/processing/chunk-text";
 import { recordActivityEvent } from "@/features/history/record-event";
@@ -124,7 +124,6 @@ export async function translateDocument(input: {
   }
 
   try {
-    const openai = getOpenAIClient();
     const chunks = chunkPlainText(input.originalText, {
       chunkSize: 3500,
       overlap: 0,
@@ -132,18 +131,11 @@ export async function translateDocument(input: {
     const translatedParts: string[] = [];
 
     for (const chunk of chunks) {
-      const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_TRANSLATE_MODEL?.trim() || "gpt-4o-mini",
+      const part = await generateText({
         temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: `You are a professional translator. Translate the user's text into ${language.label}. Preserve meaning, paragraph breaks, and tone. Return only the translated text.`,
-          },
-          { role: "user", content: chunk.text },
-        ],
+        system: `You are a professional translator. Translate the user's text into ${language.label}. Preserve meaning, paragraph breaks, and tone. Return only the translated text.`,
+        user: chunk.text,
       });
-      const part = completion.choices[0]?.message?.content?.trim() || "";
       if (part) {
         translatedParts.push(part);
       }

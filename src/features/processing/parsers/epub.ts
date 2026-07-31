@@ -120,9 +120,15 @@ export async function parseEpub(
     }
   }
 
+  const pageRecords = pages.map((pageText, index) => ({
+    pageNumber: index + 1,
+    text: pageText,
+  }));
+
   return {
-    text: pages.join("\n\n").trim(),
-    pageCount: pages.length || null,
+    text: pageRecords.map((page) => page.text).join("\n\n").trim(),
+    pageCount: pageRecords.length || null,
     title,
+    pages: pageRecords,
   };
 }
