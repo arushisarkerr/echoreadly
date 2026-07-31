@@ -1,7 +1,7 @@
 import { PDFS_BUCKET } from "@/constants";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
-  DOCUMENT_FORMATS,
+  extensionOf,
   labelForFormat,
   type DocumentFormatId,
 } from "@/features/import/formats/registry";
@@ -71,14 +71,14 @@ function toUploadResult(input: {
 
 /**
  * Per-attempt Storage key. Same owner + idempotency key retries the same attempt.
- * Extension matches the detected document format.
  */
 export function createAttemptObjectKey(
   ownerId: string,
   idempotencyKey: string,
-  formatId: DocumentFormatId,
+  filenameOrFormatExt: string,
 ): string {
-  const extension = DOCUMENT_FORMATS[formatId].extension.replace(/^\./, "");
+  const raw = extensionOf(filenameOrFormatExt) || filenameOrFormatExt;
+  const extension = raw.replace(/^\./, "") || "bin";
   return `${ownerId}/${idempotencyKey}.${extension}`;
 }
 
@@ -109,8 +109,11 @@ export async function uploadPdfToSupabaseBucket(
   file: File,
   ownerId: string,
   idempotencyKey: string,
+  options?: { preferOcr?: boolean },
 ): Promise<PdfUploadResult> {
-  const validation = validateDocumentFile(file);
+  const validation = validateDocumentFile(file, {
+    preferOcr: options?.preferOcr,
+  });
   if (!validation.ok) {
     throw new Error(validation.message);
   }
@@ -129,7 +132,11 @@ export async function uploadPdfToSupabaseBucket(
   const uploadedAt = new Date().toISOString();
   const bytes = new Uint8Array(await validation.file.arrayBuffer());
   const documentHash = hashDocumentBytes(bytes);
-  const path = createAttemptObjectKey(normalizedOwner, idempotencyKey, formatId);
+  const path = createAttemptObjectKey(
+    normalizedOwner,
+    idempotencyKey,
+    validation.file.name,
+  );
   const finalStoragePath = `${PDFS_BUCKET}/${path}`;
 
   const existingByPath = await getDocumentByStoragePath(

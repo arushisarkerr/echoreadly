@@ -18,6 +18,7 @@ export function DocumentCard({
   selected = false,
   selecting = false,
   onToggleSelect,
+  onOpen,
   onDelete,
   deleteDisabled = false,
 }: {
@@ -31,6 +32,7 @@ export function DocumentCard({
   selected?: boolean;
   selecting?: boolean;
   onToggleSelect?: () => void;
+  onOpen?: () => void;
   onDelete?: () => void;
   deleteDisabled?: boolean;
 }) {
@@ -43,8 +45,8 @@ export function DocumentCard({
         layout === "list" ? "flex-row items-center" : "flex-col",
         selected && "border-foreground/30",
       )}
-      onClick={selecting ? onToggleSelect : undefined}
-      role={selecting ? "button" : undefined}
+      onClick={selecting ? onToggleSelect : onOpen}
+      role={selecting || onOpen ? "button" : undefined}
       aria-pressed={selecting ? selected : undefined}
     >
       <div

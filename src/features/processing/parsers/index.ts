@@ -2,8 +2,11 @@ import type { DocumentFormatId } from "@/features/import/formats/registry";
 import { detectDocumentFormat } from "@/features/import/formats/registry";
 import { parseDocx } from "@/features/processing/parsers/docx";
 import { parseEpub } from "@/features/processing/parsers/epub";
+import { parseOcr } from "@/features/processing/parsers/ocr";
 import { parsePdf } from "@/features/processing/parsers/pdf";
 import { parseTxt } from "@/features/processing/parsers/txt";
+import { parseWebsite } from "@/features/processing/parsers/website";
+import { parseYoutube } from "@/features/processing/parsers/youtube";
 import type {
   DocumentParseResult,
   DocumentParser,
@@ -14,6 +17,9 @@ const PARSERS: Record<DocumentFormatId, DocumentParser> = {
   docx: parseDocx,
   epub: parseEpub,
   txt: parseTxt,
+  website: parseWebsite,
+  youtube: parseYoutube,
+  ocr: parseOcr,
 };
 
 /**
@@ -23,8 +29,18 @@ export async function parseDocumentBytes(
   bytes: Uint8Array,
   filename: string,
   mimeType?: string,
+  sourceFormat?: string | null,
 ): Promise<DocumentParseResult & { formatId: DocumentFormatId }> {
-  const formatId = detectDocumentFormat(filename, mimeType);
+  const fromSource =
+    sourceFormat && sourceFormat in PARSERS
+      ? (sourceFormat as DocumentFormatId)
+      : null;
+  const formatId =
+    fromSource ||
+    detectDocumentFormat(filename, mimeType, {
+      preferOcr: Boolean(sourceFormat === "ocr"),
+    });
+
   if (!formatId) {
     throw new Error("Unsupported document format for parsing.");
   }
@@ -33,5 +49,13 @@ export async function parseDocumentBytes(
   return { ...parsed, formatId };
 }
 
-export { parseDocx, parseEpub, parsePdf, parseTxt };
+export {
+  parseDocx,
+  parseEpub,
+  parseOcr,
+  parsePdf,
+  parseTxt,
+  parseWebsite,
+  parseYoutube,
+};
 export type { DocumentParseResult, DocumentParser };

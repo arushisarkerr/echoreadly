@@ -56,6 +56,11 @@ export async function POST(request: Request) {
   const fileEntry = form.get("file");
   const ownerIdEntry = form.get("ownerId");
   const idempotencyKeyEntry = form.get("idempotencyKey");
+  const preferOcrEntry = form.get("preferOcr");
+  const preferOcr =
+    preferOcrEntry === "1" ||
+    preferOcrEntry === "true" ||
+    preferOcrEntry === "on";
 
   if (!(fileEntry instanceof File)) {
     return jsonError("Choose a file to import.", 400);
@@ -77,6 +82,7 @@ export async function POST(request: Request) {
       fileEntry,
       ownerIdEntry,
       idempotencyKeyEntry,
+      { preferOcr },
     );
     return Response.json({ ok: true as const, result });
   } catch (cause) {

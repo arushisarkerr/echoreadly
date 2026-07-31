@@ -17,6 +17,9 @@ export type DocumentRecord = {
   processingStatus: ProcessingStatus;
   pageCount?: number | null;
   sourceFormat?: string | null;
+  sourceUrl?: string | null;
+  sourceMetadata?: Record<string, unknown> | null;
+  extractedText?: string | null;
 };
 
 export type DocumentRow = {
@@ -33,6 +36,9 @@ export type DocumentRow = {
   document_hash: string;
   page_count?: number | null;
   source_format?: string | null;
+  source_url?: string | null;
+  source_metadata?: Record<string, unknown> | null;
+  extracted_text?: string | null;
 };
 
 export type CreateDocumentInput = {
@@ -47,4 +53,6 @@ export type CreateDocumentInput = {
   documentHash: string;
   processingStatus?: ProcessingStatus;
   sourceFormat?: string;
+  sourceUrl?: string;
+  sourceMetadata?: Record<string, unknown>;
 };

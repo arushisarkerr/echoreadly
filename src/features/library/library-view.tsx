@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   IconFile,
@@ -18,10 +19,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROUTES } from "@/constants";
+import { labelForMimeType } from "@/features/import/formats/registry";
+import { formatFileSize } from "@/features/import/utils/format-file-size";
 import { DocumentCard } from "@/features/library/document-card";
 import { useLibraryDocuments } from "@/features/library/hooks/use-library-documents";
-import { formatFileSize } from "@/features/import/utils/format-file-size";
-import { labelForMimeType } from "@/features/import/formats/registry";
 import { processingStatusLabel } from "@/features/library/status-labels";
 import { cn } from "@/utils";
 
@@ -82,6 +83,7 @@ function formatUploadedAt(value: string): string {
 }
 
 export function LibraryView() {
+  const router = useRouter();
   const view = useSyncExternalStore(
     subscribeView,
     readStoredView,
@@ -103,27 +105,34 @@ export function LibraryView() {
 
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = documents.filter((document) => {
-    if (filter === "pdf" && document.mimeType !== "application/pdf") {
+    const source = document.sourceFormat ?? "";
+    if (filter === "pdf") {
+      const isPdf =
+        source === "pdf" ||
+        (!source && document.mimeType === "application/pdf");
+      if (!isPdf) {
+        return false;
+      }
+    }
+    if (filter === "docx" && source !== "docx") {
       return false;
     }
-    if (
-      filter === "docx" &&
-      document.mimeType !==
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
+    if (filter === "epub" && source !== "epub") {
       return false;
     }
-    if (
-      filter === "epub" &&
-      document.mimeType !== "application/epub+zip" &&
-      document.mimeType !== "application/x-epub+zip"
-    ) {
+    if (filter === "txt" && source !== "txt") {
       return false;
     }
-    if (filter === "txt" && document.mimeType !== "text/plain") {
+    if (filter === "web" && source !== "website") {
       return false;
     }
-    if (filter === "web" || filter === "youtube" || filter === "favorites") {
+    if (filter === "youtube" && source !== "youtube") {
+      return false;
+    }
+    if (filter === "ocr" && source !== "ocr") {
+      return false;
+    }
+    if (filter === "favorites") {
       return false;
     }
     if (!normalizedQuery) {
@@ -281,6 +290,7 @@ export function LibraryView() {
             { value: "txt", label: "TXT" },
             { value: "web", label: "Websites" },
             { value: "youtube", label: "YouTube" },
+            { value: "ocr", label: "OCR" },
             { value: "favorites", label: "Favorites" },
           ]}
         />
@@ -370,7 +380,10 @@ export function LibraryView() {
             <DocumentCard
               key={document.id}
               title={document.filename}
-              language={labelForMimeType(document.mimeType)}
+              language={labelForMimeType(
+                document.mimeType,
+                document.sourceFormat,
+              )}
               duration={formatFileSize(document.fileSize)}
               createdAt={formatUploadedAt(document.uploadedAt)}
               tags={[processingStatusLabel(document.processingStatus)]}
@@ -378,6 +391,9 @@ export function LibraryView() {
               selecting={selecting}
               selected={selectedIds.includes(document.id)}
               onToggleSelect={() => toggleSelected(document.id)}
+              onOpen={() => {
+                router.push(`${ROUTES.reader}?id=${encodeURIComponent(document.id)}`);
+              }}
               onDelete={() => {
                 void handleDeleteOne(document.id);
               }}

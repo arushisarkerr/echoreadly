@@ -5,6 +5,7 @@ import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { IconFile, IconImport } from "@/components/icons/dashboard-icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { OCR_ACCEPT } from "@/features/import/formats/registry";
 import { PDF_ACCEPT, PDF_MAX_BYTES } from "@/features/import/utils/constants";
 import { formatFileSize } from "@/features/import/utils/format-file-size";
 import { cn } from "@/utils";
@@ -12,9 +13,23 @@ import { cn } from "@/utils";
 type PdfDropzoneProps = {
   disabled?: boolean;
   onFile: (file: File) => void;
+  /** When true, accept OCR image / scanned PDF types. */
+  preferOcr?: boolean;
 };
 
-export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
+export function PdfDropzone({
+  disabled = false,
+  onFile,
+  preferOcr = false,
+}: PdfDropzoneProps) {
+  const accept = preferOcr ? OCR_ACCEPT : PDF_ACCEPT;
+  const formatsHint = preferOcr
+    ? "PNG, JPG, WEBP, HEIC, PDF"
+    : "PDF, DOCX, EPUB, TXT";
+  const ariaLabel = preferOcr
+    ? "OCR upload dropzone. Drop an image or scanned PDF or press Enter to choose a file."
+    : "Document upload dropzone. Drop a PDF, DOCX, EPUB, or TXT file or press Enter to choose a file.";
+  const heading = preferOcr ? "Drop a scan to import" : "Drop a file to import";
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
@@ -90,7 +105,7 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
-      aria-label="Document upload dropzone. Drop a PDF, DOCX, EPUB, or TXT file or press Enter to choose a file."
+      aria-label={ariaLabel}
       onKeyDown={onKeyDown}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
@@ -102,11 +117,11 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
           <IconImport className="size-5" />
         </div>
         <h2 className="font-display mt-5 text-xl font-semibold text-foreground">
-          Drop a file to import
+          {heading}
         </h2>
         <p className="mt-2 max-w-md text-sm text-muted">
-          PDF, DOCX, EPUB, TXT · up to {formatFileSize(PDF_MAX_BYTES)}. Drag a
-          file here or choose one from your device.
+          {formatsHint} · up to {formatFileSize(PDF_MAX_BYTES)}. Drag a file
+          here or choose one from your device.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Button
@@ -126,7 +141,7 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
       <input
         ref={inputRef}
         type="file"
-        accept={PDF_ACCEPT}
+        accept={accept}
         className="sr-only"
         tabIndex={-1}
         disabled={disabled}

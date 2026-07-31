@@ -9,7 +9,7 @@ import type {
 } from "@/features/library/types";
 
 const DOCUMENT_SELECT =
-  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash, page_count, source_format";
+  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash, page_count, source_format, source_url, source_metadata, extracted_text";
 
 function toRecord(row: DocumentRow): DocumentRecord {
   const ownerId = row.user_id ?? row.guest_id;
@@ -29,14 +29,22 @@ function toRecord(row: DocumentRow): DocumentRecord {
     processingStatus: row.processing_status,
     pageCount: row.page_count == null ? null : Number(row.page_count),
     sourceFormat: row.source_format ?? null,
+    sourceUrl: row.source_url ?? null,
+    sourceMetadata: row.source_metadata ?? null,
+    extractedText: row.extracted_text ?? null,
   };
 }
 
 /**
- * SHA-256 of PDF bytes — the documents.document_hash identity used for dedupe.
+ * Stable hash helper for content bytes or canonical identity strings.
  */
-export function hashDocumentBytes(bytes: ArrayBuffer | Uint8Array): string {
-  const buffer = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+export function hashDocumentBytes(bytes: ArrayBuffer | Uint8Array | string): string {
+  const buffer =
+    typeof bytes === "string"
+      ? new TextEncoder().encode(bytes)
+      : bytes instanceof Uint8Array
+        ? bytes
+        : new Uint8Array(bytes);
   return createHash("sha256").update(buffer).digest("hex");
 }
 
@@ -122,6 +130,8 @@ export async function createDocumentRecord(
       processing_status: input.processingStatus ?? "uploaded",
       document_hash: input.documentHash,
       source_format: input.sourceFormat ?? null,
+      source_url: input.sourceUrl ?? null,
+      source_metadata: input.sourceMetadata ?? null,
     })
     .select(DOCUMENT_SELECT)
     .single();
@@ -254,6 +264,7 @@ export type DocumentProcessingUpdate = {
   extractedText?: string | null;
   extractedAt?: string | null;
   sourceFormat?: string | null;
+  sourceMetadata?: Record<string, unknown> | null;
   filename?: string;
 };
 
@@ -280,6 +291,9 @@ export async function updateDocumentProcessing(
   }
   if (fields.sourceFormat !== undefined) {
     patch.source_format = fields.sourceFormat;
+  }
+  if (fields.sourceMetadata !== undefined) {
+    patch.source_metadata = fields.sourceMetadata;
   }
   if (fields.filename) {
     patch.filename = fields.filename;

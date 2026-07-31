@@ -74,11 +74,18 @@ function clearUploadAttempt(options?: { keepIdempotencyKey?: boolean }) {
   }
 }
 
+type UsePdfUploadOptions = {
+  preferOcr?: boolean;
+};
+
 /**
  * Reusable PDF upload state machine for the Import feature.
  * Successful uploads rehydrate from localStorage + Supabase after hard refresh.
  */
-export function usePdfUpload(): UsePdfUploadReturn {
+export function usePdfUpload(
+  options: UsePdfUploadOptions = {},
+): UsePdfUploadReturn {
+  const preferOcr = Boolean(options.preferOcr);
   const state = useSyncExternalStore(
     subscribePdfUploadStore,
     getPdfUploadState,
@@ -95,7 +102,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
     abortRef.current = null;
     clearUploadAttempt();
 
-    const validation = validateDocumentFile(file);
+    const validation = validateDocumentFile(file, { preferOcr });
     if (!validation.ok) {
       setPdfUploadState({
         selected: null,
@@ -171,6 +178,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
       const next = await uploadPdfToSupabase(current.selected.file, {
         ownerId: getImportOwnerId(),
         idempotencyKey,
+        preferOcr,
         signal: controller.signal,
         onProgress: (event) => {
           setPdfUploadState({

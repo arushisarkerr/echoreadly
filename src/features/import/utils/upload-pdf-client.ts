@@ -6,6 +6,7 @@ import type {
 type UploadPdfClientOptions = {
   ownerId: string;
   idempotencyKey: string;
+  preferOcr?: boolean;
   onProgress?: (event: PdfUploadProgressEvent) => void;
   signal?: AbortSignal;
 };
@@ -29,7 +30,7 @@ export function uploadPdfToSupabase(
   file: File,
   options: UploadPdfClientOptions,
 ): Promise<PdfUploadResult> {
-  const { ownerId, idempotencyKey, onProgress, signal } = options;
+  const { ownerId, idempotencyKey, preferOcr, onProgress, signal } = options;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -37,6 +38,9 @@ export function uploadPdfToSupabase(
     form.append("file", file);
     form.append("ownerId", ownerId);
     form.append("idempotencyKey", idempotencyKey);
+    if (preferOcr) {
+      form.append("preferOcr", "1");
+    }
 
     function cleanup() {
       signal?.removeEventListener("abort", onAbort);

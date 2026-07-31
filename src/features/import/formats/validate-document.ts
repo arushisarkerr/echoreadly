@@ -26,17 +26,15 @@ export type DocumentValidationResult =
       message: string;
     };
 
-function mimeAllowedForFormat(
-  formatId: DocumentFormatId,
-  mime: string,
-): boolean {
+function mimeAllowedForFormat(formatId: DocumentFormatId, mime: string): boolean {
   if (!mime) {
     return true;
   }
   const format = DOCUMENT_FORMATS[formatId];
   return (
     format.mimeTypes.includes(mime) ||
-    Boolean(format.mimeAliases?.includes(mime))
+    Boolean(format.mimeAliases?.includes(mime)) ||
+    (formatId === "ocr" && (mime.startsWith("image/") || mime === "application/pdf"))
   );
 }
 
@@ -45,6 +43,7 @@ function mimeAllowedForFormat(
  */
 export function validateDocumentFile(
   file: File | null | undefined,
+  options?: { preferOcr?: boolean },
 ): DocumentValidationResult {
   if (!file) {
     return {
@@ -54,13 +53,14 @@ export function validateDocumentFile(
     };
   }
 
-  const formatId = detectDocumentFormat(file.name, file.type);
+  const formatId = detectDocumentFormat(file.name, file.type, options);
   if (!formatId) {
     return {
       ok: false,
       code: "unsupported_type",
-      message:
-        "Only PDF, DOCX, EPUB, and TXT files are supported.",
+      message: options?.preferOcr
+        ? "Only PNG, JPG, WEBP, HEIC, or PDF files are supported for OCR."
+        : "Only PDF, DOCX, EPUB, and TXT files are supported.",
     };
   }
 
@@ -89,10 +89,16 @@ export function validateDocumentFile(
     };
   }
 
+  const mimeType =
+    mime ||
+    (formatId === "ocr" && file.name.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : DOCUMENT_FORMATS[formatId].mimeTypes[0]);
+
   return {
     ok: true,
     file,
     formatId,
-    mimeType: mime || DOCUMENT_FORMATS[formatId].mimeTypes[0],
+    mimeType,
   };
 }

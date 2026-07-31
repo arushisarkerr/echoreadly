@@ -1,4 +1,5 @@
 export { ImportSourceCards } from "./import-source-cards";
+export { LinkImportPanel } from "./link-import-panel";
 export { PdfDropzone } from "./pdf-dropzone";
 export { PdfFileCard } from "./pdf-file-card";
 export { PdfImportPanel } from "./pdf-import-panel";

@@ -4,6 +4,8 @@ import {
   getDocumentById,
   updateDocumentProcessing,
 } from "@/features/library/server/documents";
+import { chunkPlainText } from "@/features/processing/chunk-text";
+import { replaceDocumentChunks } from "@/features/processing/document-chunks";
 import { parseDocumentBytes } from "@/features/processing/parsers";
 
 function toObjectKey(storagePath: string): string {
@@ -14,9 +16,9 @@ function toObjectKey(storagePath: string): string {
 }
 
 /**
- * Shared post-upload processing pipeline.
+ * Shared post-upload processing pipeline for every import source.
  * Status: uploaded (Queued) → processing → ready (Completed) | failed.
- * Only the parser/extractor differs by format.
+ * Only the extractor/parser differs by source format.
  */
 export async function processUploadedDocument(documentId: string): Promise<void> {
   const document = await getDocumentById(documentId);
@@ -41,11 +43,19 @@ export async function processUploadedDocument(documentId: string): Promise<void>
     }
 
     const bytes = new Uint8Array(await data.arrayBuffer());
+    const parseName =
+      document.sourceFormat === "website" || document.sourceFormat === "youtube"
+        ? document.sourceUrl || document.originalFilename || document.filename
+        : document.originalFilename || document.filename;
     const parsed = await parseDocumentBytes(
       bytes,
-      document.originalFilename || document.filename,
+      parseName,
       document.mimeType,
+      document.sourceFormat,
     );
+
+    const chunks = chunkPlainText(parsed.text);
+    await replaceDocumentChunks(documentId, document.ownerId, chunks);
 
     await updateDocumentProcessing(documentId, {
       processingStatus: "ready",
@@ -53,6 +63,7 @@ export async function processUploadedDocument(documentId: string): Promise<void>
       extractedText: parsed.text,
       extractedAt: new Date().toISOString(),
       sourceFormat: parsed.formatId,
+      sourceMetadata: parsed.metadata ?? null,
       filename:
         parsed.title && parsed.title.trim()
           ? parsed.title.trim()

@@ -8,7 +8,11 @@ import { PdfUploadProgress } from "@/features/import/components/pdf-upload-progr
 import { PdfUploadSuccess } from "@/features/import/components/pdf-upload-success";
 import { usePdfUpload } from "@/features/import/hooks";
 
-export function PdfImportPanel() {
+type PdfImportPanelProps = {
+  preferOcr?: boolean;
+};
+
+export function PdfImportPanel({ preferOcr = false }: PdfImportPanelProps) {
   const {
     status,
     selected,
@@ -20,7 +24,7 @@ export function PdfImportPanel() {
     remove,
     reset,
     canUpload,
-  } = usePdfUpload();
+  } = usePdfUpload({ preferOcr });
 
   const isUploading = status === "uploading";
 
@@ -29,6 +33,7 @@ export function PdfImportPanel() {
       {!selected && status !== "success" ? (
         <PdfDropzone
           disabled={isUploading}
+          preferOcr={preferOcr}
           onFile={(file) => selectFile(file)}
         />
       ) : null}
@@ -43,7 +48,17 @@ export function PdfImportPanel() {
         />
       ) : null}
 
-      {status === "uploading" ? <PdfUploadProgress progress={progress} /> : null}
+      {status === "uploading" ? (
+        <PdfUploadProgress
+          progress={progress}
+          title={preferOcr ? "Uploading for OCR" : "Uploading"}
+          description={
+            preferOcr
+              ? "Staging your scan securely for OCR processing."
+              : "Staging your file securely for the next processing steps."
+          }
+        />
+      ) : null}
 
       {status === "success" && result ? (
         <PdfUploadSuccess
@@ -51,6 +66,8 @@ export function PdfImportPanel() {
           onUploadAnother={() => {
             reset();
           }}
+          title={preferOcr ? "OCR file uploaded" : "Uploaded"}
+          anotherLabel={preferOcr ? "Upload another scan" : "Upload another"}
         />
       ) : null}
 

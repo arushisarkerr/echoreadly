@@ -11,4 +11,5 @@ export {
   subscribePdfUploadStore,
 } from "./pdf-upload-store";
 export { removeUploadedPdf, uploadPdfToSupabase } from "./upload-pdf-client";
+export { uploadLinkToSupabase } from "./upload-link-client";
 export { validatePdfFile } from "./validate-pdf";

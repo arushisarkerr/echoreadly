@@ -1,14 +1,12 @@
 /**
- * Shared parser output — format-specific extractors must return this shape.
+ * Shared parser/extractor output — every source extractor returns this shape.
  */
 
 export type DocumentParseResult = {
-  /** Plain text extracted from the document. */
   text: string;
-  /** Page or section count when the format supports it. */
   pageCount: number | null;
-  /** Optional title from document metadata. */
   title: string | null;
+  metadata?: Record<string, unknown>;
 };
 
 export type DocumentParser = (

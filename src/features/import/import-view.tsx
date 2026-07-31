@@ -1,20 +1,13 @@
 "use client";
 
-import { useState } from "react";
-
-import {
-  IconFile,
-  IconLink,
-} from "@/components/icons/dashboard-icons";
+import { ImportSourceCards } from "@/features/import/components/import-source-cards";
+import { LinkImportPanel } from "@/features/import/components/link-import-panel";
+import { PdfImportPanel } from "@/features/import/components/pdf-import-panel";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/overlays";
-import { ImportSourceCards } from "@/features/import/components/import-source-cards";
-import { PdfImportPanel } from "@/features/import/components/pdf-import-panel";
 import { ROUTES } from "@/constants";
 
 const FORMATS = [
@@ -24,20 +17,18 @@ const FORMATS = [
   { label: "TXT", available: true },
   { label: "Markdown", available: false },
   { label: "EPUB", available: true },
-  { label: "Website URL", available: false },
-  { label: "Blog URL", available: false },
-  { label: "YouTube URL", available: false },
-  { label: "OCR", available: false },
+  { label: "Website URL", available: true },
+  { label: "Blog URL", available: true },
+  { label: "YouTube URL", available: true },
+  { label: "OCR", available: true },
 ] as const;
 
 export function ImportView() {
-  const [url, setUrl] = useState("");
-
   return (
     <div className="space-y-8">
       <PageHeader
         title="Import"
-        description="Drop files or paste a link. PDF, DOCX, EPUB, and TXT use the same import pipeline."
+        description="Drop files or paste a link. Every source uses the same import pipeline."
         breadcrumbs={[
           { label: "Home", href: ROUTES.dashboard },
           { label: "Import" },
@@ -58,42 +49,11 @@ export function ImportView() {
         </TabsContent>
 
         <TabsContent value="links" className="mt-5 space-y-5">
-          <Card className="opacity-70">
-            <CardHeader
-              title="Import from the web"
-              description="Website, blog, or YouTube URLs."
-              action={<Badge>Coming Soon</Badge>}
-            />
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
-                <Input
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://…"
-                  leftSlot={<IconLink />}
-                  aria-label="Import URL"
-                  disabled
-                />
-              </div>
-              <Button disabled>Add link</Button>
-            </div>
-          </Card>
+          <LinkImportPanel />
         </TabsContent>
 
         <TabsContent value="ocr" className="mt-5">
-          <Card className="opacity-70">
-            <CardHeader
-              title="OCR import"
-              description="Scan image-based documents into readable text later."
-              action={<Badge>Coming Soon</Badge>}
-            />
-            <EmptyState
-              icon={<IconFile />}
-              title="OCR is coming soon"
-              description="The surface is ready for scanned PDFs and image pages when processing is connected."
-              className="py-12"
-            />
-          </Card>
+          <PdfImportPanel preferOcr />
         </TabsContent>
       </Tabs>
 

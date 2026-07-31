@@ -65,20 +65,20 @@ export const IMPORT_SOURCES: ImportSource[] = [
     label: "Website URL",
     description: "Import articles from the web.",
     icon: IconLink,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "youtube",
     label: "YouTube",
     description: "Import transcripts from videos.",
     icon: IconListen,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "ocr",
     label: "OCR",
     description: "Extract text from scans and images.",
     icon: IconSpark,
-    enabled: false,
+    enabled: true,
   },
 ];
