@@ -21,6 +21,8 @@ import { ROUTES } from "@/constants";
 import { DocumentCard } from "@/features/library/document-card";
 import { useLibraryDocuments } from "@/features/library/hooks/use-library-documents";
 import { formatFileSize } from "@/features/import/utils/format-file-size";
+import { labelForMimeType } from "@/features/import/formats/registry";
+import { processingStatusLabel } from "@/features/library/status-labels";
 import { cn } from "@/utils";
 
 const LIBRARY_VIEW_KEY = "echoreadly-library-view";
@@ -102,6 +104,23 @@ export function LibraryView() {
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = documents.filter((document) => {
     if (filter === "pdf" && document.mimeType !== "application/pdf") {
+      return false;
+    }
+    if (
+      filter === "docx" &&
+      document.mimeType !==
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      return false;
+    }
+    if (
+      filter === "epub" &&
+      document.mimeType !== "application/epub+zip" &&
+      document.mimeType !== "application/x-epub+zip"
+    ) {
+      return false;
+    }
+    if (filter === "txt" && document.mimeType !== "text/plain") {
       return false;
     }
     if (filter === "web" || filter === "youtube" || filter === "favorites") {
@@ -257,6 +276,9 @@ export function LibraryView() {
           options={[
             { value: "all", label: "All sources" },
             { value: "pdf", label: "PDF" },
+            { value: "docx", label: "DOCX" },
+            { value: "epub", label: "EPUB" },
+            { value: "txt", label: "TXT" },
             { value: "web", label: "Websites" },
             { value: "youtube", label: "YouTube" },
             { value: "favorites", label: "Favorites" },
@@ -348,10 +370,10 @@ export function LibraryView() {
             <DocumentCard
               key={document.id}
               title={document.filename}
-              language="PDF"
+              language={labelForMimeType(document.mimeType)}
               duration={formatFileSize(document.fileSize)}
               createdAt={formatUploadedAt(document.uploadedAt)}
-              tags={[document.processingStatus]}
+              tags={[processingStatusLabel(document.processingStatus)]}
               layout={view}
               selecting={selecting}
               selected={selectedIds.includes(document.id)}

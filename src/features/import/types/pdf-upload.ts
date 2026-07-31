@@ -1,6 +1,8 @@
 /**
- * PDF import upload types — milestone 1.
+ * Document import upload types — shared across PDF / DOCX / EPUB / TXT.
  */
+
+import type { DocumentFormatId } from "@/features/import/formats/registry";
 
 export type PdfUploadStatus = "idle" | "uploading" | "success" | "failed";
 
@@ -9,6 +11,7 @@ export type SelectedPdf = {
   name: string;
   size: number;
   type: string;
+  formatId?: DocumentFormatId;
 };
 
 export type PdfUploadResult = {
@@ -18,17 +21,19 @@ export type PdfUploadResult = {
   name: string;
   size: number;
   stagedAt: string;
-  /** Object key within the `pdfs` bucket (`{ownerId}/{fileId}.pdf`). */
+  /** Object key within the documents bucket. */
   path: string;
-  /** Bucket-qualified storage path (`pdfs/{ownerId}/{fileId}.pdf`). */
+  /** Bucket-qualified storage path. */
   storagePath: string;
   mimeType: string;
   ownerId: string;
+  formatId?: DocumentFormatId;
 };
 
 export type PdfValidationErrorCode =
   | "missing"
   | "not_pdf"
+  | "unsupported_type"
   | "empty"
   | "too_large";
 
@@ -47,4 +52,5 @@ export type SelectedPdfMeta = {
   name: string;
   size: number;
   type: string;
+  formatId?: DocumentFormatId;
 };

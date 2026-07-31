@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { validateDocumentFile } from "@/features/import/formats/validate-document";
 import type { SelectedPdf } from "@/features/import/types";
 import {
   clearPdfUploadState,
@@ -15,7 +16,6 @@ import {
   removeUploadedPdf,
   uploadPdfToSupabase,
 } from "@/features/import/utils/upload-pdf-client";
-import { validatePdfFile } from "@/features/import/utils/validate-pdf";
 
 export type UsePdfUploadReturn = {
   status: ReturnType<typeof getPdfUploadState>["status"];
@@ -30,12 +30,17 @@ export type UsePdfUploadReturn = {
   canUpload: boolean;
 };
 
-function toSelected(file: File): SelectedPdf {
+function toSelected(
+  file: File,
+  formatId: SelectedPdf["formatId"],
+  mimeType: string,
+): SelectedPdf {
   return {
     file,
     name: file.name,
     size: file.size,
-    type: file.type || "application/pdf",
+    type: mimeType || file.type || "application/octet-stream",
+    formatId,
   };
 }
 
@@ -90,7 +95,7 @@ export function usePdfUpload(): UsePdfUploadReturn {
     abortRef.current = null;
     clearUploadAttempt();
 
-    const validation = validatePdfFile(file);
+    const validation = validateDocumentFile(file);
     if (!validation.ok) {
       setPdfUploadState({
         selected: null,
@@ -103,13 +108,18 @@ export function usePdfUpload(): UsePdfUploadReturn {
       return;
     }
 
-    const selected = toSelected(validation.file);
+    const selected = toSelected(
+      validation.file,
+      validation.formatId,
+      validation.mimeType,
+    );
     setPdfUploadState({
       selected,
       selectedMeta: {
         name: selected.name,
         size: selected.size,
         type: selected.type,
+        formatId: selected.formatId,
       },
       progress: 0,
       result: null,
@@ -181,12 +191,15 @@ export function usePdfUpload(): UsePdfUploadReturn {
         selectedMeta: {
           name: next.name,
           size: next.size,
-          type: current.selected.type || "application/pdf",
+          type: next.mimeType || current.selected.type || "application/octet-stream",
+          formatId: next.formatId ?? current.selected.formatId,
         },
         selected: {
           ...current.selected,
           name: next.name,
           size: next.size,
+          type: next.mimeType || current.selected.type,
+          formatId: next.formatId ?? current.selected.formatId,
         },
         progress: 100,
         status: "success",

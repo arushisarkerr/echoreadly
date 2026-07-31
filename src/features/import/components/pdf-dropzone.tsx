@@ -90,7 +90,7 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
-      aria-label="PDF upload dropzone. Drop a PDF or press Enter to choose a file."
+      aria-label="Document upload dropzone. Drop a PDF, DOCX, EPUB, or TXT file or press Enter to choose a file."
       onKeyDown={onKeyDown}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
@@ -102,11 +102,11 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
           <IconImport className="size-5" />
         </div>
         <h2 className="font-display mt-5 text-xl font-semibold text-foreground">
-          Drop a PDF to import
+          Drop a file to import
         </h2>
         <p className="mt-2 max-w-md text-sm text-muted">
-          PDF only · up to {formatFileSize(PDF_MAX_BYTES)}. Drag a file here or
-          choose one from your device.
+          PDF, DOCX, EPUB, TXT · up to {formatFileSize(PDF_MAX_BYTES)}. Drag a
+          file here or choose one from your device.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Button
@@ -118,7 +118,7 @@ export function PdfDropzone({ disabled = false, onFile }: PdfDropzoneProps) {
               openPicker();
             }}
           >
-            Choose PDF
+            Choose file
           </Button>
         </div>
       </div>

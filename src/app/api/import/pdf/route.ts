@@ -40,7 +40,8 @@ export async function GET(request: Request) {
 
 /**
  * PDF import upload endpoint — storage + library document in one success flow.
- * Rejects PDFs whose content already exists in the owner's Library.
+ * Accepts PDF, DOCX, EPUB, and TXT through the shared upload pipeline.
+ * Rejects files whose content already exists in the owner's Library.
  * Same idempotency key retries the same attempt without creating a second row.
  */
 export async function POST(request: Request) {
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
   const idempotencyKeyEntry = form.get("idempotencyKey");
 
   if (!(fileEntry instanceof File)) {
-    return jsonError("Choose a PDF file to import.", 400);
+    return jsonError("Choose a file to import.", 400);
   }
 
   if (typeof ownerIdEntry !== "string" || !OWNER_ID_PATTERN.test(ownerIdEntry)) {

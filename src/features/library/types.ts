@@ -15,6 +15,8 @@ export type DocumentRecord = {
   storagePath: string;
   uploadedAt: string;
   processingStatus: ProcessingStatus;
+  pageCount?: number | null;
+  sourceFormat?: string | null;
 };
 
 export type DocumentRow = {
@@ -29,6 +31,8 @@ export type DocumentRow = {
   uploaded_at: string;
   processing_status: ProcessingStatus;
   document_hash: string;
+  page_count?: number | null;
+  source_format?: string | null;
 };
 
 export type CreateDocumentInput = {
@@ -42,4 +46,5 @@ export type CreateDocumentInput = {
   uploadedAt: string;
   documentHash: string;
   processingStatus?: ProcessingStatus;
+  sourceFormat?: string;
 };

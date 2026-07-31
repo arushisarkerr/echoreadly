@@ -29,7 +29,7 @@ export type ImportSource = {
 
 /**
  * Import sources shown on the Import page.
- * Only PDF is functional in milestone 1.
+ * PDF, DOCX, EPUB, and TXT share the same upload architecture.
  */
 export const IMPORT_SOURCES: ImportSource[] = [
   {
@@ -44,21 +44,21 @@ export const IMPORT_SOURCES: ImportSource[] = [
     label: "DOCX",
     description: "Import Word documents.",
     icon: IconImport,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "epub",
     label: "EPUB",
     description: "Import ebook files.",
     icon: IconLibrary,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "txt",
     label: "TXT",
     description: "Import plain text files.",
     icon: IconFile,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "website",

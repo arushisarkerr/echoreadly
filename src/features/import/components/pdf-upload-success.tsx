@@ -21,8 +21,7 @@ export function PdfUploadSuccess({
         description={`${result.name} · ${formatFileSize(result.size)}`}
       />
       <p className="text-sm text-muted">
-        Your PDF is staged and ready for future processing milestones. No parsing
-        has run yet.
+        Your file is staged in the library and queued for processing.
       </p>
       <div className="mt-5">
         <Button type="button" variant="secondary" onClick={onUploadAnother}>

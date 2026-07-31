@@ -73,7 +73,7 @@ export function PdfImportPanel() {
       {selected && status === "idle" ? (
         <div className="flex flex-wrap gap-2">
           <Button type="button" disabled={!canUpload} onClick={() => void upload()}>
-            Upload PDF
+            Upload
           </Button>
           <Button
             type="button"

@@ -20,10 +20,10 @@ import { ROUTES } from "@/constants";
 const FORMATS = [
   { label: "PDF", available: true },
   { label: "DOC", available: false },
-  { label: "DOCX", available: false },
-  { label: "TXT", available: false },
+  { label: "DOCX", available: true },
+  { label: "TXT", available: true },
   { label: "Markdown", available: false },
-  { label: "EPUB", available: false },
+  { label: "EPUB", available: true },
   { label: "Website URL", available: false },
   { label: "Blog URL", available: false },
   { label: "YouTube URL", available: false },
@@ -37,7 +37,7 @@ export function ImportView() {
     <div className="space-y-8">
       <PageHeader
         title="Import"
-        description="Drop files or paste a link. Everything stays in the UI until a backend is connected."
+        description="Drop files or paste a link. PDF, DOCX, EPUB, and TXT use the same import pipeline."
         breadcrumbs={[
           { label: "Home", href: ROUTES.dashboard },
           { label: "Import" },

@@ -5,10 +5,11 @@ import type {
   CreateDocumentInput,
   DocumentRecord,
   DocumentRow,
+  ProcessingStatus,
 } from "@/features/library/types";
 
 const DOCUMENT_SELECT =
-  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash";
+  "id, user_id, guest_id, filename, original_file_name, file_size, mime_type, storage_path, uploaded_at, processing_status, document_hash, page_count, source_format";
 
 function toRecord(row: DocumentRow): DocumentRecord {
   const ownerId = row.user_id ?? row.guest_id;
@@ -26,6 +27,8 @@ function toRecord(row: DocumentRow): DocumentRecord {
     storagePath: row.storage_path,
     uploadedAt: row.uploaded_at,
     processingStatus: row.processing_status,
+    pageCount: row.page_count == null ? null : Number(row.page_count),
+    sourceFormat: row.source_format ?? null,
   };
 }
 
@@ -118,6 +121,7 @@ export async function createDocumentRecord(
       uploaded_at: input.uploadedAt,
       processing_status: input.processingStatus ?? "uploaded",
       document_hash: input.documentHash,
+      source_format: input.sourceFormat ?? null,
     })
     .select(DOCUMENT_SELECT)
     .single();
@@ -222,4 +226,75 @@ export async function deleteDocumentRowsByIds(
   }
 
   return ((data as Array<{ id: string }> | null) ?? []).map((row) => row.id);
+}
+
+/**
+ * Load a document by id (service role — used by the shared processing pipeline).
+ */
+export async function getDocumentById(
+  documentId: string,
+): Promise<DocumentRecord | null> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("documents")
+    .select(DOCUMENT_SELECT)
+    .eq("id", documentId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Unable to look up document.");
+  }
+
+  return data ? toRecord(data as DocumentRow) : null;
+}
+
+export type DocumentProcessingUpdate = {
+  processingStatus: ProcessingStatus;
+  pageCount?: number | null;
+  extractedText?: string | null;
+  extractedAt?: string | null;
+  sourceFormat?: string | null;
+  filename?: string;
+};
+
+/**
+ * Update processing fields after format-specific extraction.
+ */
+export async function updateDocumentProcessing(
+  documentId: string,
+  fields: DocumentProcessingUpdate,
+): Promise<DocumentRecord> {
+  const client = createServiceClient();
+  const patch: Record<string, unknown> = {
+    processing_status: fields.processingStatus,
+  };
+
+  if (fields.pageCount !== undefined) {
+    patch.page_count = fields.pageCount;
+  }
+  if (fields.extractedText !== undefined) {
+    patch.extracted_text = fields.extractedText;
+  }
+  if (fields.extractedAt !== undefined) {
+    patch.extracted_at = fields.extractedAt;
+  }
+  if (fields.sourceFormat !== undefined) {
+    patch.source_format = fields.sourceFormat;
+  }
+  if (fields.filename) {
+    patch.filename = fields.filename;
+  }
+
+  const { data, error } = await client
+    .from("documents")
+    .update(patch)
+    .eq("id", documentId)
+    .select(DOCUMENT_SELECT)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Unable to update document processing.");
+  }
+
+  return toRecord(data as DocumentRow);
 }

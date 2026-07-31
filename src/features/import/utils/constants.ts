@@ -1,7 +1,15 @@
-/** Maximum accepted PDF size for import milestone 1. */
-export const PDF_MAX_BYTES = 100 * 1024 * 1024;
+import {
+  DOCUMENT_ACCEPT,
+  DOCUMENT_MAX_BYTES,
+} from "@/features/import/formats/registry";
 
-export const PDF_ACCEPT = "application/pdf,.pdf" as const;
+/** @deprecated Use DOCUMENT_MAX_BYTES */
+export const PDF_MAX_BYTES = DOCUMENT_MAX_BYTES;
+
+/** Multi-format accept string (PDF, DOCX, EPUB, TXT). */
+export const PDF_ACCEPT = DOCUMENT_ACCEPT;
+
+export const DOCUMENT_ACCEPT_ATTR = DOCUMENT_ACCEPT;
 
 export const PDF_MIME = "application/pdf" as const;
 
