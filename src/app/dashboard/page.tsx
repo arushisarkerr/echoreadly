@@ -1,8 +1,5 @@
-/**
- * Public dashboard shell — empty foundation for the next product UI.
- * No authentication required.
- */
+import { DashboardHomeView } from "@/features/dashboard/home-view";
 
 export default function DashboardPage() {
-  return null;
+  return <DashboardHomeView />;
 }
