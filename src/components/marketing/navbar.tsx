@@ -5,7 +5,6 @@ import { useEffect, useId, useState } from "react";
 import { CloseIcon, MenuIcon } from "@/components/icons";
 import { siteConfig } from "@/config";
 import { ROUTES } from "@/constants";
-import { AccountMenu } from "@/features/auth";
 
 const NAV_LINKS = [
   { label: "Sources", href: "#sources" },
@@ -15,7 +14,7 @@ const NAV_LINKS = [
 ] as const;
 
 /**
- * Floating glass navbar — auth untouched via AccountMenu.
+ * Floating glass navbar for the public landing page.
  */
 export function MarketingNavbar() {
   const [open, setOpen] = useState(false);
@@ -86,9 +85,12 @@ export function MarketingNavbar() {
           ))}
         </nav>
 
-        <div className="hidden md:block">
-          <AccountMenu />
-        </div>
+        <a
+          href={ROUTES.dashboard}
+          className="hidden h-9 items-center justify-center rounded-md bg-foreground px-3.5 text-sm font-medium text-background transition-opacity hover:opacity-90 md:inline-flex"
+        >
+          Open app
+        </a>
 
         <button
           type="button"
@@ -118,9 +120,13 @@ export function MarketingNavbar() {
               {link.label}
             </a>
           ))}
-          <div className="mt-2 border-t border-border pt-3">
-            <AccountMenu />
-          </div>
+          <a
+            href={ROUTES.dashboard}
+            className="mt-2 inline-flex h-11 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-medium text-background"
+            onClick={() => setOpen(false)}
+          >
+            Open app
+          </a>
         </nav>
       </div>
     </header>

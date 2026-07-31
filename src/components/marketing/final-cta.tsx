@@ -3,7 +3,7 @@ import { ROUTES } from "@/constants";
 import { Reveal } from "@/components/marketing/reveal";
 
 /**
- * Final CTA — cinematic close into existing auth routes.
+ * Final CTA — close into the public app shell.
  */
 export function FinalCta() {
   return (
@@ -22,21 +22,15 @@ export function FinalCta() {
             Import. Listen.
           </h2>
           <p className="er-copy mx-auto mt-6 text-muted">
-            Sign in to {siteConfig.name} and turn your files into natural AI
-            audio. {siteConfig.tagline}
+            Open {siteConfig.name} and turn your files into natural AI audio.{" "}
+            {siteConfig.tagline}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href={ROUTES.login}
+              href={ROUTES.dashboard}
               className="er-btn inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-background transition-transform hover:scale-[1.02]"
             >
-              Sign in — Import → Listen
-            </a>
-            <a
-              href={ROUTES.signup}
-              className="er-btn inline-flex h-12 items-center justify-center rounded-full border border-border bg-[color:var(--glass)] px-8 text-foreground backdrop-blur-md"
-            >
-              Create account
+              Open app
             </a>
           </div>
         </Reveal>

@@ -90,7 +90,7 @@ export function MarketingHero() {
             with বাংলা as the primary listening language.
           </p>
           <div className="er-reveal er-reveal-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a href={ROUTES.signup} className={primaryCta}>
+            <a href={ROUTES.dashboard} className={primaryCta}>
               Open EchoReadly
             </a>
             <a href="#how-it-works" className={secondaryCta}>

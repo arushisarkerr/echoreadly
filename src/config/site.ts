@@ -6,9 +6,7 @@ import {
 import { publicEnv } from "@/config/env";
 
 /**
- * Site configuration used by metadata, layouts, and shared chrome.
- *
- * Centralizing these values keeps branding and SEO consistent as routes grow.
+ * Site configuration used by metadata and marketing chrome.
  */
 export const siteConfig = {
   name: APP_NAME,

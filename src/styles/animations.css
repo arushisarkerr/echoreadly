@@ -146,28 +146,6 @@
   animation: er-float-c 6.5s ease-in-out infinite;
 }
 
-@keyframes er-upload-slide {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(280%);
-  }
-}
-
-.er-upload-indeterminate {
-  width: 40% !important;
-  animation: er-upload-slide 1.15s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .er-upload-indeterminate {
-    animation: none;
-    width: 66% !important;
-    opacity: 0.85;
-  }
-}
-
 .er-wave-bar {
   transform-origin: center bottom;
   animation: er-wave 1.5s ease-in-out infinite;
@@ -218,8 +196,7 @@
   .er-reveal-delay-1,
   .er-reveal-delay-2,
   .er-reveal-delay-3,
-  .er-line-draw,
-  .er-upload-indeterminate {
+  .er-line-draw {
     animation: none !important;
   }
 

@@ -3,8 +3,6 @@ import { DM_Sans, Geist_Mono, Syne } from "next/font/google";
 
 import { RootShell } from "@/components/layout";
 import { siteConfig } from "@/config";
-import { AuthProvider } from "@/features/auth";
-import { getUser } from "@/server/auth";
 
 import "@/styles/globals.css";
 
@@ -37,21 +35,9 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
-  keywords: [
-    "EchoReadly",
-    "PDF to audio",
-    "AI audio",
-    "text to speech",
-    "document listen",
-    "PDF listen",
-    "listen to documents",
-    "natural AI audio",
-    "Bangla audio",
-  ],
   authors: [{ name: siteConfig.name }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
-  category: "productivity",
   alternates: {
     canonical: "/",
   },
@@ -71,18 +57,6 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
-  formatDetection: {
-    telephone: false,
-    email: false,
-    address: false,
   },
 };
 
@@ -94,22 +68,18 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const auth = await getUser();
-
   return (
     <html
       lang="en"
       className={`${dmSans.variable} ${syne.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background font-sans text-foreground">
-        <AuthProvider initialUser={auth.ok ? auth.user : null}>
-          <RootShell>{children}</RootShell>
-        </AuthProvider>
+        <RootShell>{children}</RootShell>
       </body>
     </html>
   );

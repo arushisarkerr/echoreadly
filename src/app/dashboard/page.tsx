@@ -1,10 +1,8 @@
-import { redirect } from "next/navigation";
-
-import { ROUTES } from "@/constants";
-
 /**
- * Dashboard root — Library is the product home.
+ * Public dashboard shell — empty foundation for the next product UI.
+ * No authentication required.
  */
+
 export default function DashboardPage() {
-  redirect(ROUTES.library);
+  return null;
 }

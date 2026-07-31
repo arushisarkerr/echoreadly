@@ -1,8 +1,5 @@
 /**
  * Application-level constants.
- *
- * Keep product-wide, environment-agnostic values here.
- * Runtime configuration that may change per deployment belongs in `config/`.
  */
 
 export const APP_NAME = "EchoReadly";
