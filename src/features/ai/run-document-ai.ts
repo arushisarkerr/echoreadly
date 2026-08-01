@@ -1,5 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { getOpenAIClient } from "@/lib/ai/openai";
+import {
+  getAiProviderLayer,
+  isAiProviderError,
+} from "@/features/ai-provider";
 
 export type DocumentChunkRow = {
   chunkIndex: number;
@@ -54,8 +58,48 @@ export type AiAction =
   | "explain"
   | "ask";
 
+const DOCUMENT_AI_SYSTEM =
+  "You help readers understand documents. Use only the provided document context. If the answer is not in the context, say so.";
+
+/**
+ * Chat (ask) — routed through the AI Provider Layer.
+ * OpenAI → Gemini automatic fallback via Router / Orchestrator.
+ */
+async function runDocumentChat(input: {
+  documentId: string;
+  context: string;
+  question: string;
+}): Promise<{ result: string }> {
+  const layer = getAiProviderLayer();
+  const task = `Answer this question using only the document:\n${input.question}`;
+
+  try {
+    const response = await layer.orchestrator.execute({
+      feature: "chat",
+      documentId: input.documentId,
+      system: DOCUMENT_AI_SYSTEM,
+      input: `Document context:\n\n${input.context}\n\nTask:\n${task}`,
+      temperature: 0.3,
+    });
+
+    if (response.kind !== "text" || !response.text.trim()) {
+      throw new Error("AI did not return a result.");
+    }
+    return { result: response.text.trim() };
+  } catch (cause) {
+    if (isAiProviderError(cause)) {
+      throw new Error(cause.message);
+    }
+    throw cause instanceof Error
+      ? cause
+      : new Error("AI request failed.");
+  }
+}
+
 /**
  * Run an AI action grounded in document chunks.
+ * Phase 2: only `ask` (Chat) uses the Provider Layer.
+ * Summary and other actions remain on the legacy OpenAI path until later phases.
  */
 export async function runDocumentAi(input: {
   documentId: string;
@@ -68,7 +112,6 @@ export async function runDocumentAi(input: {
   }
 
   const context = contextFromChunks(chunks);
-  const openai = getOpenAIClient();
 
   const prompts: Record<AiAction, string> = {
     summary:
@@ -86,18 +129,25 @@ export async function runDocumentAi(input: {
       : "Answer questions about the document.",
   };
 
-  if (input.action === "ask" && !input.question?.trim()) {
-    throw new Error("Enter a question to ask about this document.");
+  if (input.action === "ask") {
+    if (!input.question?.trim()) {
+      throw new Error("Enter a question to ask about this document.");
+    }
+    return runDocumentChat({
+      documentId: input.documentId,
+      context,
+      question: input.question.trim(),
+    });
   }
 
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: process.env.OPENAI_AI_MODEL?.trim() || "gpt-4o-mini",
     temperature: 0.3,
     messages: [
       {
         role: "system",
-        content:
-          "You help readers understand documents. Use only the provided document context. If the answer is not in the context, say so.",
+        content: DOCUMENT_AI_SYSTEM,
       },
       {
         role: "user",

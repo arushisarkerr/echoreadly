@@ -1,8 +1,8 @@
 /**
- * AI Provider Layer — Phase 1 infrastructure public surface.
+ * AI Provider Layer public surface.
  *
  * Features must not import provider SDKs.
- * Feature migration happens in later phases; existing OpenAI/Gemini paths remain active.
+ * Phase 2: Chat (`ask`) is migrated. Summary/Translation/TTS remain on legacy paths.
  */
 
 export type {
@@ -82,3 +82,9 @@ export {
   resetAiProviderLayerForTests,
   type AiProviderLayer,
 } from "./create-layer";
+
+export {
+  createPhase2ChatAdapters,
+  createOpenAiChatAdapter,
+  createGeminiChatAdapter,
+} from "./adapters/register-chat";

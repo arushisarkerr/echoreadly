@@ -159,11 +159,10 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
 export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   {
     feature: "chat",
-    providers: ["openai", "claude", "gemini", "grok", "mistral", "kimi"],
+    providers: ["openai", "gemini"],
     models: {
       openai: "gpt-4o-mini",
       gemini: "gemini-2.0-flash",
-      mistral: "mistral-small-latest",
     },
   },
   {

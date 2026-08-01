@@ -1,8 +1,9 @@
 /**
- * Factory that wires the full AI Provider Layer (Phase 1 infrastructure).
- * Does not migrate or replace existing feature provider calls.
+ * Factory that wires the AI Provider Layer.
+ * Phase 2 registers Chat adapters (OpenAI + Gemini).
  */
 
+import { createPhase2ChatAdapters } from "./adapters/register-chat";
 import { AdapterRegistry } from "./adapters/types";
 import { CircuitBreaker } from "./circuit/circuit-breaker";
 import { loadAiProviderConfig } from "./config/loader";
@@ -35,28 +36,84 @@ export type AiProviderLayer = {
   router: ProviderRouter;
   adapters: AdapterRegistry;
   queue: QueueManager;
-  /** Register a provider adapter (Phase 2+). Syncs the provider pool. */
+  /** Register a provider adapter. Syncs the provider pool. */
   registerAdapter: (adapter: AiProviderAdapter) => void;
 };
 
 let singleton: AiProviderLayer | null = null;
 
+function applyChatModelEnvOverrides(
+  config: AiProviderLayerConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): AiProviderLayerConfig {
+  const openaiChatModel = env.OPENAI_AI_MODEL?.trim() || env.OPENAI_MODEL?.trim();
+  const geminiChatModel =
+    env.GEMINI_CHAT_MODEL?.trim() || env.GEMINI_MODEL?.trim();
+
+  const featureRouting = config.featureRouting.map((row) => {
+    if (row.feature !== "chat") {
+      return row;
+    }
+    return {
+      ...row,
+      models: {
+        ...row.models,
+        ...(openaiChatModel ? { openai: openaiChatModel } : {}),
+        ...(geminiChatModel ? { gemini: geminiChatModel } : {}),
+      },
+    };
+  });
+
+  const models = [...config.models];
+  if (
+    openaiChatModel &&
+    !models.some(
+      (model) => model.providerId === "openai" && model.id === openaiChatModel,
+    )
+  ) {
+    models.push({
+      id: openaiChatModel,
+      providerId: "openai",
+      capabilities: ["chat", "summary", "translation", "streaming"],
+      modality: "text",
+      displayName: openaiChatModel,
+    });
+  }
+  if (
+    geminiChatModel &&
+    !models.some(
+      (model) => model.providerId === "gemini" && model.id === geminiChatModel,
+    )
+  ) {
+    models.push({
+      id: geminiChatModel,
+      providerId: "gemini",
+      capabilities: ["chat", "summary", "translation", "streaming", "vision"],
+      modality: "text",
+      displayName: geminiChatModel,
+    });
+  }
+
+  return { ...config, featureRouting, models };
+}
+
 export function createAiProviderLayer(
   config: AiProviderLayerConfig = loadAiProviderConfig(),
 ): AiProviderLayer {
-  const providers = new ProviderRegistry(config.providers);
-  const models = new ModelRegistry(config.models);
+  const resolved = applyChatModelEnvOverrides(config);
+  const providers = new ProviderRegistry(resolved.providers);
+  const models = new ModelRegistry(resolved.models);
   const capabilities = new CapabilityRegistry(providers);
   const pool = new ProviderPool(providers);
   const cooldown = new CooldownManager();
-  const keys = new KeyManager(config.keys, cooldown, config.cooldown);
+  const keys = new KeyManager(resolved.keys, cooldown, resolved.cooldown);
   const health = new HealthManager();
-  const circuit = new CircuitBreaker(config.circuitBreaker);
-  const retry = new RetryManager(config.retry);
+  const circuit = new CircuitBreaker(resolved.circuitBreaker);
+  const retry = new RetryManager(resolved.retry);
   const adapters = new AdapterRegistry();
   const queue = new QueueManager();
   const router = new ProviderRouter(
-    config.featureRouting,
+    resolved.featureRouting,
     providers,
     models,
     capabilities,
@@ -75,7 +132,7 @@ export function createAiProviderLayer(
   );
 
   const layer: AiProviderLayer = {
-    config,
+    config: resolved,
     orchestrator,
     providers,
     models,
@@ -95,12 +152,15 @@ export function createAiProviderLayer(
     },
   };
 
+  for (const adapter of createPhase2ChatAdapters()) {
+    layer.registerAdapter(adapter);
+  }
+
   return layer;
 }
 
 /**
- * Process-wide singleton for future feature migration.
- * Phase 1: safe to import; features must not call it for production paths yet.
+ * Process-wide singleton used by migrated features (Chat in Phase 2).
  */
 export function getAiProviderLayer(): AiProviderLayer {
   if (!singleton) {
