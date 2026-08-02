@@ -89,6 +89,13 @@ export const DEFAULT_PROVIDERS: AiProviderDefinition[] = [
     capabilities: ["chat", "summary", "translation", "streaming"],
   },
   {
+    id: "openrouter",
+    displayName: "OpenRouter",
+    enabled: true,
+    defaultPriority: 70,
+    capabilities: ["chat", "summary", "translation", "streaming"],
+  },
+  {
     id: "tesseract",
     displayName: "Tesseract OCR",
     enabled: true,
@@ -156,6 +163,13 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
     displayName: "Mistral Small",
   },
   {
+    id: "openrouter/auto",
+    providerId: "openrouter",
+    capabilities: ["chat", "summary", "translation", "streaming"],
+    modality: "text",
+    displayName: "OpenRouter Auto",
+  },
+  {
     id: "tesseract-eng",
     providerId: "tesseract",
     capabilities: ["ocr"],
@@ -167,26 +181,29 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
 export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   {
     feature: "chat",
-    providers: ["openai", "gemini"],
+    providers: ["openai", "gemini", "openrouter"],
     models: {
       openai: "gpt-4o-mini",
       gemini: "gemini-2.0-flash",
+      openrouter: "openrouter/auto",
     },
   },
   {
     feature: "summary",
-    providers: ["openai", "gemini"],
+    providers: ["openai", "gemini", "openrouter"],
     models: {
       openai: "gpt-4o-mini",
       gemini: "gemini-2.0-flash",
+      openrouter: "openrouter/auto",
     },
   },
   {
     feature: "translation",
-    providers: ["openai", "gemini"],
+    providers: ["openai", "gemini", "openrouter"],
     models: {
       openai: "gpt-4o-mini",
       gemini: "gemini-2.0-flash",
+      openrouter: "openrouter/auto",
     },
   },
   {

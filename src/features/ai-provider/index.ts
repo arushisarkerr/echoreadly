@@ -94,6 +94,7 @@ export {
   createEmbeddingAdapters,
   createOpenAiChatAdapter,
   createGeminiChatAdapter,
+  createOpenRouterChatAdapter,
   createOpenAiTtsAdapter,
   createOpenAiEmbeddingAdapter,
   createFutureTtsAdapterStub,

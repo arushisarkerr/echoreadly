@@ -80,6 +80,11 @@ async function translateChunkViaProviderLayer(input: {
   chunkText: string;
 }): Promise<string> {
   const layer = getAiProviderLayer();
+  // Temporary development breadcrumb — details live in orchestrator translation debug logs.
+  console.info("[AI translation debug]", "chunk request start", {
+    documentId: input.documentId,
+    chunkChars: input.chunkText.length,
+  });
   try {
     const response = await layer.orchestrator.execute({
       feature: "translation",
@@ -91,8 +96,19 @@ async function translateChunkViaProviderLayer(input: {
     if (response.kind !== "text") {
       throw new Error("Translation failed to produce text.");
     }
+    console.info("[AI translation debug]", "chunk request success", {
+      documentId: input.documentId,
+      providerId: response.providerId,
+      modelId: response.modelId,
+      attempts: response.attempts,
+    });
     return response.text.trim();
   } catch (cause) {
+    console.info("[AI translation debug]", "chunk request failed", {
+      documentId: input.documentId,
+      finalError:
+        cause instanceof Error ? cause.message : "Translation failed.",
+    });
     if (isAiProviderError(cause)) {
       throw new Error(cause.message);
     }

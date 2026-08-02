@@ -2,13 +2,18 @@ import { createGeminiChatAdapter } from "./gemini/chat";
 import { createOpenAiChatAdapter } from "./openai/chat";
 import { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 import { createOpenAiTtsAdapter } from "./openai/tts";
+import { createOpenRouterChatAdapter } from "./openrouter/chat";
 import type { AiProviderAdapter } from "./types";
 
 /**
  * Text adapters for Chat, document generation, and Translation.
  */
 export function createPhase2ChatAdapters(): AiProviderAdapter[] {
-  return [createOpenAiChatAdapter(), createGeminiChatAdapter()];
+  return [
+    createOpenAiChatAdapter(),
+    createGeminiChatAdapter(),
+    createOpenRouterChatAdapter(),
+  ];
 }
 
 /** Alias — same text adapters serve summary / key points / quiz / etc. */
@@ -33,6 +38,7 @@ export function createEmbeddingAdapters(): AiProviderAdapter[] {
 
 export { createOpenAiChatAdapter } from "./openai/chat";
 export { createGeminiChatAdapter } from "./gemini/chat";
+export { createOpenRouterChatAdapter } from "./openrouter/chat";
 export { createOpenAiTtsAdapter } from "./openai/tts";
 export { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 export { createFutureTtsAdapterStub } from "./future/tts-stub";

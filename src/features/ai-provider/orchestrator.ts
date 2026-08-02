@@ -1,4 +1,9 @@
 import { AiProviderError, isAiProviderError } from "./errors";
+import {
+  formatKeyIndexLabel,
+  isTranslationDebugEnabled,
+  logTranslationDebug,
+} from "./debug/translation-debug";
 import type {
   AiOrchestratorResponse,
   AiTextResponse,
@@ -67,22 +72,74 @@ export class AiOrchestrator {
   async execute(request: AiOrchestratorRequest): Promise<AiOrchestratorResponse> {
     this.validate(request);
 
-    const candidates = this.router.requireRoute(request.feature, {
-      preferredProviderId: request.preferredProviderId,
-      preferredModelId: request.preferredModelId,
-      requireAdapter: true,
-    });
+    const debug = isTranslationDebugEnabled(request.feature);
+    let fallbackAttempts = 0;
+    let providerIndex = 0;
+
+    let candidates;
+    try {
+      candidates = this.router.requireRoute(request.feature, {
+        preferredProviderId: request.preferredProviderId,
+        preferredModelId: request.preferredModelId,
+        requireAdapter: true,
+      });
+    } catch (cause) {
+      if (debug) {
+        const message =
+          cause instanceof Error ? cause.message : "Routing failed.";
+        logTranslationDebug("final error", {
+          fallbackAttempts: 0,
+          totalAttempts: 0,
+          finalSuccessfulProvider: null,
+          finalError: message,
+          finalErrorCode: isAiProviderError(cause)
+            ? cause.code
+            : "provider_unavailable",
+        });
+      }
+      throw cause;
+    }
+
+    if (debug) {
+      logTranslationDebug("selected providers in order", {
+        documentId: request.documentId ?? null,
+        providers: candidates.map((candidate) => candidate.providerId),
+        models: candidates.map((candidate) => ({
+          provider: candidate.providerId,
+          model: candidate.model.id,
+        })),
+      });
+    }
 
     let lastError: AiProviderError | null = null;
     let attempts = 0;
 
     for (const candidate of candidates) {
+      providerIndex += 1;
+      if (providerIndex > 1) {
+        fallbackAttempts += 1;
+      }
+
       if (!this.circuit.canRequest(candidate.providerId)) {
+        if (debug) {
+          logTranslationDebug("skipping provider (circuit open)", {
+            currentProvider: candidate.providerId,
+            selectedModel: candidate.model.id,
+            fallbackAttempts,
+          });
+        }
         continue;
       }
 
       const adapter = this.adapters.get(candidate.providerId);
       if (!adapter) {
+        if (debug) {
+          logTranslationDebug("skipping provider (no adapter)", {
+            currentProvider: candidate.providerId,
+            selectedModel: candidate.model.id,
+            fallbackAttempts,
+          });
+        }
         continue;
       }
 
@@ -94,12 +151,37 @@ export class AiOrchestrator {
           providerId: candidate.providerId,
           retryable: true,
         });
+        if (debug) {
+          logTranslationDebug("skipping provider (no healthy key)", {
+            currentProvider: candidate.providerId,
+            selectedModel: candidate.model.id,
+            fallbackAttempts,
+            finalError: lastError.message,
+          });
+        }
         continue;
       }
+
+      const keyIndex = formatKeyIndexLabel(
+        candidate.providerId,
+        keySelection.key.id,
+      );
 
       for (let attempt = 1; attempt <= this.retry.maxAttempts; attempt += 1) {
         attempts += 1;
         const started = Date.now();
+
+        if (debug) {
+          logTranslationDebug("attempting provider", {
+            currentProvider: candidate.providerId,
+            selectedModel: candidate.model.id,
+            selectedApiKeyIndex: keyIndex,
+            retryAttempt: attempt,
+            totalAttempts: attempts,
+            fallbackAttempts,
+          });
+        }
+
         try {
           const result = await this.dispatch(request, {
             providerId: candidate.providerId,
@@ -115,6 +197,19 @@ export class AiOrchestrator {
           this.keys.recordSuccess(keySelection.key.id);
           this.health.recordSuccess(candidate.providerId, latencyMs);
           this.circuit.recordSuccess(candidate.providerId);
+
+          if (debug) {
+            logTranslationDebug("provider response status", {
+              currentProvider: candidate.providerId,
+              selectedModel: candidate.model.id,
+              selectedApiKeyIndex: keyIndex,
+              retryAttempt: attempt,
+              fallbackAttempts,
+              providerResponseStatus: "ok",
+              latencyMs,
+              finalSuccessfulProvider: candidate.providerId,
+            });
+          }
 
           return {
             ...result,
@@ -136,11 +231,33 @@ export class AiOrchestrator {
           lastError = mapped;
           this.recordFailure(candidate.providerId, keySelection.key.id, mapped);
 
+          if (debug) {
+            logTranslationDebug("provider response status", {
+              currentProvider: candidate.providerId,
+              selectedModel: candidate.model.id,
+              selectedApiKeyIndex: keyIndex,
+              retryAttempt: attempt,
+              fallbackAttempts,
+              providerResponseStatus: mapped.code,
+              error: mapped.message,
+            });
+          }
+
           const decision = this.retry.decide({
             attempt,
             retryable: mapped.retryable,
           });
           if (decision.retry) {
+            if (debug) {
+              logTranslationDebug("retrying same provider", {
+                currentProvider: candidate.providerId,
+                selectedModel: candidate.model.id,
+                selectedApiKeyIndex: keyIndex,
+                retryAttempt: attempt,
+                nextRetryDelayMs: decision.delayMs,
+                fallbackAttempts,
+              });
+            }
             await this.retry.wait(decision.delayMs);
             continue;
           }
@@ -148,16 +265,36 @@ export class AiOrchestrator {
         }
       }
       // try next provider (fallback)
+      if (debug) {
+        logTranslationDebug("falling back to next provider", {
+          failedProvider: candidate.providerId,
+          fallbackAttempts,
+          remainingProviders: candidates
+            .slice(providerIndex)
+            .map((entry) => entry.providerId),
+        });
+      }
     }
 
-    throw (
+    const finalError =
       lastError ??
       new AiProviderError({
         code: "retry_exhausted",
         message: `AI request failed for capability "${request.feature}".`,
         retryable: false,
-      })
-    );
+      });
+
+    if (debug) {
+      logTranslationDebug("final error", {
+        fallbackAttempts,
+        totalAttempts: attempts,
+        finalSuccessfulProvider: null,
+        finalError: finalError.message,
+        finalErrorCode: finalError.code,
+      });
+    }
+
+    throw finalError;
   }
 
   /**

@@ -55,25 +55,65 @@ function applyModelEnvOverrides(
     env.OPENAI_AI_MODEL?.trim() ||
     env.OPENAI_MODEL?.trim();
   const geminiTextModel =
-    env.GEMINI_TRANSLATE_MODEL?.trim() ||
     env.GEMINI_CHAT_MODEL?.trim() ||
     env.GEMINI_SUMMARY_MODEL?.trim() ||
     env.GEMINI_MODEL?.trim();
+  // Prefer GEMINI_TRANSLATION_MODEL; keep GEMINI_TRANSLATE_MODEL as alias.
+  const geminiTranslationModel =
+    env.GEMINI_TRANSLATION_MODEL?.trim() ||
+    env.GEMINI_TRANSLATE_MODEL?.trim() ||
+    geminiTextModel;
+  const openRouterChatModel =
+    env.OPENROUTER_CHAT_MODEL?.trim() || env.OPENROUTER_MODEL?.trim();
+  const openRouterSummaryModel =
+    env.OPENROUTER_SUMMARY_MODEL?.trim() ||
+    openRouterChatModel ||
+    env.OPENROUTER_MODEL?.trim();
+  const openRouterTranslationModel =
+    env.OPENROUTER_TRANSLATION_MODEL?.trim() ||
+    env.OPENROUTER_TRANSLATE_MODEL?.trim() ||
+    openRouterChatModel ||
+    env.OPENROUTER_MODEL?.trim();
   const openaiTtsModel = env.OPENAI_TTS_MODEL?.trim();
   const openaiEmbeddingModel = env.OPENAI_EMBEDDING_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
-    if (
-      row.feature === "chat" ||
-      row.feature === "summary" ||
-      row.feature === "translation"
-    ) {
+    if (row.feature === "chat") {
       return {
         ...row,
         models: {
           ...row.models,
           ...(openaiTextModel ? { openai: openaiTextModel } : {}),
           ...(geminiTextModel ? { gemini: geminiTextModel } : {}),
+          ...(openRouterChatModel ? { openrouter: openRouterChatModel } : {}),
+        },
+      };
+    }
+    if (row.feature === "summary") {
+      return {
+        ...row,
+        models: {
+          ...row.models,
+          ...(openaiTextModel ? { openai: openaiTextModel } : {}),
+          ...(geminiTextModel ? { gemini: geminiTextModel } : {}),
+          ...(openRouterSummaryModel
+            ? { openrouter: openRouterSummaryModel }
+            : {}),
+        },
+      };
+    }
+    if (row.feature === "translation") {
+      return {
+        ...row,
+        models: {
+          ...row.models,
+          ...(openaiTextModel ? { openai: openaiTextModel } : {}),
+          ...(geminiTranslationModel
+            ? { gemini: geminiTranslationModel }
+            : {}),
+          ...(openRouterTranslationModel
+            ? { openrouter: openRouterTranslationModel }
+            : {}),
         },
       };
     }
@@ -113,19 +153,42 @@ function applyModelEnvOverrides(
       displayName: openaiTextModel,
     });
   }
-  if (
-    geminiTextModel &&
-    !models.some(
-      (model) => model.providerId === "gemini" && model.id === geminiTextModel,
-    )
-  ) {
-    models.push({
-      id: geminiTextModel,
-      providerId: "gemini",
-      capabilities: ["chat", "summary", "translation", "streaming", "vision"],
-      modality: "text",
-      displayName: geminiTextModel,
-    });
+  for (const geminiModelId of [geminiTextModel, geminiTranslationModel]) {
+    if (
+      geminiModelId &&
+      !models.some(
+        (model) => model.providerId === "gemini" && model.id === geminiModelId,
+      )
+    ) {
+      models.push({
+        id: geminiModelId,
+        providerId: "gemini",
+        capabilities: ["chat", "summary", "translation", "streaming", "vision"],
+        modality: "text",
+        displayName: geminiModelId,
+      });
+    }
+  }
+  for (const openRouterModelId of [
+    openRouterChatModel,
+    openRouterSummaryModel,
+    openRouterTranslationModel,
+  ]) {
+    if (
+      openRouterModelId &&
+      !models.some(
+        (model) =>
+          model.providerId === "openrouter" && model.id === openRouterModelId,
+      )
+    ) {
+      models.push({
+        id: openRouterModelId,
+        providerId: "openrouter",
+        capabilities: ["chat", "summary", "translation", "streaming"],
+        modality: "text",
+        displayName: openRouterModelId,
+      });
+    }
   }
   if (
     openaiTtsModel &&
@@ -170,7 +233,7 @@ export function createAiProviderLayer(
   const pool = new ProviderPool(providers);
   const cooldown = new CooldownManager();
   const keys = new KeyManager(resolved.keys, cooldown, resolved.cooldown);
-  const health = new HealthManager();
+  const health = new HealthManager(resolved.cooldown);
   const circuit = new CircuitBreaker(resolved.circuitBreaker);
   const retry = new RetryManager(resolved.retry);
   const adapters = new AdapterRegistry();
