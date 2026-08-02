@@ -1,5 +1,6 @@
 import { createGeminiChatAdapter } from "./gemini/chat";
 import { createOpenAiChatAdapter } from "./openai/chat";
+import { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 import { createOpenAiTtsAdapter } from "./openai/tts";
 import type { AiProviderAdapter } from "./types";
 
@@ -25,7 +26,14 @@ export function createTtsAdapters(): AiProviderAdapter[] {
   return [createOpenAiTtsAdapter()];
 }
 
+/** Phase 7 — OpenAI embeddings (merges onto the openai provider entry). */
+export function createEmbeddingAdapters(): AiProviderAdapter[] {
+  return [createOpenAiEmbeddingAdapter()];
+}
+
 export { createOpenAiChatAdapter } from "./openai/chat";
 export { createGeminiChatAdapter } from "./gemini/chat";
 export { createOpenAiTtsAdapter } from "./openai/tts";
+export { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 export { createFutureTtsAdapterStub } from "./future/tts-stub";
+export { createFutureEmbeddingAdapterStub } from "./future/embedding-stub";

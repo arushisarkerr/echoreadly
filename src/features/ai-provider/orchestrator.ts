@@ -23,8 +23,8 @@ import type {
 } from "./types";
 
 /**
- * Single public entry point for all AI capabilities (Phase 1 infrastructure).
- * Features are not wired yet — adapters must be registered in later phases.
+ * Single public entry point for all AI capabilities.
+ * Embeddings are available via execute / embed; no feature uses them yet (Phase 7).
  */
 export class AiOrchestrator {
   constructor(
@@ -40,6 +40,28 @@ export class AiOrchestrator {
   /** Expose queue for future long-running jobs without leaking other internals. */
   get jobs(): QueueManager {
     return this.queue;
+  }
+
+  /**
+   * Convenience for future RAG / semantic search — same path as
+   * `execute({ feature: "embedding", ... })`.
+   */
+  async embed(
+    request: Omit<AiEmbeddingRequest, "feature"> & {
+      feature?: "embedding";
+    },
+  ): Promise<AiEmbeddingResponse> {
+    const response = await this.execute({
+      ...request,
+      feature: "embedding",
+    });
+    if (response.kind !== "embedding") {
+      throw new AiProviderError({
+        code: "validation_failed",
+        message: "Expected an embedding response from the orchestrator.",
+      });
+    }
+    return response;
   }
 
   async execute(request: AiOrchestratorRequest): Promise<AiOrchestratorResponse> {

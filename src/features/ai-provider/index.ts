@@ -3,7 +3,9 @@
  *
  * Features must not import provider SDKs.
  * Phase 2–6: Chat, document generation, Translation, TTS, and Audio Export
- * (via Phase 5 TTS) use the Orchestrator. Whisper/STT remains legacy for now.
+ * (via Phase 5 TTS) use the Orchestrator.
+ * Phase 7: Embeddings are exposed via Orchestrator (no feature consumers yet).
+ * Whisper/STT remains legacy for now.
  */
 
 export type {
@@ -89,8 +91,11 @@ export {
   createDocumentGenerationAdapters,
   createTranslationAdapters,
   createTtsAdapters,
+  createEmbeddingAdapters,
   createOpenAiChatAdapter,
   createGeminiChatAdapter,
   createOpenAiTtsAdapter,
+  createOpenAiEmbeddingAdapter,
   createFutureTtsAdapterStub,
+  createFutureEmbeddingAdapterStub,
 } from "./adapters/register-chat";

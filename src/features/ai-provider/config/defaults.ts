@@ -134,6 +134,14 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
     displayName: "Embedding 3 Small",
   },
   {
+    id: "text-embedding-3-large",
+    providerId: "openai",
+    capabilities: ["embedding"],
+    modality: "embedding",
+    displayName: "Embedding 3 Large",
+    enabled: true,
+  },
+  {
     id: "gemini-2.0-flash",
     providerId: "gemini",
     capabilities: ["chat", "summary", "translation", "streaming", "vision"],
@@ -189,7 +197,8 @@ export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   },
   {
     feature: "embedding",
-    providers: ["openai", "gemini", "mistral"],
+    // OpenAI first; additional embedding providers via adapter + config only.
+    providers: ["openai"],
     models: { openai: "text-embedding-3-small" },
   },
   {

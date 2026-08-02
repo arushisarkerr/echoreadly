@@ -1,9 +1,10 @@
 /**
  * Factory that wires the AI Provider Layer.
- * Registers text adapters (Chat/Summary/Translation) and TTS adapters.
+ * Registers text, TTS, and embedding adapters.
  */
 
 import {
+  createEmbeddingAdapters,
   createPhase2ChatAdapters,
   createTtsAdapters,
 } from "./adapters/register-chat";
@@ -59,6 +60,7 @@ function applyModelEnvOverrides(
     env.GEMINI_SUMMARY_MODEL?.trim() ||
     env.GEMINI_MODEL?.trim();
   const openaiTtsModel = env.OPENAI_TTS_MODEL?.trim();
+  const openaiEmbeddingModel = env.OPENAI_EMBEDDING_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
     if (
@@ -81,6 +83,15 @@ function applyModelEnvOverrides(
         models: {
           ...row.models,
           openai: openaiTtsModel,
+        },
+      };
+    }
+    if (row.feature === "embedding" && openaiEmbeddingModel) {
+      return {
+        ...row,
+        models: {
+          ...row.models,
+          openai: openaiEmbeddingModel,
         },
       };
     }
@@ -128,6 +139,21 @@ function applyModelEnvOverrides(
       capabilities: ["tts", "audio"],
       modality: "speech",
       displayName: openaiTtsModel,
+    });
+  }
+  if (
+    openaiEmbeddingModel &&
+    !models.some(
+      (model) =>
+        model.providerId === "openai" && model.id === openaiEmbeddingModel,
+    )
+  ) {
+    models.push({
+      id: openaiEmbeddingModel,
+      providerId: "openai",
+      capabilities: ["embedding"],
+      modality: "embedding",
+      displayName: openaiEmbeddingModel,
     });
   }
 
@@ -195,12 +221,16 @@ export function createAiProviderLayer(
   for (const adapter of createTtsAdapters()) {
     layer.registerAdapter(adapter);
   }
+  for (const adapter of createEmbeddingAdapters()) {
+    layer.registerAdapter(adapter);
+  }
 
   return layer;
 }
 
 /**
- * Process-wide singleton used by migrated features (Chat → TTS).
+ * Process-wide singleton used by migrated features (Chat → TTS)
+ * and infrastructure capabilities (embeddings).
  */
 export function getAiProviderLayer(): AiProviderLayer {
   if (!singleton) {
