@@ -62,7 +62,7 @@ export const serverEnv = {
     );
   },
 
-  /** OpenAI API key for Whisper STT, translation, TTS, and AI tools. */
+  /** OpenAI API key (Whisper STT; Provider Layer also loads OPENAI_* keys). */
   get openaiApiKey(): string | undefined {
     return normalizeEnv(process.env.OPENAI_API_KEY);
   },
