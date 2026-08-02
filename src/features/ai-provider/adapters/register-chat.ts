@@ -3,11 +3,16 @@ import { createOpenAiChatAdapter } from "./openai/chat";
 import type { AiProviderAdapter } from "./types";
 
 /**
- * Concrete adapters enabled for Phase 2 (Chat).
- * Additional modality adapters land in later phases.
+ * Concrete text adapters for Chat (Phase 2) and document generation (Phase 3).
+ * OpenAI + Gemini both expose generateText for chat/summary routing.
  */
 export function createPhase2ChatAdapters(): AiProviderAdapter[] {
   return [createOpenAiChatAdapter(), createGeminiChatAdapter()];
+}
+
+/** Alias — same text adapters serve summary / key points / quiz / etc. */
+export function createDocumentGenerationAdapters(): AiProviderAdapter[] {
+  return createPhase2ChatAdapters();
 }
 
 export { createOpenAiChatAdapter } from "./openai/chat";

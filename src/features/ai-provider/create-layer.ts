@@ -42,55 +42,57 @@ export type AiProviderLayer = {
 
 let singleton: AiProviderLayer | null = null;
 
-function applyChatModelEnvOverrides(
+function applyTextModelEnvOverrides(
   config: AiProviderLayerConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): AiProviderLayerConfig {
-  const openaiChatModel = env.OPENAI_AI_MODEL?.trim() || env.OPENAI_MODEL?.trim();
-  const geminiChatModel =
-    env.GEMINI_CHAT_MODEL?.trim() || env.GEMINI_MODEL?.trim();
+  const openaiTextModel = env.OPENAI_AI_MODEL?.trim() || env.OPENAI_MODEL?.trim();
+  const geminiTextModel =
+    env.GEMINI_CHAT_MODEL?.trim() ||
+    env.GEMINI_SUMMARY_MODEL?.trim() ||
+    env.GEMINI_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
-    if (row.feature !== "chat") {
+    if (row.feature !== "chat" && row.feature !== "summary") {
       return row;
     }
     return {
       ...row,
       models: {
         ...row.models,
-        ...(openaiChatModel ? { openai: openaiChatModel } : {}),
-        ...(geminiChatModel ? { gemini: geminiChatModel } : {}),
+        ...(openaiTextModel ? { openai: openaiTextModel } : {}),
+        ...(geminiTextModel ? { gemini: geminiTextModel } : {}),
       },
     };
   });
 
   const models = [...config.models];
   if (
-    openaiChatModel &&
+    openaiTextModel &&
     !models.some(
-      (model) => model.providerId === "openai" && model.id === openaiChatModel,
+      (model) => model.providerId === "openai" && model.id === openaiTextModel,
     )
   ) {
     models.push({
-      id: openaiChatModel,
+      id: openaiTextModel,
       providerId: "openai",
       capabilities: ["chat", "summary", "translation", "streaming"],
       modality: "text",
-      displayName: openaiChatModel,
+      displayName: openaiTextModel,
     });
   }
   if (
-    geminiChatModel &&
+    geminiTextModel &&
     !models.some(
-      (model) => model.providerId === "gemini" && model.id === geminiChatModel,
+      (model) => model.providerId === "gemini" && model.id === geminiTextModel,
     )
   ) {
     models.push({
-      id: geminiChatModel,
+      id: geminiTextModel,
       providerId: "gemini",
       capabilities: ["chat", "summary", "translation", "streaming", "vision"],
       modality: "text",
-      displayName: geminiChatModel,
+      displayName: geminiTextModel,
     });
   }
 
@@ -100,7 +102,7 @@ function applyChatModelEnvOverrides(
 export function createAiProviderLayer(
   config: AiProviderLayerConfig = loadAiProviderConfig(),
 ): AiProviderLayer {
-  const resolved = applyChatModelEnvOverrides(config);
+  const resolved = applyTextModelEnvOverrides(config);
   const providers = new ProviderRegistry(resolved.providers);
   const models = new ModelRegistry(resolved.models);
   const capabilities = new CapabilityRegistry(providers);
