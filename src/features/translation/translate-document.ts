@@ -2,7 +2,10 @@ import {
   TRANSLATION_LANGUAGES,
   labelForLanguageCode,
 } from "@/constants/languages";
-import { generateText } from "@/lib/ai/generate-text";
+import {
+  getAiProviderLayer,
+  isAiProviderError,
+} from "@/features/ai-provider";
 import { createServiceClient } from "@/lib/supabase/server";
 import { chunkPlainText } from "@/features/processing/chunk-text";
 import { recordActivityEvent } from "@/features/history/record-event";
@@ -71,8 +74,35 @@ export async function getTranslation(
   return data ? toTranslation(data as Record<string, unknown>) : null;
 }
 
+async function translateChunkViaProviderLayer(input: {
+  documentId: string;
+  system: string;
+  chunkText: string;
+}): Promise<string> {
+  const layer = getAiProviderLayer();
+  try {
+    const response = await layer.orchestrator.execute({
+      feature: "translation",
+      documentId: input.documentId,
+      system: input.system,
+      input: input.chunkText,
+      temperature: 0.2,
+    });
+    if (response.kind !== "text") {
+      throw new Error("Translation failed to produce text.");
+    }
+    return response.text.trim();
+  } catch (cause) {
+    if (isAiProviderError(cause)) {
+      throw new Error(cause.message);
+    }
+    throw cause instanceof Error ? cause : new Error("Translation failed.");
+  }
+}
+
 /**
  * Translate original extracted text into a target language.
+ * Phase 4: provider calls go through the AI Provider Layer only.
  * Does not overwrite the original document text.
  */
 export async function translateDocument(input: {
@@ -123,6 +153,8 @@ export async function translateDocument(input: {
     throw new Error(upsertError?.message || "Unable to start translation.");
   }
 
+  const system = `You are a professional translator. Translate the user's text into ${language.label}. Preserve meaning, paragraph breaks, and tone. Return only the translated text.`;
+
   try {
     const chunks = chunkPlainText(input.originalText, {
       chunkSize: 3500,
@@ -131,10 +163,10 @@ export async function translateDocument(input: {
     const translatedParts: string[] = [];
 
     for (const chunk of chunks) {
-      const part = await generateText({
-        temperature: 0.2,
-        system: `You are a professional translator. Translate the user's text into ${language.label}. Preserve meaning, paragraph breaks, and tone. Return only the translated text.`,
-        user: chunk.text,
+      const part = await translateChunkViaProviderLayer({
+        documentId: input.documentId,
+        system,
+        chunkText: chunk.text,
       });
       if (part) {
         translatedParts.push(part);

@@ -46,14 +46,22 @@ function applyTextModelEnvOverrides(
   config: AiProviderLayerConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): AiProviderLayerConfig {
-  const openaiTextModel = env.OPENAI_AI_MODEL?.trim() || env.OPENAI_MODEL?.trim();
+  const openaiTextModel =
+    env.OPENAI_TRANSLATE_MODEL?.trim() ||
+    env.OPENAI_AI_MODEL?.trim() ||
+    env.OPENAI_MODEL?.trim();
   const geminiTextModel =
+    env.GEMINI_TRANSLATE_MODEL?.trim() ||
     env.GEMINI_CHAT_MODEL?.trim() ||
     env.GEMINI_SUMMARY_MODEL?.trim() ||
     env.GEMINI_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
-    if (row.feature !== "chat" && row.feature !== "summary") {
+    if (
+      row.feature !== "chat" &&
+      row.feature !== "summary" &&
+      row.feature !== "translation"
+    ) {
       return row;
     }
     return {

@@ -3,8 +3,8 @@ import { createOpenAiChatAdapter } from "./openai/chat";
 import type { AiProviderAdapter } from "./types";
 
 /**
- * Concrete text adapters for Chat (Phase 2) and document generation (Phase 3).
- * OpenAI + Gemini both expose generateText for chat/summary routing.
+ * Concrete text adapters for Chat, document generation, and Translation.
+ * OpenAI + Gemini expose generateText for chat / summary / translation routing.
  */
 export function createPhase2ChatAdapters(): AiProviderAdapter[] {
   return [createOpenAiChatAdapter(), createGeminiChatAdapter()];
@@ -12,6 +12,11 @@ export function createPhase2ChatAdapters(): AiProviderAdapter[] {
 
 /** Alias — same text adapters serve summary / key points / quiz / etc. */
 export function createDocumentGenerationAdapters(): AiProviderAdapter[] {
+  return createPhase2ChatAdapters();
+}
+
+/** Alias — same text adapters serve Translation (Phase 4). */
+export function createTranslationAdapters(): AiProviderAdapter[] {
   return createPhase2ChatAdapters();
 }
 

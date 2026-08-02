@@ -2,8 +2,8 @@
  * AI Provider Layer public surface.
  *
  * Features must not import provider SDKs.
- * Phase 2–3: Chat + document generation (summary/key points/explain/quiz/flashcards)
- * use the Orchestrator. Translation/TTS remain on legacy paths.
+ * Phase 2–4: Chat, document generation, and Translation use the Orchestrator.
+ * TTS remains on the legacy OpenAI path until Phase 5.
  */
 
 export type {
@@ -87,6 +87,7 @@ export {
 export {
   createPhase2ChatAdapters,
   createDocumentGenerationAdapters,
+  createTranslationAdapters,
   createOpenAiChatAdapter,
   createGeminiChatAdapter,
 } from "./adapters/register-chat";

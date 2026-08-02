@@ -175,11 +175,10 @@ export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   },
   {
     feature: "translation",
-    providers: ["gemini", "openai", "claude", "mistral"],
+    providers: ["openai", "gemini"],
     models: {
-      gemini: "gemini-2.0-flash",
       openai: "gpt-4o-mini",
-      mistral: "mistral-small-latest",
+      gemini: "gemini-2.0-flash",
     },
   },
   {
