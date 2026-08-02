@@ -1,7 +1,10 @@
 import { AUDIO_BUCKET } from "@/constants";
 import { TTS_LANGUAGES, TTS_VOICES, type TtsVoice } from "@/constants/languages";
+import {
+  getAiProviderLayer,
+  isAiProviderError,
+} from "@/features/ai-provider";
 import { recordActivityEvent } from "@/features/history/record-event";
-import { getOpenAIClient } from "@/lib/ai/openai";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export type DocumentAudioRecord = {
@@ -52,8 +55,35 @@ export async function listAudioForDocument(
   return ((data as Record<string, unknown>[] | null) ?? []).map(toAudio);
 }
 
+async function synthesizeSpeechChunk(input: {
+  documentId: string;
+  text: string;
+  voice: string;
+}): Promise<Uint8Array> {
+  const layer = getAiProviderLayer();
+  try {
+    const response = await layer.orchestrator.execute({
+      feature: "tts",
+      documentId: input.documentId,
+      text: input.text,
+      voice: input.voice,
+      format: "mp3",
+    });
+    if (response.kind !== "tts" || response.bytes.byteLength === 0) {
+      throw new Error("Audio generation failed.");
+    }
+    return response.bytes;
+  } catch (cause) {
+    if (isAiProviderError(cause)) {
+      throw new Error(cause.message);
+    }
+    throw cause instanceof Error ? cause : new Error("Audio generation failed.");
+  }
+}
+
 /**
  * Generate TTS audio for original or translated text and store in Supabase.
+ * Phase 5: synthesis goes through the AI Provider Layer (no direct SDK calls).
  */
 export async function generateDocumentAudio(input: {
   documentId: string;
@@ -122,19 +152,18 @@ export async function generateDocumentAudio(input: {
   }
 
   try {
-    const openai = getOpenAIClient();
-    // OpenAI TTS input limit ~4096 chars — chunk and concatenate MP3s simply by taking first chunk for MVP long docs.
+    // OpenAI TTS input limit ~4096 chars — chunk and concatenate MP3s.
     const maxChars = 4000;
     const pieces: Uint8Array[] = [];
     for (let start = 0; start < input.text.length; start += maxChars) {
       const slice = input.text.slice(start, start + maxChars);
-      const speech = await openai.audio.speech.create({
-        model: process.env.OPENAI_TTS_MODEL?.trim() || "tts-1",
-        voice: voice as TtsVoice,
-        input: slice,
-        response_format: "mp3",
-      });
-      pieces.push(new Uint8Array(await speech.arrayBuffer()));
+      pieces.push(
+        await synthesizeSpeechChunk({
+          documentId: input.documentId,
+          text: slice,
+          voice,
+        }),
+      );
       // Cap total generated audio pieces to keep cost/latency bounded.
       if (pieces.length >= 8) {
         break;

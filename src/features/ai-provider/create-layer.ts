@@ -1,9 +1,12 @@
 /**
  * Factory that wires the AI Provider Layer.
- * Phase 2 registers Chat adapters (OpenAI + Gemini).
+ * Registers text adapters (Chat/Summary/Translation) and TTS adapters.
  */
 
-import { createPhase2ChatAdapters } from "./adapters/register-chat";
+import {
+  createPhase2ChatAdapters,
+  createTtsAdapters,
+} from "./adapters/register-chat";
 import { AdapterRegistry } from "./adapters/types";
 import { CircuitBreaker } from "./circuit/circuit-breaker";
 import { loadAiProviderConfig } from "./config/loader";
@@ -42,7 +45,7 @@ export type AiProviderLayer = {
 
 let singleton: AiProviderLayer | null = null;
 
-function applyTextModelEnvOverrides(
+function applyModelEnvOverrides(
   config: AiProviderLayerConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): AiProviderLayerConfig {
@@ -55,23 +58,33 @@ function applyTextModelEnvOverrides(
     env.GEMINI_CHAT_MODEL?.trim() ||
     env.GEMINI_SUMMARY_MODEL?.trim() ||
     env.GEMINI_MODEL?.trim();
+  const openaiTtsModel = env.OPENAI_TTS_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
     if (
-      row.feature !== "chat" &&
-      row.feature !== "summary" &&
-      row.feature !== "translation"
+      row.feature === "chat" ||
+      row.feature === "summary" ||
+      row.feature === "translation"
     ) {
-      return row;
+      return {
+        ...row,
+        models: {
+          ...row.models,
+          ...(openaiTextModel ? { openai: openaiTextModel } : {}),
+          ...(geminiTextModel ? { gemini: geminiTextModel } : {}),
+        },
+      };
     }
-    return {
-      ...row,
-      models: {
-        ...row.models,
-        ...(openaiTextModel ? { openai: openaiTextModel } : {}),
-        ...(geminiTextModel ? { gemini: geminiTextModel } : {}),
-      },
-    };
+    if (row.feature === "tts" && openaiTtsModel) {
+      return {
+        ...row,
+        models: {
+          ...row.models,
+          openai: openaiTtsModel,
+        },
+      };
+    }
+    return row;
   });
 
   const models = [...config.models];
@@ -103,6 +116,20 @@ function applyTextModelEnvOverrides(
       displayName: geminiTextModel,
     });
   }
+  if (
+    openaiTtsModel &&
+    !models.some(
+      (model) => model.providerId === "openai" && model.id === openaiTtsModel,
+    )
+  ) {
+    models.push({
+      id: openaiTtsModel,
+      providerId: "openai",
+      capabilities: ["tts", "audio"],
+      modality: "speech",
+      displayName: openaiTtsModel,
+    });
+  }
 
   return { ...config, featureRouting, models };
 }
@@ -110,7 +137,7 @@ function applyTextModelEnvOverrides(
 export function createAiProviderLayer(
   config: AiProviderLayerConfig = loadAiProviderConfig(),
 ): AiProviderLayer {
-  const resolved = applyTextModelEnvOverrides(config);
+  const resolved = applyModelEnvOverrides(config);
   const providers = new ProviderRegistry(resolved.providers);
   const models = new ModelRegistry(resolved.models);
   const capabilities = new CapabilityRegistry(providers);
@@ -165,12 +192,15 @@ export function createAiProviderLayer(
   for (const adapter of createPhase2ChatAdapters()) {
     layer.registerAdapter(adapter);
   }
+  for (const adapter of createTtsAdapters()) {
+    layer.registerAdapter(adapter);
+  }
 
   return layer;
 }
 
 /**
- * Process-wide singleton used by migrated features (Chat in Phase 2).
+ * Process-wide singleton used by migrated features (Chat → TTS).
  */
 export function getAiProviderLayer(): AiProviderLayer {
   if (!singleton) {

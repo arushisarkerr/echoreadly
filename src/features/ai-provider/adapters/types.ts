@@ -45,8 +45,24 @@ export interface AiProviderAdapter {
 export class AdapterRegistry {
   private readonly adapters = new Map<AiProviderId, AiProviderAdapter>();
 
+  /**
+   * Register (or merge) an adapter by provider id.
+   * Later phases can register TTS/embed methods onto the same provider
+   * without wiping earlier text methods.
+   */
   register(adapter: AiProviderAdapter): void {
-    this.adapters.set(adapter.providerId, adapter);
+    const existing = this.adapters.get(adapter.providerId);
+    if (!existing) {
+      this.adapters.set(adapter.providerId, adapter);
+      return;
+    }
+    this.adapters.set(adapter.providerId, {
+      providerId: adapter.providerId,
+      generateText: adapter.generateText ?? existing.generateText,
+      synthesizeSpeech: adapter.synthesizeSpeech ?? existing.synthesizeSpeech,
+      embed: adapter.embed ?? existing.embed,
+      ocr: adapter.ocr ?? existing.ocr,
+    });
   }
 
   unregister(providerId: AiProviderId): void {

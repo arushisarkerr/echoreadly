@@ -183,6 +183,7 @@ export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   },
   {
     feature: "tts",
+    // OpenAI first; additional TTS providers are appended via config when adapters exist.
     providers: ["openai"],
     models: { openai: "tts-1" },
   },
