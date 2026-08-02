@@ -58,10 +58,19 @@ export async function POST(request: Request) {
   const ownerId = typeof body.ownerId === "string" ? body.ownerId : "";
   const documentId = typeof body.documentId === "string" ? body.documentId : "";
   const languageCode =
-    typeof body.languageCode === "string" ? body.languageCode : "";
+    typeof body.languageCode === "string" ? body.languageCode.trim() : "";
+
+  console.info("[translation flow]", "API request body", {
+    documentId,
+    languageCode,
+  });
 
   if (!OWNER_ID_PATTERN.test(ownerId) || !OWNER_ID_PATTERN.test(documentId)) {
     return jsonError("Invalid ids.", 400);
+  }
+
+  if (!languageCode) {
+    return jsonError("languageCode is required.", 400);
   }
 
   try {
@@ -79,7 +88,24 @@ export async function POST(request: Request) {
     });
 
     const existing = await getTranslation(documentId, languageCode);
-    if (existing?.status === "ready") {
+    console.info("[translation flow]", "existing translation lookup", {
+      documentId,
+      languageCode,
+      found: Boolean(existing),
+      status: existing?.status ?? null,
+      languageLabel: existing?.languageLabel ?? null,
+      textChars: existing?.text?.length ?? 0,
+    });
+
+    // Only short-circuit when a ready translation has real text.
+    // Ready+empty rows (legacy backfill / partial writes) must re-run.
+    if (existing?.status === "ready" && existing.text.trim()) {
+      console.info("[translation flow]", "API response (cache hit)", {
+        documentId,
+        languageCode: existing.languageCode,
+        languageLabel: existing.languageLabel,
+        textChars: existing.text.length,
+      });
       return Response.json({ ok: true as const, translation: existing });
     }
 
@@ -96,8 +122,22 @@ export async function POST(request: Request) {
       processingStage: "ready",
     });
 
+    console.info("[translation flow]", "API response (fresh)", {
+      documentId,
+      languageCode: translation.languageCode,
+      languageLabel: translation.languageLabel,
+      status: translation.status,
+      textChars: translation.text.length,
+      wordCount: translation.wordCount,
+    });
+
     return Response.json({ ok: true as const, translation });
   } catch (cause) {
+    console.info("[translation flow]", "API final error", {
+      documentId,
+      languageCode,
+      error: cause instanceof Error ? cause.message : "Translation failed.",
+    });
     return jsonError(
       cause instanceof Error ? cause.message : "Translation failed.",
       400,
