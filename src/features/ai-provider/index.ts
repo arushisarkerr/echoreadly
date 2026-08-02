@@ -2,8 +2,8 @@
  * AI Provider Layer public surface.
  *
  * Features must not import provider SDKs.
- * Phase 2–5: Chat, document generation, Translation, and TTS use the Orchestrator.
- * Whisper/STT remains on the legacy OpenAI path for now.
+ * Phase 2–6: Chat, document generation, Translation, TTS, and Audio Export
+ * (via Phase 5 TTS) use the Orchestrator. Whisper/STT remains legacy for now.
  */
 
 export type {

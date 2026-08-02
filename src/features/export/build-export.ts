@@ -1,16 +1,19 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import JSZip from "jszip";
 
-import { EXPORTS_BUCKET } from "@/constants";
+import { AUDIO_BUCKET, EXPORTS_BUCKET } from "@/constants";
 import { recordActivityEvent } from "@/features/history/record-event";
+import { generateDocumentAudio } from "@/features/tts/generate-audio";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export type ExportFormat = "txt" | "md" | "docx" | "pdf";
+export type AudioExportFormat = "mp3";
+export type AnyExportFormat = ExportFormat | AudioExportFormat;
 
 export type DocumentExportRecord = {
   id: string;
   documentId: string;
-  format: ExportFormat | "mp3";
+  format: AnyExportFormat;
   languageCode: string;
   filename: string;
   storagePath: string | null;
@@ -246,6 +249,153 @@ export async function exportDocumentText(input: {
       id: String(data.id),
       documentId: String(data.document_id),
       format: data.format as ExportFormat,
+      languageCode: String(data.language_code),
+      filename: String(data.filename),
+      storagePath: (data.storage_path as string | null) ?? null,
+      byteSize: data.byte_size == null ? null : Number(data.byte_size),
+      createdAt: String(data.created_at),
+    },
+    downloadUrl,
+    bytes,
+  };
+}
+
+function toObjectKey(storagePath: string, bucket: string): string {
+  return storagePath.startsWith(`${bucket}/`)
+    ? storagePath.slice(bucket.length + 1)
+    : storagePath;
+}
+
+async function downloadAudioBytes(storagePath: string): Promise<Uint8Array> {
+  const client = createServiceClient();
+  const bucket = storagePath.startsWith(`${AUDIO_BUCKET}/`)
+    ? AUDIO_BUCKET
+    : storagePath.startsWith("pdfs/")
+      ? "pdfs"
+      : AUDIO_BUCKET;
+  const key = toObjectKey(storagePath, bucket);
+  const { data, error } = await client.storage.from(bucket).download(key);
+  if (error || !data) {
+    throw new Error(error?.message || "Unable to load generated audio for export.");
+  }
+  return new Uint8Array(await data.arrayBuffer());
+}
+
+/**
+ * Export narration audio as MP3.
+ * Phase 6: AI synthesis is delegated to Phase 5 `generateDocumentAudio`
+ * (Provider Layer TTS). No provider SDKs or duplicate TTS logic here.
+ */
+export async function exportDocumentAudio(input: {
+  documentId: string;
+  guestId: string;
+  title: string;
+  text: string;
+  languageCode: string;
+  voice?: string;
+  translationId?: string | null;
+}): Promise<{
+  record: DocumentExportRecord;
+  downloadUrl: string;
+  bytes: Uint8Array;
+}> {
+  if (!input.text.trim()) {
+    throw new Error("No text available to export as audio.");
+  }
+
+  // Reuse Provider Layer TTS (cache + synthesis). Do not call providers here.
+  const audio = await generateDocumentAudio({
+    documentId: input.documentId,
+    guestId: input.guestId,
+    text: input.text,
+    languageCode: input.languageCode,
+    voice: input.voice || "alloy",
+    translationId: input.translationId ?? null,
+    documentTitle: input.title,
+  });
+
+  if (audio.status !== "ready") {
+    throw new Error(audio.errorMessage || "Audio generation is not ready.");
+  }
+
+  const bytes = await downloadAudioBytes(audio.storagePath);
+  const safeTitle =
+    input.title.replace(/[^\w\-]+/g, "_").slice(0, 60) || "document";
+  const filename = `${safeTitle}-${input.languageCode}.mp3`;
+  const objectKey = `${input.guestId}/${input.documentId}/${filename}`;
+  const client = createServiceClient();
+
+  let storagePath: string | null = null;
+  const { error: uploadError } = await client.storage
+    .from(EXPORTS_BUCKET)
+    .upload(objectKey, bytes, {
+      contentType: "audio/mpeg",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    const fallbackKey = `exports/${objectKey}`;
+    const { error: fallbackError } = await client.storage
+      .from("pdfs")
+      .upload(fallbackKey, bytes, {
+        contentType: "audio/mpeg",
+        upsert: true,
+      });
+    if (fallbackError) {
+      storagePath = null;
+    } else {
+      storagePath = `pdfs/${fallbackKey}`;
+    }
+  } else {
+    storagePath = `${EXPORTS_BUCKET}/${objectKey}`;
+  }
+
+  const { data, error } = await client
+    .from("document_exports")
+    .insert({
+      document_id: input.documentId,
+      format: "mp3",
+      language_code: input.languageCode,
+      filename,
+      storage_path: storagePath,
+      byte_size: bytes.byteLength,
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || "Unable to record audio export.");
+  }
+
+  await recordActivityEvent({
+    guestId: input.guestId,
+    documentId: input.documentId,
+    eventType: "exported",
+    title: "Exported MP3",
+    detail: filename,
+    metadata: {
+      format: "mp3",
+      languageCode: input.languageCode,
+      voice: audio.voice,
+      audioId: audio.id,
+    },
+  });
+
+  let downloadUrl = "";
+  if (storagePath) {
+    const bucket = storagePath.startsWith(`${EXPORTS_BUCKET}/`)
+      ? EXPORTS_BUCKET
+      : "pdfs";
+    const key = storagePath.slice(bucket.length + 1);
+    const signed = await client.storage.from(bucket).createSignedUrl(key, 3600);
+    downloadUrl = signed.data?.signedUrl || "";
+  }
+
+  return {
+    record: {
+      id: String(data.id),
+      documentId: String(data.document_id),
+      format: "mp3",
       languageCode: String(data.language_code),
       filename: String(data.filename),
       storagePath: (data.storage_path as string | null) ?? null,

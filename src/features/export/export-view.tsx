@@ -183,13 +183,12 @@ export function ExportView() {
                 variant="outline"
                 size="sm"
                 className="mt-4"
+                disabled={busyFormat === "mp3"}
                 onClick={() => {
-                  window.location.href = documentId
-                    ? `${ROUTES.listen}?id=${encodeURIComponent(documentId)}`
-                    : ROUTES.listen;
+                  void prepareExport("mp3");
                 }}
               >
-                Open Listen
+                {busyFormat === "mp3" ? "Preparing…" : "Prepare export"}
               </Button>
             </div>
           </div>
