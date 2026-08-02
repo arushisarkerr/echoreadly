@@ -96,6 +96,20 @@ export const DEFAULT_PROVIDERS: AiProviderDefinition[] = [
     capabilities: ["chat", "summary", "translation", "streaming"],
   },
   {
+    id: "elevenlabs",
+    displayName: "ElevenLabs",
+    enabled: true,
+    defaultPriority: 15,
+    capabilities: ["tts", "audio"],
+  },
+  {
+    id: "google",
+    displayName: "Google Cloud TTS",
+    enabled: true,
+    defaultPriority: 12,
+    capabilities: ["tts", "audio"],
+  },
+  {
     id: "tesseract",
     displayName: "Tesseract OCR",
     enabled: true,
@@ -125,6 +139,20 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
     capabilities: ["tts", "audio"],
     modality: "speech",
     displayName: "TTS-1",
+  },
+  {
+    id: "eleven_multilingual_v2",
+    providerId: "elevenlabs",
+    capabilities: ["tts", "audio"],
+    modality: "speech",
+    displayName: "Eleven Multilingual v2",
+  },
+  {
+    id: "google-cloud-tts",
+    providerId: "google",
+    capabilities: ["tts", "audio"],
+    modality: "speech",
+    displayName: "Google Cloud TTS",
   },
   {
     id: "whisper-1",
@@ -208,9 +236,13 @@ export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   },
   {
     feature: "tts",
-    // OpenAI first; additional TTS providers are appended via config when adapters exist.
-    providers: ["openai"],
-    models: { openai: "tts-1" },
+    // Order overridden by TTS_PROVIDER_ORDER / TTS_PROVIDER when set.
+    providers: ["google", "elevenlabs", "openai"],
+    models: {
+      google: "google-cloud-tts",
+      elevenlabs: "eleven_multilingual_v2",
+      openai: "tts-1",
+    },
   },
   {
     feature: "embedding",

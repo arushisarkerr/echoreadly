@@ -75,6 +75,7 @@ function applyModelEnvOverrides(
     openRouterChatModel ||
     env.OPENROUTER_MODEL?.trim();
   const openaiTtsModel = env.OPENAI_TTS_MODEL?.trim();
+  const elevenLabsTtsModel = env.ELEVENLABS_TTS_MODEL?.trim();
   const openaiEmbeddingModel = env.OPENAI_EMBEDDING_MODEL?.trim();
 
   const featureRouting = config.featureRouting.map((row) => {
@@ -117,12 +118,13 @@ function applyModelEnvOverrides(
         },
       };
     }
-    if (row.feature === "tts" && openaiTtsModel) {
+    if (row.feature === "tts") {
       return {
         ...row,
         models: {
           ...row.models,
-          openai: openaiTtsModel,
+          ...(openaiTtsModel ? { openai: openaiTtsModel } : {}),
+          ...(elevenLabsTtsModel ? { elevenlabs: elevenLabsTtsModel } : {}),
         },
       };
     }
@@ -202,6 +204,21 @@ function applyModelEnvOverrides(
       capabilities: ["tts", "audio"],
       modality: "speech",
       displayName: openaiTtsModel,
+    });
+  }
+  if (
+    elevenLabsTtsModel &&
+    !models.some(
+      (model) =>
+        model.providerId === "elevenlabs" && model.id === elevenLabsTtsModel,
+    )
+  ) {
+    models.push({
+      id: elevenLabsTtsModel,
+      providerId: "elevenlabs",
+      capabilities: ["tts", "audio"],
+      modality: "speech",
+      displayName: elevenLabsTtsModel,
     });
   }
   if (

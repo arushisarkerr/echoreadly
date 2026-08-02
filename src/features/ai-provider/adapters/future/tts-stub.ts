@@ -1,13 +1,13 @@
 /**
  * Future TTS provider adapter contract placeholder.
  *
- * Phase 5 ships OpenAI TTS only. Additional providers implement
- * `synthesizeSpeech` on AiProviderAdapter, register via the layer,
- * and are selected by config routing — no TTS feature code changes.
+ * OpenAI, ElevenLabs, and Google Cloud TTS ship by default. Additional
+ * providers implement `synthesizeSpeech` on AiProviderAdapter, register via
+ * the layer, and are selected by config routing — no TTS feature code changes.
  *
  * Example registration (later):
  *   layer.registerAdapter(createFutureTtsAdapter());
- *   // and add provider id to featureRouting.tts.providers
+ *   // and add provider id to featureRouting.tts.providers / TTS_PROVIDER_ORDER
  */
 
 import type { AiProviderAdapter } from "../types";

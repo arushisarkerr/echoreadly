@@ -4,6 +4,11 @@ import {
   isTranslationDebugEnabled,
   logTranslationDebug,
 } from "./debug/translation-debug";
+import {
+  logTtsNoUsableProvider,
+  logTtsProviderResolution,
+} from "./debug/tts-debug";
+import { logTtsExec, logTtsExecError } from "@/features/tts/tts-exec-debug";
 import type {
   AiOrchestratorResponse,
   AiTextResponse,
@@ -73,8 +78,20 @@ export class AiOrchestrator {
     this.validate(request);
 
     const debug = isTranslationDebugEnabled(request.feature);
+    const ttsDebug = request.feature === "tts";
     let fallbackAttempts = 0;
     let providerIndex = 0;
+
+    // TEMPORARY — full TTS provider-resolution dump (no selection changes).
+    const ttsProbes = ttsDebug
+      ? logTtsProviderResolution({
+          router: this.router,
+          keys: this.keys,
+          adapters: this.adapters,
+          preferredProviderId: request.preferredProviderId,
+          preferredModelId: request.preferredModelId,
+        })
+      : [];
 
     let candidates;
     try {
@@ -84,6 +101,9 @@ export class AiOrchestrator {
         requireAdapter: true,
       });
     } catch (cause) {
+      if (ttsDebug) {
+        logTtsNoUsableProvider(ttsProbes);
+      }
       if (debug) {
         const message =
           cause instanceof Error ? cause.message : "Routing failed.";
@@ -98,6 +118,13 @@ export class AiOrchestrator {
         });
       }
       throw cause;
+    }
+
+    if (ttsDebug && candidates[0]) {
+      logTtsExec("Provider selected", {
+        provider: candidates[0].providerId,
+        model: candidates[0].model.id,
+      });
     }
 
     if (debug) {
@@ -151,6 +178,12 @@ export class AiOrchestrator {
           providerId: candidate.providerId,
           retryable: true,
         });
+        if (ttsDebug) {
+          logTtsExecError(lastError, {
+            provider: candidate.providerId,
+            model: candidate.model.id,
+          });
+        }
         if (debug) {
           logTranslationDebug("skipping provider (no healthy key)", {
             currentProvider: candidate.providerId,
@@ -166,6 +199,15 @@ export class AiOrchestrator {
         candidate.providerId,
         keySelection.key.id,
       );
+
+      if (ttsDebug) {
+        logTtsExec("Provider selected", {
+          provider: candidate.providerId,
+          model: candidate.model.id,
+          selectedKeyIndex: keyIndex,
+          attempt: providerIndex,
+        });
+      }
 
       for (let attempt = 1; attempt <= this.retry.maxAttempts; attempt += 1) {
         attempts += 1;
@@ -230,6 +272,14 @@ export class AiOrchestrator {
 
           lastError = mapped;
           this.recordFailure(candidate.providerId, keySelection.key.id, mapped);
+
+          if (ttsDebug) {
+            logTtsExecError(mapped, {
+              provider: candidate.providerId,
+              model: candidate.model.id,
+              keyIndex,
+            });
+          }
 
           if (debug) {
             logTranslationDebug("provider response status", {

@@ -10,17 +10,25 @@
  *   GROK_KEY_1, ...
  *   KIMI_KEY_1, ...
  *   OPENROUTER_KEY_1, ...
+ *   ELEVENLABS_KEY_1, ...
  *
  * Compatibility aliases (treated as priority-1 keys when numbered keys absent):
  *   OPENAI_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY, ANTHROPIC_API_KEY,
- *   OPENROUTER_API_KEY
+ *   OPENROUTER_API_KEY, ELEVENLABS_API_KEY, GOOGLE_TTS_API_KEY
  *
  * Optional overrides:
  *   AI_PROVIDER                 default text provider id
  *   AI_FEATURE_ROUTING_JSON     JSON array of AiFeatureRouting
  *   TRANSLATION_PROVIDER_ORDER  comma-separated provider ids for translation
+ *   TTS_PROVIDER_ORDER          comma-separated provider ids for TTS (e.g. "google,elevenlabs,openai")
+ *   TTS_PROVIDER                single TTS provider id (alias for TTS_PROVIDER_ORDER)
  *   OPENAI_ENABLED, GEMINI_ENABLED, CLAUDE_ENABLED, GROK_ENABLED, KIMI_ENABLED,
- *   OPENROUTER_ENABLED
+ *   OPENROUTER_ENABLED, ELEVENLABS_ENABLED
+ *   OPENAI_TTS_MODEL            OpenAI speech model id (default routing uses tts-1)
+ *   ELEVENLABS_TTS_MODEL        ElevenLabs model id (default eleven_multilingual_v2)
+ *   ELEVENLABS_VOICE_ID         ElevenLabs voice id for TTS
+ *   GOOGLE_TTS_VOICE            Google Cloud TTS voice name
+ *   GOOGLE_TTS_LANGUAGE         Google Cloud TTS language code
  *   AI_RETRY_MAX_ATTEMPTS, AI_RETRY_BASE_DELAY_MS, AI_RETRY_MAX_DELAY_MS
  */
 
@@ -37,7 +45,7 @@ import type {
 } from "../types";
 
 const NUMBERED_KEY_PATTERN =
-  /^(OPENAI|GEMINI|MISTRAL|CLAUDE|GROK|KIMI|OPENROUTER|ANTHROPIC|XAI|TESSERACT)_KEY_(\d+)$/i;
+  /^(OPENAI|GEMINI|MISTRAL|CLAUDE|GROK|KIMI|OPENROUTER|ANTHROPIC|XAI|TESSERACT|ELEVENLABS)_KEY_(\d+)$/i;
 
 const PROVIDER_ALIAS: Record<string, AiProviderId> = {
   OPENAI: "openai",
@@ -50,6 +58,7 @@ const PROVIDER_ALIAS: Record<string, AiProviderId> = {
   KIMI: "kimi",
   OPENROUTER: "openrouter",
   TESSERACT: "tesseract",
+  ELEVENLABS: "elevenlabs",
 };
 
 const LEGACY_SINGLE_KEYS: Array<{ env: string; providerId: AiProviderId }> = [
@@ -62,6 +71,8 @@ const LEGACY_SINGLE_KEYS: Array<{ env: string; providerId: AiProviderId }> = [
   { env: "XAI_API_KEY", providerId: "grok" },
   { env: "KIMI_API_KEY", providerId: "kimi" },
   { env: "OPENROUTER_API_KEY", providerId: "openrouter" },
+  { env: "ELEVENLABS_API_KEY", providerId: "elevenlabs" },
+  { env: "GOOGLE_TTS_API_KEY", providerId: "google" },
 ];
 
 function normalizeEnv(value: string | undefined): string | undefined {
@@ -201,6 +212,33 @@ function parseProviderOrder(raw: string | undefined): AiProviderId[] | null {
   return providers.length > 0 ? providers : null;
 }
 
+/**
+ * TTS provider order — keep "google" as Google Cloud TTS (do not remap to gemini).
+ * Text routing still uses normalizeProviderId (google → gemini).
+ */
+function parseTtsProviderOrder(raw: string | undefined): AiProviderId[] | null {
+  if (!raw?.trim()) {
+    return null;
+  }
+  const providers = raw
+    .split(",")
+    .map((part) => {
+      const id = part.trim().toLowerCase();
+      if (!id) {
+        return null;
+      }
+      if (id === "anthropic") {
+        return "claude";
+      }
+      if (id === "xai") {
+        return "grok";
+      }
+      return id;
+    })
+    .filter((id): id is AiProviderId => Boolean(id));
+  return providers.length > 0 ? providers : null;
+}
+
 function parseEnabledFlag(raw: string | undefined): boolean | null {
   if (raw == null || !raw.trim()) {
     return null;
@@ -222,6 +260,7 @@ const PROVIDER_ENABLED_ENV: Array<{ env: string; providerId: AiProviderId }> = [
   { env: "GROK_ENABLED", providerId: "grok" },
   { env: "KIMI_ENABLED", providerId: "kimi" },
   { env: "OPENROUTER_ENABLED", providerId: "openrouter" },
+  { env: "ELEVENLABS_ENABLED", providerId: "elevenlabs" },
 ];
 
 function applyProviderEnabledFlags(
@@ -258,6 +297,26 @@ function applyTranslationProviderOrder(
 }
 
 /**
+ * Apply TTS provider order from env.
+ * Prefers TTS_PROVIDER_ORDER; falls back to TTS_PROVIDER (single id).
+ * Providers that do not advertise "tts" are skipped by the router.
+ */
+function applyTtsProviderOrder(
+  routing: AiFeatureRouting[],
+  env: NodeJS.ProcessEnv,
+): AiFeatureRouting[] {
+  const order =
+    parseTtsProviderOrder(env.TTS_PROVIDER_ORDER) ??
+    parseTtsProviderOrder(env.TTS_PROVIDER);
+  if (!order) {
+    return routing;
+  }
+  return routing.map((row) =>
+    row.feature === "tts" ? { ...row, providers: order } : row,
+  );
+}
+
+/**
  * Load Provider Layer config from process.env (or an injected env map for tests).
  * Does not mutate global state; callers wire registries from the result.
  */
@@ -273,8 +332,11 @@ export function loadAiProviderConfig(
       ? "gemini"
       : normalizeEnv(env.AI_PROVIDER)?.toLowerCase() || base.defaultTextProvider;
 
-  const featureRouting = applyTranslationProviderOrder(
-    parseFeatureRouting(env.AI_FEATURE_ROUTING_JSON) ?? DEFAULT_FEATURE_ROUTING,
+  const featureRouting = applyTtsProviderOrder(
+    applyTranslationProviderOrder(
+      parseFeatureRouting(env.AI_FEATURE_ROUTING_JSON) ?? DEFAULT_FEATURE_ROUTING,
+      env,
+    ),
     env,
   );
   const providers = applyProviderEnabledFlags(base.providers, env);

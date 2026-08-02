@@ -1,4 +1,6 @@
+import { createElevenLabsTtsAdapter } from "./elevenlabs/tts";
 import { createGeminiChatAdapter } from "./gemini/chat";
+import { createGoogleTtsAdapter } from "./google/tts";
 import { createOpenAiChatAdapter } from "./openai/chat";
 import { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 import { createOpenAiTtsAdapter } from "./openai/tts";
@@ -26,9 +28,13 @@ export function createTranslationAdapters(): AiProviderAdapter[] {
   return createPhase2ChatAdapters();
 }
 
-/** Phase 5 — OpenAI TTS (merges onto the openai provider entry). */
+/** TTS adapters — order controlled by TTS_PROVIDER_ORDER. */
 export function createTtsAdapters(): AiProviderAdapter[] {
-  return [createOpenAiTtsAdapter()];
+  return [
+    createOpenAiTtsAdapter(),
+    createElevenLabsTtsAdapter(),
+    createGoogleTtsAdapter(),
+  ];
 }
 
 /** Phase 7 — OpenAI embeddings (merges onto the openai provider entry). */
@@ -40,6 +46,8 @@ export { createOpenAiChatAdapter } from "./openai/chat";
 export { createGeminiChatAdapter } from "./gemini/chat";
 export { createOpenRouterChatAdapter } from "./openrouter/chat";
 export { createOpenAiTtsAdapter } from "./openai/tts";
+export { createElevenLabsTtsAdapter } from "./elevenlabs/tts";
+export { createGoogleTtsAdapter } from "./google/tts";
 export { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 export { createFutureTtsAdapterStub } from "./future/tts-stub";
 export { createFutureEmbeddingAdapterStub } from "./future/embedding-stub";

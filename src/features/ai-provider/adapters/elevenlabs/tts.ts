@@ -1,5 +1,5 @@
 /**
- * OpenAI TTS adapter.
+ * ElevenLabs TTS adapter.
  * Provider HTTP for speech may only live here — not in feature modules.
  */
 
@@ -13,15 +13,65 @@ import type { AiTtsResponse } from "../../responses";
 import type { AiProviderAdapter, AdapterExecutionContext } from "../types";
 import type { AiTtsRequest } from "../../types";
 
-const MIME_BY_FORMAT: Record<NonNullable<AiTtsRequest["format"]>, string> = {
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  opus: "audio/opus",
-};
+/** OpenAI-style presets from the Listen UI — not valid ElevenLabs voice ids. */
+const OPENAI_VOICE_PRESETS = new Set([
+  "alloy",
+  "ash",
+  "ballad",
+  "coral",
+  "echo",
+  "fable",
+  "onyx",
+  "nova",
+  "sage",
+  "shimmer",
+  "verse",
+]);
 
-export function createOpenAiTtsAdapter(): AiProviderAdapter {
+/** Public default voice when ELEVENLABS_VOICE_ID is unset (Rachel). */
+const DEFAULT_ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+
+function resolveElevenLabsVoiceId(requestVoice?: string): string {
+  const fromEnv = process.env.ELEVENLABS_VOICE_ID?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  const requested = requestVoice?.trim();
+  if (requested && !OPENAI_VOICE_PRESETS.has(requested.toLowerCase())) {
+    return requested;
+  }
+  return DEFAULT_ELEVENLABS_VOICE_ID;
+}
+
+function mimeForFormat(
+  format: NonNullable<AiTtsRequest["format"]>,
+): string {
+  if (format === "wav") {
+    return "audio/wav";
+  }
+  if (format === "opus") {
+    return "audio/opus";
+  }
+  return "audio/mpeg";
+}
+
+/**
+ * Map request format to ElevenLabs output_format query value.
+ * Downstream storage expects mp3 by default (same as OpenAI adapter).
+ */
+function elevenLabsOutputFormat(
+  format: NonNullable<AiTtsRequest["format"]>,
+): string {
+  if (format === "wav") {
+    return "pcm_22050";
+  }
+  // mp3 / opus → standard mp3 for pipeline compatibility
+  return "mp3_44100_128";
+}
+
+export function createElevenLabsTtsAdapter(): AiProviderAdapter {
   return {
-    providerId: "openai",
+    providerId: "elevenlabs",
 
     async synthesizeSpeech(
       request: AiTtsRequest,
@@ -29,33 +79,38 @@ export function createOpenAiTtsAdapter(): AiProviderAdapter {
     ): Promise<Omit<AiTtsResponse, "attempts">> {
       const started = Date.now();
       const format = request.format ?? "mp3";
-      const voice = request.voice?.trim() || "alloy";
-      const selectedKeyIndex = keyIndexLabel("openai", context.keyId);
+      const voiceId = resolveElevenLabsVoiceId(request.voice);
+      const selectedKeyIndex = keyIndexLabel("elevenlabs", context.keyId);
+      const outputFormat = elevenLabsOutputFormat(format);
 
-      logTtsExec("OpenAI request start", {
+      logTtsExec("ElevenLabs request start", {
         model: context.modelId,
-        voice,
+        voice: voiceId,
         selectedKeyIndex,
       });
 
+      const url = new URL(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
+      );
+      url.searchParams.set("output_format", outputFormat);
+
       let response: Response;
       try {
-        response = await fetch("https://api.openai.com/v1/audio/speech", {
+        response = await fetch(url.toString(), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${context.apiKey}`,
+            Accept: "audio/mpeg",
+            "xi-api-key": context.apiKey,
           },
           body: JSON.stringify({
-            model: context.modelId,
-            voice,
-            input: request.text,
-            response_format: format,
+            text: request.text,
+            model_id: context.modelId,
           }),
         });
       } catch (cause) {
         logTtsExecError(cause, {
-          provider: "openai",
+          provider: "elevenlabs",
           model: context.modelId,
           keyIndex: selectedKeyIndex,
         });
@@ -63,33 +118,32 @@ export function createOpenAiTtsAdapter(): AiProviderAdapter {
       }
 
       const requestId =
-        response.headers.get("x-request-id") ||
         response.headers.get("request-id") ||
+        response.headers.get("x-request-id") ||
         null;
 
       if (!response.ok) {
         const body = await response.text();
-        logTtsExec("OpenAI response", {
+        logTtsExec("ElevenLabs response", {
           httpStatus: response.status,
           responseBody: body.slice(0, 2000),
           requestId,
         });
         const mapped = mapProviderFailure({
-          providerId: "openai",
+          providerId: "elevenlabs",
           keyId: context.keyId,
           status: response.status,
           body,
         });
         logTtsExecError(mapped, {
-          provider: "openai",
+          provider: "elevenlabs",
           model: context.modelId,
           keyIndex: selectedKeyIndex,
         });
         throw mapped;
       }
 
-      // Success: body is audio bytes — do not dump binary as "response body".
-      logTtsExec("OpenAI response", {
+      logTtsExec("ElevenLabs response", {
         httpStatus: response.status,
         responseBody: "(audio binary)",
         requestId,
@@ -102,12 +156,12 @@ export function createOpenAiTtsAdapter(): AiProviderAdapter {
 
       if (buffer.byteLength === 0) {
         const mapped = mapProviderFailure({
-          providerId: "openai",
+          providerId: "elevenlabs",
           keyId: context.keyId,
-          body: "OpenAI TTS returned empty audio.",
+          body: "ElevenLabs TTS returned empty audio.",
         });
         logTtsExecError(mapped, {
-          provider: "openai",
+          provider: "elevenlabs",
           model: context.modelId,
           keyIndex: selectedKeyIndex,
         });
@@ -117,8 +171,8 @@ export function createOpenAiTtsAdapter(): AiProviderAdapter {
       return {
         kind: "tts",
         bytes: buffer,
-        mimeType: MIME_BY_FORMAT[format],
-        providerId: "openai",
+        mimeType: mimeForFormat(format === "opus" ? "mp3" : format),
+        providerId: "elevenlabs",
         modelId: context.modelId,
         keyId: context.keyId,
         capability: "tts",

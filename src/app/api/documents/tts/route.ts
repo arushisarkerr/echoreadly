@@ -7,6 +7,7 @@ import {
   generateDocumentAudio,
   listAudioForDocument,
 } from "@/features/tts/generate-audio";
+import { logTtsExec, logTtsExecError } from "@/features/tts/tts-exec-debug";
 import { updateDocumentProcessing } from "@/features/library/server/documents";
 
 export const runtime = "nodejs";
@@ -116,9 +117,17 @@ export async function POST(request: Request) {
       processingStage: "ready",
     });
 
+    logTtsExec("Signed URL creation", {
+      storagePath: audio.storagePath,
+    });
     const url = await createSignedAudioUrl(audio.storagePath);
+    logTtsExec("Final success", {
+      audioId: audio.id,
+      hasUrl: Boolean(url),
+    });
     return Response.json({ ok: true as const, audio: { ...audio, url } });
   } catch (cause) {
+    logTtsExecError(cause);
     return jsonError(
       cause instanceof Error ? cause.message : "Audio generation failed.",
       400,

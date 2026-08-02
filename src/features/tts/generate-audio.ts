@@ -6,6 +6,7 @@ import {
 } from "@/features/ai-provider";
 import { recordActivityEvent } from "@/features/history/record-event";
 import { createServiceClient } from "@/lib/supabase/server";
+import { logTtsExec, logTtsExecError } from "./tts-exec-debug";
 
 export type DocumentAudioRecord = {
   id: string;
@@ -74,6 +75,7 @@ async function synthesizeSpeechChunk(input: {
     }
     return response.bytes;
   } catch (cause) {
+    logTtsExecError(cause);
     if (isAiProviderError(cause)) {
       throw new Error(cause.message);
     }
@@ -94,6 +96,13 @@ export async function generateDocumentAudio(input: {
   translationId?: string | null;
   documentTitle?: string;
 }): Promise<DocumentAudioRecord> {
+  logTtsExec("Request start", {
+    documentId: input.documentId,
+    languageCode: input.languageCode,
+    voice: input.voice ?? "alloy",
+    textChars: input.text.length,
+  });
+
   const language =
     input.languageCode === "original"
       ? { code: "original", label: "Original" }
@@ -125,9 +134,18 @@ export async function generateDocumentAudio(input: {
     .maybeSingle();
 
   if (existing.data && existing.data.status === "ready") {
+    logTtsExec("Final success", {
+      source: "cache",
+      audioId: existing.data.id,
+    });
     return toAudio(existing.data as Record<string, unknown>);
   }
 
+  logTtsExec("Database update", {
+    phase: "upsert_processing",
+    languageCode: language.code,
+    voice,
+  });
   const { data: row, error: upsertError } = await client
     .from("document_audio")
     .upsert(
@@ -146,9 +164,18 @@ export async function generateDocumentAudio(input: {
     )
     .select("*")
     .single();
+  logTtsExec("Database update", {
+    phase: "upsert_processing_result",
+    ok: Boolean(row) && !upsertError,
+    error: upsertError?.message ?? null,
+  });
 
   if (upsertError || !row) {
-    throw new Error(upsertError?.message || "Unable to start audio generation.");
+    const err = new Error(
+      upsertError?.message || "Unable to start audio generation.",
+    );
+    logTtsExecError(err);
+    throw err;
   }
 
   try {
@@ -171,26 +198,56 @@ export async function generateDocumentAudio(input: {
     }
 
     const bytes = concatBytes(pieces);
+    logTtsExec("Audio bytes received", {
+      size: bytes.byteLength,
+      pieceCount: pieces.length,
+    });
+
+    logTtsExec("Upload to Supabase Storage", {
+      bucket: AUDIO_BUCKET,
+      path: objectKey,
+    });
     const { error: uploadError } = await client.storage
       .from(AUDIO_BUCKET)
       .upload(objectKey, bytes, {
         contentType: "audio/mpeg",
         upsert: true,
       });
+    logTtsExec("Storage upload result", {
+      bucket: AUDIO_BUCKET,
+      path: objectKey,
+      ok: !uploadError,
+      error: uploadError?.message ?? null,
+    });
 
     if (uploadError) {
       // Fall back to pdfs bucket prefix if dedicated bucket missing.
       const fallbackKey = `audio/${objectKey}`;
+      logTtsExec("Upload to Supabase Storage", {
+        bucket: "pdfs",
+        path: fallbackKey,
+        fallback: true,
+      });
       const { error: fallbackError } = await client.storage
         .from("pdfs")
         .upload(fallbackKey, bytes, {
           contentType: "audio/mpeg",
           upsert: true,
         });
+      logTtsExec("Storage upload result", {
+        bucket: "pdfs",
+        path: fallbackKey,
+        ok: !fallbackError,
+        error: fallbackError?.message ?? null,
+      });
       if (fallbackError) {
         throw new Error(uploadError.message || "Unable to store generated audio.");
       }
       const fallbackPath = `pdfs/${fallbackKey}`;
+      logTtsExec("Database update", {
+        phase: "mark_ready_fallback",
+        storagePath: fallbackPath,
+      });
       const { data: saved, error: saveError } = await client
         .from("document_audio")
         .update({
@@ -202,6 +259,11 @@ export async function generateDocumentAudio(input: {
         .eq("id", row.id)
         .select("*")
         .single();
+      logTtsExec("Database update", {
+        phase: "mark_ready_fallback_result",
+        ok: Boolean(saved) && !saveError,
+        error: saveError?.message ?? null,
+      });
       if (saveError || !saved) {
         throw new Error(saveError?.message || "Unable to save audio record.");
       }
@@ -213,9 +275,17 @@ export async function generateDocumentAudio(input: {
         detail: input.documentTitle || null,
         metadata: { languageCode: language.code, voice },
       });
+      logTtsExec("Final success", {
+        audioId: saved.id,
+        storagePath: fallbackPath,
+      });
       return toAudio(saved as Record<string, unknown>);
     }
 
+    logTtsExec("Database update", {
+      phase: "mark_ready",
+      storagePath,
+    });
     const { data: saved, error: saveError } = await client
       .from("document_audio")
       .update({
@@ -226,6 +296,11 @@ export async function generateDocumentAudio(input: {
       .eq("id", row.id)
       .select("*")
       .single();
+    logTtsExec("Database update", {
+      phase: "mark_ready_result",
+      ok: Boolean(saved) && !saveError,
+      error: saveError?.message ?? null,
+    });
 
     if (saveError || !saved) {
       throw new Error(saveError?.message || "Unable to save audio record.");
@@ -240,8 +315,13 @@ export async function generateDocumentAudio(input: {
       metadata: { languageCode: language.code, voice },
     });
 
+    logTtsExec("Final success", {
+      audioId: saved.id,
+      storagePath,
+    });
     return toAudio(saved as Record<string, unknown>);
   } catch (cause) {
+    logTtsExecError(cause);
     const message =
       cause instanceof Error && cause.message
         ? cause.message
@@ -272,13 +352,17 @@ export async function createSignedAudioUrl(
     ? storagePath.slice(bucket.length + 1)
     : storagePath;
 
+  logTtsExec("Signed URL creation", { bucket, path: key });
   const { data, error } = await client.storage
     .from(bucket)
     .createSignedUrl(key, expiresIn);
 
   if (error || !data?.signedUrl) {
-    throw new Error(error?.message || "Unable to create audio URL.");
+    const err = new Error(error?.message || "Unable to create audio URL.");
+    logTtsExecError(err);
+    throw err;
   }
+  logTtsExec("Signed URL creation", { ok: true, bucket, path: key });
   return data.signedUrl;
 }
 
