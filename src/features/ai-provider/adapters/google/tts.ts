@@ -17,6 +17,12 @@ import {
 import type { AiTtsResponse } from "../../responses";
 import type { AiProviderAdapter, AdapterExecutionContext } from "../types";
 import type { AiTtsRequest } from "../../types";
+import {
+  GOOGLE_TTS_MAX_CHUNK_BYTES,
+  splitTextByUtf8Bytes,
+  utf8ByteLength,
+} from "./chunk-utf8";
+import { mergeMp3ChunksWithFfmpeg } from "./merge-mp3";
 
 /** Same model as the verified smoke / official unary sample. */
 const DEFAULT_GEMINI_TTS_MODEL = "gemini-3.1-flash-tts-preview";
@@ -206,6 +212,138 @@ function decodeBase64Audio(audioContent: string): Uint8Array {
   return new Uint8Array(binary);
 }
 
+type SynthesizeUnaryInput = {
+  text: string;
+  prompt: string;
+  accessToken: string;
+  projectId: string;
+  voiceName: string;
+  languageCode: string;
+  modelName: string;
+  audioEncoding: "MP3" | "LINEAR16" | "OGG_OPUS";
+  keyId: string;
+  selectedKeyIndex: string;
+};
+
+/**
+ * Single Gemini-TTS unary call. Caller must ensure text/prompt stay under the
+ * documented 4000-byte limit (we chunk text to 3500 bytes upstream).
+ */
+async function synthesizeUnaryChunk(
+  input: SynthesizeUnaryInput,
+): Promise<Uint8Array> {
+  const bodyInput: { text: string; prompt?: string } = { text: input.text };
+  if (input.prompt) {
+    bodyInput.prompt = input.prompt;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      "https://texttospeech.googleapis.com/v1/text:synthesize",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${input.accessToken}`,
+          "x-goog-user-project": input.projectId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: bodyInput,
+          voice: {
+            languageCode: input.languageCode,
+            name: input.voiceName,
+            model_name: input.modelName,
+          },
+          audioConfig: {
+            audioEncoding: input.audioEncoding,
+          },
+        }),
+      },
+    );
+  } catch (cause) {
+    logTtsExecError(cause, {
+      provider: "google",
+      model: input.modelName,
+      keyIndex: input.selectedKeyIndex,
+    });
+    throw cause;
+  }
+
+  const requestId =
+    response.headers.get("x-request-id") ||
+    response.headers.get("request-id") ||
+    null;
+
+  const bodyText = await response.text();
+
+  if (!response.ok) {
+    logTtsExec("Google TTS response", {
+      httpStatus: response.status,
+      responseBody: bodyText.slice(0, 2000),
+      requestId,
+    });
+    const mapped = mapProviderFailure({
+      providerId: "google",
+      keyId: input.keyId,
+      status: response.status,
+      body: bodyText,
+    });
+    logTtsExecError(mapped, {
+      provider: "google",
+      model: input.modelName,
+      keyIndex: input.selectedKeyIndex,
+    });
+    throw mapped;
+  }
+
+  let audioContent: string | undefined;
+  try {
+    const parsed = JSON.parse(bodyText) as { audioContent?: unknown };
+    audioContent =
+      typeof parsed.audioContent === "string" ? parsed.audioContent : undefined;
+  } catch {
+    audioContent = undefined;
+  }
+
+  logTtsExec("Google TTS response", {
+    httpStatus: response.status,
+    responseBody: audioContent ? "(audio base64)" : bodyText.slice(0, 500),
+    requestId,
+  });
+
+  if (!audioContent) {
+    const mapped = mapProviderFailure({
+      providerId: "google",
+      keyId: input.keyId,
+      body: "Google TTS returned no audioContent.",
+    });
+    logTtsExecError(mapped, {
+      provider: "google",
+      model: input.modelName,
+      keyIndex: input.selectedKeyIndex,
+    });
+    throw mapped;
+  }
+
+  const buffer = decodeBase64Audio(audioContent);
+  if (buffer.byteLength === 0) {
+    const mapped = mapProviderFailure({
+      providerId: "google",
+      keyId: input.keyId,
+      body: "Google TTS returned empty audio.",
+    });
+    logTtsExecError(mapped, {
+      provider: "google",
+      model: input.modelName,
+      keyIndex: input.selectedKeyIndex,
+    });
+    throw mapped;
+  }
+
+  return buffer;
+}
+
 export function createGoogleTtsAdapter(): AiProviderAdapter {
   return {
     providerId: "google",
@@ -249,11 +387,33 @@ export function createGoogleTtsAdapter(): AiProviderAdapter {
         throw mapped;
       }
 
+      // Official Gemini-TTS unary field: input.prompt (style instruction).
+      // Prefer request.prompt; fall back to GOOGLE_TTS_PROMPT; omit if unset.
+      const prompt =
+        request.prompt?.trim() ||
+        process.env.GOOGLE_TTS_PROMPT?.trim() ||
+        "";
+
+      // Google Gemini-TTS unary caps input.text / input.prompt at 4000 UTF-8 bytes.
+      // Chunk by bytes (3500 margin); never by character count — see chunk-utf8.ts.
+      const textChunks = splitTextByUtf8Bytes(
+        request.text,
+        GOOGLE_TTS_MAX_CHUNK_BYTES,
+      );
+      // Multi-chunk merge re-encodes via FFmpeg to MP3; force MP3 encoding upstream.
+      const multiChunk = textChunks.length > 1;
+      const effectiveEncoding = multiChunk ? "MP3" : audioEncoding;
+      const effectiveMime = multiChunk ? "audio/mpeg" : mimeForFormat(format);
+
       logTtsExec("Google TTS request start", {
         model: modelName,
         voice: voiceName,
         languageCode,
         selectedKeyIndex,
+        textBytes: utf8ByteLength(request.text),
+        promptBytes: utf8ByteLength(prompt),
+        chunkCount: textChunks.length,
+        maxChunkBytes: GOOGLE_TTS_MAX_CHUNK_BYTES,
       });
 
       let accessToken: string;
@@ -268,41 +428,34 @@ export function createGoogleTtsAdapter(): AiProviderAdapter {
         throw cause;
       }
 
-      // Official Gemini-TTS unary field: input.prompt (style instruction).
-      // Prefer request.prompt; fall back to GOOGLE_TTS_PROMPT; omit if unset.
-      const prompt =
-        request.prompt?.trim() ||
-        process.env.GOOGLE_TTS_PROMPT?.trim() ||
-        "";
-      const input: { text: string; prompt?: string } = { text: request.text };
-      if (prompt) {
-        input.prompt = prompt;
+      // Sequential synthesis: any chunk failure throws immediately (no partial merge/upload).
+      const audioPieces: Uint8Array[] = [];
+      for (let index = 0; index < textChunks.length; index += 1) {
+        const chunk = textChunks[index];
+        logTtsExec("Google TTS chunk", {
+          chunkIndex: index + 1,
+          chunkCount: textChunks.length,
+          chunkBytes: utf8ByteLength(chunk),
+        });
+        const piece = await synthesizeUnaryChunk({
+          text: chunk,
+          prompt,
+          accessToken,
+          projectId,
+          voiceName,
+          languageCode,
+          modelName,
+          audioEncoding: effectiveEncoding,
+          keyId: context.keyId,
+          selectedKeyIndex,
+        });
+        audioPieces.push(piece);
       }
 
-      let response: Response;
+      let buffer: Uint8Array;
       try {
-        response = await fetch(
-          "https://texttospeech.googleapis.com/v1/text:synthesize",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "x-goog-user-project": projectId,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              input,
-              voice: {
-                languageCode,
-                name: voiceName,
-                model_name: modelName,
-              },
-              audioConfig: {
-                audioEncoding,
-              },
-            }),
-          },
-        );
+        // 1 chunk → FFmpeg bypass; 2+ → decode/PCM/concat/libmp3lame (no byte concat).
+        buffer = await mergeMp3ChunksWithFfmpeg(audioPieces);
       } catch (cause) {
         logTtsExecError(cause, {
           provider: "google",
@@ -311,88 +464,16 @@ export function createGoogleTtsAdapter(): AiProviderAdapter {
         });
         throw cause;
       }
-
-      const requestId =
-        response.headers.get("x-request-id") ||
-        response.headers.get("request-id") ||
-        null;
-
-      const bodyText = await response.text();
-
-      if (!response.ok) {
-        logTtsExec("Google TTS response", {
-          httpStatus: response.status,
-          responseBody: bodyText.slice(0, 2000),
-          requestId,
-        });
-        const mapped = mapProviderFailure({
-          providerId: "google",
-          keyId: context.keyId,
-          status: response.status,
-          body: bodyText,
-        });
-        logTtsExecError(mapped, {
-          provider: "google",
-          model: modelName,
-          keyIndex: selectedKeyIndex,
-        });
-        throw mapped;
-      }
-
-      let audioContent: string | undefined;
-      try {
-        const parsed = JSON.parse(bodyText) as { audioContent?: unknown };
-        audioContent =
-          typeof parsed.audioContent === "string"
-            ? parsed.audioContent
-            : undefined;
-      } catch {
-        audioContent = undefined;
-      }
-
-      logTtsExec("Google TTS response", {
-        httpStatus: response.status,
-        responseBody: audioContent ? "(audio base64)" : bodyText.slice(0, 500),
-        requestId,
-      });
-
-      if (!audioContent) {
-        const mapped = mapProviderFailure({
-          providerId: "google",
-          keyId: context.keyId,
-          body: "Google TTS returned no audioContent.",
-        });
-        logTtsExecError(mapped, {
-          provider: "google",
-          model: modelName,
-          keyIndex: selectedKeyIndex,
-        });
-        throw mapped;
-      }
-
-      const buffer = decodeBase64Audio(audioContent);
       logTtsExec("Audio bytes received", {
         size: buffer.byteLength,
+        pieceCount: audioPieces.length,
+        mergedWithFfmpeg: multiChunk,
       });
-
-      if (buffer.byteLength === 0) {
-        const mapped = mapProviderFailure({
-          providerId: "google",
-          keyId: context.keyId,
-          body: "Google TTS returned empty audio.",
-        });
-        logTtsExecError(mapped, {
-          provider: "google",
-          model: modelName,
-          keyIndex: selectedKeyIndex,
-        });
-        throw mapped;
-      }
 
       return {
         kind: "tts",
         bytes: buffer,
-        mimeType: mimeForFormat(format),
+        mimeType: effectiveMime,
         providerId: "google",
         modelId: modelName,
         keyId: context.keyId,
