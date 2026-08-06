@@ -110,6 +110,13 @@ export const DEFAULT_PROVIDERS: AiProviderDefinition[] = [
     capabilities: ["tts", "audio"],
   },
   {
+    id: "piper",
+    displayName: "Piper TTS",
+    enabled: true,
+    defaultPriority: 11,
+    capabilities: ["tts", "audio"],
+  },
+  {
     id: "tesseract",
     displayName: "Tesseract OCR",
     enabled: true,
@@ -153,6 +160,13 @@ export const DEFAULT_MODELS: AiModelDefinition[] = [
     capabilities: ["tts", "audio"],
     modality: "speech",
     displayName: "Google Cloud TTS",
+  },
+  {
+    id: "piper-local",
+    providerId: "piper",
+    capabilities: ["tts", "audio"],
+    modality: "speech",
+    displayName: "Piper Local",
   },
   {
     id: "whisper-1",
@@ -237,8 +251,9 @@ export const DEFAULT_FEATURE_ROUTING: AiFeatureRouting[] = [
   {
     feature: "tts",
     // Order overridden by TTS_PROVIDER_ORDER / TTS_PROVIDER when set.
-    providers: ["google", "elevenlabs", "openai"],
+    providers: ["piper", "google", "elevenlabs", "openai"],
     models: {
+      piper: "piper-local",
       google: "google-cloud-tts",
       elevenlabs: "eleven_multilingual_v2",
       openai: "tts-1",

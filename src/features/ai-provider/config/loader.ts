@@ -16,14 +16,19 @@
  *   OPENAI_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY, ANTHROPIC_API_KEY,
  *   OPENROUTER_API_KEY, ELEVENLABS_API_KEY, GOOGLE_TTS_API_KEY
  *
+ * Local Piper TTS (no cloud API key — loader injects a placeholder key when configured):
+ *   PIPER_BIN                   path to Piper executable
+ *   PIPER_MODEL                 path to Piper .onnx voice model
+ *   PIPER_ENABLED                enable/disable piper provider
+ *
  * Optional overrides:
  *   AI_PROVIDER                 default text provider id
  *   AI_FEATURE_ROUTING_JSON     JSON array of AiFeatureRouting
  *   TRANSLATION_PROVIDER_ORDER  comma-separated provider ids for translation
- *   TTS_PROVIDER_ORDER          comma-separated provider ids for TTS (e.g. "google,elevenlabs,openai")
+ *   TTS_PROVIDER_ORDER          comma-separated provider ids for TTS (e.g. "piper,google,elevenlabs,openai")
  *   TTS_PROVIDER                single TTS provider id (alias for TTS_PROVIDER_ORDER)
  *   OPENAI_ENABLED, GEMINI_ENABLED, CLAUDE_ENABLED, GROK_ENABLED, KIMI_ENABLED,
- *   OPENROUTER_ENABLED, ELEVENLABS_ENABLED
+ *   OPENROUTER_ENABLED, ELEVENLABS_ENABLED, PIPER_ENABLED
  *   OPENAI_TTS_MODEL            OpenAI speech model id (default routing uses tts-1)
  *   ELEVENLABS_TTS_MODEL        ElevenLabs model id (default eleven_multilingual_v2)
  *   ELEVENLABS_VOICE_ID         ElevenLabs voice id for TTS
@@ -148,6 +153,43 @@ function loadLegacyKeys(
   return [...existing, ...extras];
 }
 
+/**
+ * Piper is local (no API secret). When PIPER_BIN + PIPER_MODEL are set,
+ * inject a placeholder key so KeyManager can select the provider.
+ * PIPER_ENABLED=false suppresses the placeholder even if paths are set.
+ */
+function loadPiperLocalKey(
+  env: NodeJS.ProcessEnv,
+  existing: AiKeyRecord[],
+): AiKeyRecord[] {
+  if (existing.some((key) => key.providerId === "piper")) {
+    return existing;
+  }
+
+  const enabled = parseEnabledFlag(env.PIPER_ENABLED);
+  if (enabled === false) {
+    return existing;
+  }
+
+  const bin = normalizeEnv(env.PIPER_BIN);
+  const model = normalizeEnv(env.PIPER_MODEL);
+  if (!bin || !model) {
+    return existing;
+  }
+
+  return [
+    ...existing,
+    {
+      id: "piper:key_1",
+      providerId: "piper",
+      secret: "local",
+      priority: 1,
+      weight: 1,
+      enabled: true,
+    },
+  ];
+}
+
 function parseFeatureRouting(raw: string | undefined): AiFeatureRouting[] | null {
   if (!raw?.trim()) {
     return null;
@@ -261,6 +303,7 @@ const PROVIDER_ENABLED_ENV: Array<{ env: string; providerId: AiProviderId }> = [
   { env: "KIMI_ENABLED", providerId: "kimi" },
   { env: "OPENROUTER_ENABLED", providerId: "openrouter" },
   { env: "ELEVENLABS_ENABLED", providerId: "elevenlabs" },
+  { env: "PIPER_ENABLED", providerId: "piper" },
 ];
 
 function applyProviderEnabledFlags(
@@ -325,7 +368,7 @@ export function loadAiProviderConfig(
 ): AiProviderLayerConfig {
   const base = buildEmptyLayerConfig();
   const numbered = loadNumberedKeys(env);
-  const keys = loadLegacyKeys(env, numbered);
+  const keys = loadPiperLocalKey(env, loadLegacyKeys(env, numbered));
 
   const defaultTextProvider =
     normalizeEnv(env.AI_PROVIDER)?.toLowerCase() === "google"

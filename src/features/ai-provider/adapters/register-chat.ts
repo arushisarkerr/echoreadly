@@ -5,6 +5,7 @@ import { createOpenAiChatAdapter } from "./openai/chat";
 import { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 import { createOpenAiTtsAdapter } from "./openai/tts";
 import { createOpenRouterChatAdapter } from "./openrouter/chat";
+import { createPiperTtsAdapter } from "./piper/tts";
 import type { AiProviderAdapter } from "./types";
 
 /**
@@ -34,6 +35,7 @@ export function createTtsAdapters(): AiProviderAdapter[] {
     createOpenAiTtsAdapter(),
     createElevenLabsTtsAdapter(),
     createGoogleTtsAdapter(),
+    createPiperTtsAdapter(),
   ];
 }
 
@@ -48,6 +50,7 @@ export { createOpenRouterChatAdapter } from "./openrouter/chat";
 export { createOpenAiTtsAdapter } from "./openai/tts";
 export { createElevenLabsTtsAdapter } from "./elevenlabs/tts";
 export { createGoogleTtsAdapter } from "./google/tts";
+export { createPiperTtsAdapter } from "./piper/tts";
 export { createOpenAiEmbeddingAdapter } from "./openai/embedding";
 export { createFutureTtsAdapterStub } from "./future/tts-stub";
 export { createFutureEmbeddingAdapterStub } from "./future/embedding-stub";

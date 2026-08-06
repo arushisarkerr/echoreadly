@@ -131,6 +131,8 @@ export type AiTtsRequest = AiRequestMeta & {
   text: string;
   voice?: string;
   format?: "mp3" | "wav" | "opus";
+  /** Gemini-TTS style instruction → Cloud TTS `input.prompt`. */
+  prompt?: string;
 };
 
 export type AiEmbeddingRequest = AiRequestMeta & {

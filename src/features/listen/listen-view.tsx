@@ -8,6 +8,7 @@ import {
   IconListen,
   IconPause,
   IconPlay,
+  IconStar,
   IconStop,
 } from "@/components/icons/dashboard-icons";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +21,29 @@ import { SelectField } from "@/components/ui/dropdown";
 import { ROUTES } from "@/constants";
 import {
   TRANSLATION_LANGUAGES,
-  TTS_VOICES,
   labelForLanguageCode,
 } from "@/constants/languages";
 import { getImportOwnerId } from "@/features/import/utils/pdf-upload-store";
+import {
+  buildAudioDownloadFilename,
+  downloadAudioFromUrl,
+} from "@/features/listen/download-audio";
+import {
+  GEMINI_TTS_VOICES,
+  orderVoicesWithPins,
+  readPinnedVoices,
+  storePinnedVoices,
+  togglePinnedVoice,
+} from "@/features/listen/gemini-voices";
+import {
+  STYLE_PRESETS,
+  readStoredStyleCustomText,
+  readStoredStylePresetId,
+  resolveStyleInstruction,
+  storeStyleCustomText,
+  storeStylePresetId,
+  type StylePresetId,
+} from "@/features/listen/style-presets";
 import { cn } from "@/utils";
 
 const SPEED_OPTIONS = [
@@ -33,6 +53,9 @@ const SPEED_OPTIONS = [
   { value: "1.5", label: "1.5×" },
   { value: "2", label: "2.0×" },
 ];
+
+/** Matches TTS API paste limit (8 × 4000 chunk cap). */
+const MAX_PASTE_CHARS = 32_000;
 
 type TranslationItem = {
   id: string;
@@ -64,9 +87,48 @@ function isReadyTranslation(item: TranslationItem): boolean {
   return item.status === "ready" && Boolean(item.text.trim());
 }
 
+function estimateAudioDurationLabel(text: string): string {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  if (words === 0) {
+    return "Estimated audio duration: —";
+  }
+  // ~150 words/minute speaking rate.
+  const totalSeconds = Math.max(1, Math.round((words / 150) * 60));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) {
+    return `Estimated audio duration: ~${seconds}s`;
+  }
+  return `Estimated audio duration: ~${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
+
+/** Pause and rewind without clearing src (keeps React-bound URL in sync). */
+function pauseHtmlAudio(audio: HTMLAudioElement | null) {
+  if (!audio) {
+    return;
+  }
+  audio.pause();
+  try {
+    audio.currentTime = 0;
+  } catch {
+    // ignore if not seekable yet
+  }
+}
+
+/** Stop playback and fully reset an HTMLAudioElement (prevents orphan audio). */
+function haltHtmlAudio(audio: HTMLAudioElement | null) {
+  pauseHtmlAudio(audio);
+  if (!audio) {
+    return;
+  }
+  audio.removeAttribute("src");
+  audio.load();
+}
+
 /**
  * Listening player — existing translation → TTS → cached audio → playback.
  * Cache key: documentId + language + voice. Never regenerates cached audio.
+ * Paste Text uses the same TTS API with rawText (no Library document).
  */
 export function ListenView() {
   const searchParams = useSearchParams();
@@ -78,21 +140,43 @@ export function ListenView() {
   const [title, setTitle] = useState("No track selected");
   const [originalLanguageCode, setOriginalLanguageCode] = useState("auto");
   const [hasOriginalText, setHasOriginalText] = useState(false);
+  const [originalText, setOriginalText] = useState("");
   const [translations, setTranslations] = useState<TranslationItem[]>([]);
   const [audioCache, setAudioCache] = useState<AudioItem[]>([]);
   const [language, setLanguage] = useState("original");
-  const [voice, setVoice] = useState<string>(TTS_VOICES[0]);
+  const [voice, setVoice] = useState<string>(GEMINI_TTS_VOICES[0]);
   const [speed, setSpeed] = useState("1");
   const [generating, setGenerating] = useState(false);
   const [generateFailed, setGenerateFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(Boolean(documentId));
+  const [downloading, setDownloading] = useState(false);
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loadedDocumentId, setLoadedDocumentId] = useState(documentId);
+
+  const pasteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pasteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteVoice, setPasteVoice] = useState<string>(GEMINI_TTS_VOICES[0]);
+  const [pasteSpeed, setPasteSpeed] = useState("1");
+  const [pasteGenerating, setPasteGenerating] = useState(false);
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [pasteAudioUrl, setPasteAudioUrl] = useState<string | null>(null);
+  const [pastePlaying, setPastePlaying] = useState(false);
+  const [pasteDownloading, setPasteDownloading] = useState(false);
+
+  const [pinnedVoices, setPinnedVoices] = useState<string[]>(() =>
+    typeof window === "undefined" ? [] : readPinnedVoices(),
+  );
+  // Stable SSR defaults — load localStorage only after mount (hydration-safe).
+  const [stylePresetId, setStylePresetId] =
+    useState<StylePresetId>("warm_friendly");
+  const [styleCustomText, setStyleCustomText] = useState("");
+  const [styleHydrated, setStyleHydrated] = useState(false);
 
   // Reset listen state when the route document id changes (render-time sync).
   if (documentId !== loadedDocumentId) {
@@ -100,6 +184,7 @@ export function ListenView() {
     setTitle(documentId ? "Loading…" : "No track selected");
     setOriginalLanguageCode("auto");
     setHasOriginalText(false);
+    setOriginalText("");
     setTranslations([]);
     setAudioCache([]);
     setLanguage("original");
@@ -112,6 +197,34 @@ export function ListenView() {
     setLoadingMeta(Boolean(documentId));
   }
 
+  useEffect(() => {
+    storePinnedVoices(pinnedVoices);
+  }, [pinnedVoices]);
+
+  useEffect(() => {
+    // Restore persisted style only after mount so SSR HTML matches the first client paint.
+    const preset = readStoredStylePresetId();
+    const custom = readStoredStyleCustomText();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe localStorage restore
+    setStylePresetId(preset);
+    setStyleCustomText(custom);
+    setStyleHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!styleHydrated) {
+      return;
+    }
+    storeStylePresetId(stylePresetId);
+  }, [styleHydrated, stylePresetId]);
+
+  useEffect(() => {
+    if (!styleHydrated) {
+      return;
+    }
+    storeStyleCustomText(styleCustomText);
+  }, [styleHydrated, styleCustomText]);
+
   const isOriginal = language === "original";
   const selectedTranslation = useMemo(() => {
     if (!language || isOriginal) {
@@ -123,6 +236,48 @@ export function ListenView() {
       ) ?? null
     );
   }, [isOriginal, language, translations]);
+
+  const orderedVoices = useMemo(
+    () => orderVoicesWithPins(pinnedVoices),
+    [pinnedVoices],
+  );
+
+  const styleInstruction = useMemo(
+    () => resolveStyleInstruction(stylePresetId, styleCustomText),
+    [styleCustomText, stylePresetId],
+  );
+
+  // Style changes must allow regenerate (cached audio has no style key in UI).
+  const styleKey = `${stylePresetId}\0${styleCustomText}`;
+  const previousStyleKeyRef = useRef(styleKey);
+  useEffect(() => {
+    if (previousStyleKeyRef.current === styleKey) {
+      return;
+    }
+    previousStyleKeyRef.current = styleKey;
+    // Stop any in-flight playback before clearing cached document audio.
+    haltHtmlAudio(audioRef.current);
+    // Paste URL stays bound — only pause/rewind so React src stays in sync.
+    pauseHtmlAudio(pasteAudioRef.current);
+    setPlaying(false);
+    setPastePlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setAudioCache((current) =>
+      current.filter(
+        (item) => !(item.languageCode === language && item.voice === voice),
+      ),
+    );
+    // Keep paste player URL until Generate replaces it (avoids hidden player + orphan audio).
+    setGenerateFailed(false);
+  }, [language, styleKey, voice]);
+
+  const documentSourceText = useMemo(() => {
+    if (isOriginal) {
+      return originalText;
+    }
+    return selectedTranslation?.text ?? originalText;
+  }, [isOriginal, originalText, selectedTranslation]);
 
   const canListen =
     Boolean(documentId) &&
@@ -236,13 +391,13 @@ export function ListenView() {
         );
         const detected =
           docPayload.document?.originalLanguage?.trim() || "auto";
-        const originalTextReady = Boolean(
-          docPayload.document?.extractedText?.trim(),
-        );
+        const extracted = docPayload.document?.extractedText?.trim() || "";
+        const originalTextReady = Boolean(extracted);
 
         setTitle(docPayload.document?.filename || "Untitled document");
         setOriginalLanguageCode(detected);
         setHasOriginalText(originalTextReady);
+        setOriginalText(extracted);
         setTranslations(nextTranslations);
         setAudioCache(nextAudio);
 
@@ -288,6 +443,21 @@ export function ListenView() {
     audio.playbackRate = Number(speed) || 1;
   }, [speed, audioUrl]);
 
+  // If the bound URL is cleared while an element still has buffered media, force halt.
+  useEffect(() => {
+    if (audioUrl || generating) {
+      return;
+    }
+    haltHtmlAudio(audioRef.current);
+  }, [audioUrl, generating]);
+
+  useEffect(() => {
+    if (pasteAudioUrl || pasteGenerating) {
+      return;
+    }
+    haltHtmlAudio(pasteAudioRef.current);
+  }, [pasteAudioUrl, pasteGenerating]);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) {
@@ -330,6 +500,23 @@ export function ListenView() {
     };
   }, [audioUrl]);
 
+  useEffect(() => {
+    const audio = pasteAudioRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.playbackRate = Number(pasteSpeed) || 1;
+  }, [pasteSpeed, pasteAudioUrl]);
+
+  useEffect(() => {
+    const el = pasteTextareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 480)}px`;
+  }, [pasteText]);
+
   async function refreshAudioCache(): Promise<AudioItem[]> {
     if (!documentId) {
       return [];
@@ -370,6 +557,11 @@ export function ListenView() {
       return;
     }
 
+    // Stop any in-flight playback before (re)generation.
+    pauseHtmlAudio(audioRef.current);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
     setGenerating(true);
     setGenerateFailed(false);
     setError(null);
@@ -385,6 +577,7 @@ export function ListenView() {
           // original | translated code — API uses stored text only (no re-translate).
           languageCode: language,
           voice,
+          prompt: styleInstruction || undefined,
         }),
       });
       const payload = (await response.json()) as {
@@ -541,6 +734,123 @@ export function ListenView() {
     setCurrentTime(next);
   }
 
+  function toggleVoicePin(targetVoice: string) {
+    setPinnedVoices((current) => togglePinnedVoice(targetVoice, current));
+  }
+
+  async function handleDocumentDownload() {
+    if (!audioUrl) {
+      return;
+    }
+    setDownloading(true);
+    setError(null);
+    try {
+      await downloadAudioFromUrl(
+        audioUrl,
+        buildAudioDownloadFilename(documentSourceText, "mp3"),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Unable to download audio.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handlePasteDownload() {
+    if (!pasteAudioUrl) {
+      return;
+    }
+    setPasteDownloading(true);
+    setPasteError(null);
+    try {
+      await downloadAudioFromUrl(
+        pasteAudioUrl,
+        buildAudioDownloadFilename(pasteText, "mp3"),
+      );
+    } catch (cause) {
+      setPasteError(
+        cause instanceof Error ? cause.message : "Unable to download audio.",
+      );
+    } finally {
+      setPasteDownloading(false);
+    }
+  }
+
+  async function generatePasteAudio() {
+    const text = pasteText;
+    if (!text.trim()) {
+      setPasteError("Paste or write text before generating audio.");
+      return;
+    }
+    if (text.length > MAX_PASTE_CHARS) {
+      setPasteError(
+        `Text is too long (${text.length.toLocaleString()} characters). Maximum is ${MAX_PASTE_CHARS.toLocaleString()}.`,
+      );
+      return;
+    }
+
+    // Stop playback immediately; keep existing URL until the new audio is ready
+    // so the player never disappears while audio could still be playing.
+    pauseHtmlAudio(pasteAudioRef.current);
+    setPastePlaying(false);
+    setPasteGenerating(true);
+    setPasteError(null);
+    try {
+      const response = await fetch("/api/documents/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerId: getImportOwnerId(),
+          rawText: text,
+          voice: pasteVoice,
+          speed: Number(pasteSpeed) || 1,
+          format: "mp3",
+          prompt: styleInstruction || undefined,
+        }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        audio?: { url?: string };
+      };
+      if (!response.ok || !payload.ok || !payload.audio?.url) {
+        throw new Error(payload.error || "Unable to generate audio.");
+      }
+      // Full reset then bind the newly generated audio.
+      haltHtmlAudio(pasteAudioRef.current);
+      setPasteAudioUrl(payload.audio.url);
+    } catch (cause) {
+      // Keep previous URL on failure so the player stays bound and visible.
+      setPasteError(
+        cause instanceof Error ? cause.message : "Unable to generate audio.",
+      );
+    } finally {
+      setPasteGenerating(false);
+    }
+  }
+
+  function togglePastePlay() {
+    if (!pasteAudioUrl) {
+      void generatePasteAudio();
+      return;
+    }
+    const audio = pasteAudioRef.current;
+    if (!audio) {
+      return;
+    }
+    if (pastePlaying) {
+      audio.pause();
+      setPastePlaying(false);
+      return;
+    }
+    void audio.play().then(() => setPastePlaying(true));
+  }
+
+  const pasteCharCount = pasteText.length;
+  const pasteDurationLabel = estimateAudioDurationLabel(pasteText);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -610,42 +920,112 @@ export function ListenView() {
                     setLanguage(value);
                     setError(null);
                     setGenerateFailed(false);
+                    haltHtmlAudio(audioRef.current);
                     resetPlaybackClock();
                   }}
                   options={languageOptions}
                 />
-                <SelectField
-                  label="Voice"
-                  value={voice}
-                  onChange={(value) => {
-                    // Regenerates only when this exact voice is not cached.
-                    setVoice(value);
-                    setError(null);
-                    setGenerateFailed(false);
-                    resetPlaybackClock();
-                  }}
-                  options={TTS_VOICES.map((item) => {
-                    const cached = audioCache.some(
-                      (row) =>
-                        row.languageCode === language &&
-                        row.voice === item &&
-                        row.status === "ready" &&
-                        Boolean(row.url),
-                    );
-                    return {
-                      value: item,
-                      label: cached
-                        ? `${item[0].toUpperCase()}${item.slice(1)} ✓ Ready`
-                        : item[0].toUpperCase() + item.slice(1),
-                    };
-                  })}
-                />
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      Voice
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={
+                        pinnedVoices.includes(voice)
+                          ? "Unpin voice"
+                          : "Pin voice"
+                      }
+                      className="inline-flex size-8 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-muted"
+                      onClick={() => toggleVoicePin(voice)}
+                    >
+                      <IconStar
+                        className={cn(
+                          "size-4",
+                          pinnedVoices.includes(voice)
+                            ? "fill-[var(--accent)] text-[var(--accent)]"
+                            : "text-muted",
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <select
+                    value={voice}
+                    onChange={(event) => {
+                      setVoice(event.target.value);
+                      setError(null);
+                      setGenerateFailed(false);
+                      haltHtmlAudio(audioRef.current);
+                      resetPlaybackClock();
+                    }}
+                    className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {orderedVoices.map((item) => {
+                      const cached = audioCache.some(
+                        (row) =>
+                          row.languageCode === language &&
+                          row.voice === item &&
+                          row.status === "ready" &&
+                          Boolean(row.url),
+                      );
+                      const pinned = pinnedVoices.includes(item);
+                      const label = cached
+                        ? `${item}${pinned ? " ★" : ""} ✓ Ready`
+                        : `${item}${pinned ? " ★" : ""}`;
+                      return (
+                        <option key={item} value={item}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
                 <SelectField
                   label="Speed"
                   value={speed}
                   onChange={setSpeed}
                   options={SPEED_OPTIONS}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <SelectField
+                  label="Style"
+                  value={stylePresetId}
+                  onChange={(value) => {
+                    setStylePresetId(value as StylePresetId);
+                  }}
+                  options={[
+                    ...STYLE_PRESETS.map((item) => ({
+                      value: item.id,
+                      label: item.label,
+                    })),
+                    { value: "custom", label: "Custom..." },
+                  ]}
+                />
+                <p className="text-xs text-muted">
+                  Style instructions influence delivery, pacing, and tone. They
+                  do not change the text content.
+                </p>
+                {stylePresetId === "custom" ? (
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-foreground">
+                      Custom style instruction
+                    </span>
+                    <textarea
+                      value={styleCustomText}
+                      onChange={(event) => {
+                        setStyleCustomText(event.target.value);
+                      }}
+                      rows={3}
+                      placeholder="Example: Read like a professional news anchor with calm, confident delivery"
+                      className="min-h-[5rem] w-full resize-y rounded-xl border border-border bg-surface px-3 py-3 text-sm text-foreground outline-none transition-[box-shadow,border-color] placeholder:text-muted focus:border-[var(--accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent)_35%,transparent)]"
+                    />
+                  </label>
+                ) : (
+                  <p className="text-xs text-muted">{styleInstruction}</p>
+                )}
               </div>
 
               {translationRequired ? (
@@ -747,15 +1127,16 @@ export function ListenView() {
                     )}
 
                     {audioUrl ? (
-                      <a
-                        href={audioUrl}
-                        download={`${title || "audio"}-${language}-${voice}.mp3`}
-                        className={cn(
-                          "inline-flex h-9 items-center justify-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted",
-                        )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={downloading}
+                        onClick={() => {
+                          void handleDocumentDownload();
+                        }}
                       >
-                        Download MP3
-                      </a>
+                        {downloading ? "Downloading..." : "Download MP3"}
+                      </Button>
                     ) : (
                       <Button variant="outline" size="sm" disabled>
                         Download MP3
@@ -799,6 +1180,202 @@ export function ListenView() {
               ) : null}
             </>
           )}
+        </div>
+      </Card>
+
+      <div className="flex items-center gap-3 py-1" aria-hidden>
+        <div className="h-px flex-1 bg-border/70" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+          OR
+        </span>
+        <div className="h-px flex-1 bg-border/70" />
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-border/70 px-5 py-5 sm:px-6">
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            Paste Text
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Paste or write text and generate audio with the same Piper pipeline.
+            Nothing is added to your Library.
+          </p>
+        </div>
+
+        <div className="space-y-4 px-5 py-5 sm:px-6">
+          <audio
+            ref={pasteAudioRef}
+            src={pasteAudioUrl ?? undefined}
+            preload="metadata"
+            onEnded={() => setPastePlaying(false)}
+            onPause={() => setPastePlaying(false)}
+            onPlay={() => setPastePlaying(true)}
+          />
+
+          <label className="block space-y-2">
+            <span className="sr-only">Paste text</span>
+            <textarea
+              ref={pasteTextareaRef}
+              value={pasteText}
+              onChange={(event) => {
+                setPasteText(event.target.value);
+                setPasteError(null);
+                haltHtmlAudio(pasteAudioRef.current);
+                setPasteAudioUrl(null);
+                setPastePlaying(false);
+              }}
+              placeholder="Paste or write your text here..."
+              rows={6}
+              className="min-h-[9rem] w-full resize-none overflow-hidden rounded-xl border border-border bg-surface px-3 py-3 text-sm text-foreground outline-none transition-[box-shadow,border-color] placeholder:text-muted focus:border-[var(--accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent)_35%,transparent)]"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span>
+              Characters: {pasteCharCount.toLocaleString()}
+              {pasteCharCount > MAX_PASTE_CHARS ? (
+                <span className="text-danger">
+                  {" "}
+                  (max {MAX_PASTE_CHARS.toLocaleString()})
+                </span>
+              ) : null}
+            </span>
+            <span>{pasteDurationLabel}</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  Voice
+                </span>
+                <button
+                  type="button"
+                  aria-label={
+                    pinnedVoices.includes(pasteVoice)
+                      ? "Unpin voice"
+                      : "Pin voice"
+                  }
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-muted"
+                  onClick={() => toggleVoicePin(pasteVoice)}
+                >
+                  <IconStar
+                    className={cn(
+                      "size-4",
+                      pinnedVoices.includes(pasteVoice)
+                        ? "fill-[var(--accent)] text-[var(--accent)]"
+                        : "text-muted",
+                    )}
+                  />
+                </button>
+              </div>
+              <select
+                value={pasteVoice}
+                onChange={(event) => {
+                  setPasteVoice(event.target.value);
+                  haltHtmlAudio(pasteAudioRef.current);
+                  setPasteAudioUrl(null);
+                  setPastePlaying(false);
+                  setPasteError(null);
+                }}
+                className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {orderedVoices.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                    {pinnedVoices.includes(item) ? " ★" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <SelectField
+              label="Speed"
+              value={pasteSpeed}
+              onChange={setPasteSpeed}
+              options={SPEED_OPTIONS}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <SelectField
+              label="Style"
+              value={stylePresetId}
+              onChange={(value) => {
+                setStylePresetId(value as StylePresetId);
+              }}
+              options={[
+                ...STYLE_PRESETS.map((item) => ({
+                  value: item.id,
+                  label: item.label,
+                })),
+                { value: "custom", label: "Custom..." },
+              ]}
+            />
+            <p className="text-xs text-muted">
+              Style instructions influence delivery, pacing, and tone. They do
+              not change the text content.
+            </p>
+            {stylePresetId === "custom" ? (
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-foreground">
+                  Custom style instruction
+                </span>
+                <textarea
+                  value={styleCustomText}
+                  onChange={(event) => {
+                    setStyleCustomText(event.target.value);
+                  }}
+                  rows={3}
+                  placeholder="Example: Read like a professional news anchor with calm, confident delivery"
+                  className="min-h-[5rem] w-full resize-y rounded-xl border border-border bg-surface px-3 py-3 text-sm text-foreground outline-none transition-[box-shadow,border-color] placeholder:text-muted focus:border-[var(--accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent)_35%,transparent)]"
+                />
+              </label>
+            ) : (
+              <p className="text-xs text-muted">{styleInstruction}</p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              disabled={pasteGenerating}
+              onClick={() => {
+                void generatePasteAudio();
+              }}
+            >
+              {pasteGenerating
+                ? "Generating audio..."
+                : "Generate Audio"}
+            </Button>
+            {pasteAudioUrl ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={pastePlaying ? "Pause" : "Play"}
+                  disabled={pasteGenerating}
+                  onClick={togglePastePlay}
+                >
+                  {pastePlaying ? <IconPause /> : <IconPlay />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pasteDownloading || pasteGenerating}
+                  onClick={() => {
+                    void handlePasteDownload();
+                  }}
+                >
+                  {pasteDownloading ? "Downloading..." : "Download MP3"}
+                </Button>
+              </>
+            ) : null}
+          </div>
+
+          {pasteError ? (
+            <p className="text-sm text-danger" role="alert">
+              {pasteError}
+            </p>
+          ) : null}
         </div>
       </Card>
 
