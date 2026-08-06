@@ -10,35 +10,35 @@
  */
 
 import { spawn } from "node:child_process";
-import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import { logTtsExec } from "@/features/tts/tts-exec-debug";
 
-const require = createRequire(import.meta.url);
-
 /**
- * Runtime FFmpeg resolution (production-safe for Vercel):
+ * Runtime FFmpeg resolution (Next.js 16 / Turbopack / Vercel serverless):
  * 1. FFMPEG_BIN env var — highest priority (explicit override)
- * 2. Bundled `ffmpeg-static` Linux/macOS/Windows binary — no Homebrew / PATH lookup
- * 3. Otherwise throw a clear server error (never fall back to raw MP3 concat)
+ * 2. Bundled ffmpeg-static at `<cwd>/node_modules/ffmpeg-static/ffmpeg`
+ *    (Vercel: cwd is /var/task; NFT includes this file)
+ * 3. Otherwise throw a clear server error (never PATH / Homebrew / byte-concat)
  *
- * Note: `require("ffmpeg-static")` itself returns FFMPEG_BIN when set, so we
- * resolve the package binary path via package.json to keep step 2 independent.
+ * Do not use require.resolve("ffmpeg-static/...") — Turbopack rewrites it and
+ * breaks absolute path resolution in the deployed function. Use cwd + known
+ * package path instead (same approach as vercel-labs/ffmpeg-on-vercel).
  */
 function resolveBundledStaticFfmpeg(): string | null {
-  try {
-    const packageJsonPath = require.resolve("ffmpeg-static/package.json");
-    const binaryName = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
-    const binaryPath = join(dirname(packageJsonPath), binaryName);
-    if (existsSync(binaryPath)) {
-      return binaryPath;
-    }
-  } catch {
-    // package not installed or unresolvable
+  const binaryName = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+  // process.cwd() === /var/task on Vercel; NFT places node_modules/ffmpeg-static here.
+  const binaryPath = join(
+    process.cwd(),
+    "node_modules",
+    "ffmpeg-static",
+    binaryName,
+  );
+  if (existsSync(binaryPath)) {
+    return binaryPath;
   }
   return null;
 }
